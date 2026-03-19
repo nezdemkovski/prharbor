@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		761B97072D7CCDA70000378A /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 761B97062D7CCDA70000378A /* LaunchAtLogin */; };
+		76D5F9E428D28958009EBD80 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 76D5F9E328D28958009EBD80 /* KeychainAccess */; };
 		769F4E1B2765A2B900594911 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769F4E1A2765A2B900594911 /* AboutView.swift */; };
 		769F4E7B277B97B300594911 /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769F4E7A277B97B300594911 /* Notifications.swift */; };
 		76C6AA5B2C98E809003472DA /* Defaults in Frameworks */ = {isa = PBXBuildFile; productRef = 76C6AA5A2C98E809003472DA /* Defaults */; };
@@ -65,6 +67,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				76C6AA5B2C98E809003472DA /* Defaults in Frameworks */,
+				761B97072D7CCDA70000378A /* LaunchAtLogin in Frameworks */,
+				76D5F9E428D28958009EBD80 /* KeychainAccess in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -182,7 +186,9 @@
 			);
 			name = PRHarbor;
 			packageProductDependencies = (
+				76D5F9E328D28958009EBD80 /* KeychainAccess */,
 				76C6AA5A2C98E809003472DA /* Defaults */,
+				761B97062D7CCDA70000378A /* LaunchAtLogin */,
 			);
 			productName = PRHarbor;
 			productReference = 8CECBBDF2742AAF800A2802D /* PRHarbor.app */;
@@ -214,6 +220,8 @@
 			mainGroup = 8CECBBD62742AAF800A2802D;
 			packageReferences = (
 				8CECBBF62742ABDA00A2802D /* XCRemoteSwiftPackageReference "Defaults" */,
+				76D5F9E228D28958009EBD80 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
+				761B97052D7CCDA70000378A /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */,
 			);
 			productRefGroup = 8CECBBE02742AAF800A2802D /* Products */;
 			projectDirPath = "";
@@ -490,6 +498,22 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		761B97052D7CCDA70000378A /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sindresorhus/LaunchAtLogin-Modern";
+			requirement = {
+				kind = exactVersion;
+				version = 1.1.0;
+			};
+		};
+		76D5F9E228D28958009EBD80 /* XCRemoteSwiftPackageReference "KeychainAccess" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kishikawakatsumi/KeychainAccess";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.0.0;
+			};
+		};
 		8CECBBF62742ABDA00A2802D /* XCRemoteSwiftPackageReference "Defaults" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sindresorhus/Defaults";
@@ -501,6 +525,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		761B97062D7CCDA70000378A /* LaunchAtLogin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 761B97052D7CCDA70000378A /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */;
+			productName = LaunchAtLogin;
+		};
+		76D5F9E328D28958009EBD80 /* KeychainAccess */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 76D5F9E228D28958009EBD80 /* XCRemoteSwiftPackageReference "KeychainAccess" */;
+			productName = KeychainAccess;
+		};
 		76C6AA5A2C98E809003472DA /* Defaults */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 8CECBBF62742ABDA00A2802D /* XCRemoteSwiftPackageReference "Defaults" */;

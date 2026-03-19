@@ -1,6 +1,7 @@
 
 import Foundation
 import Defaults
+import KeychainAccess
 
 @MainActor
 struct GitHubClient {

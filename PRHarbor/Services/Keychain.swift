@@ -1,47 +1,9 @@
 import SwiftUI
-import Security
 import Defaults
+import KeychainAccess
 
 typealias FromKeychain = KeychainStorage
 typealias KeychainKeys = KeychainAccessKey
-
-private enum NativeKeychain {
-    private static let service = Bundle.main.bundleIdentifier ?? "com.nezdemkovski.prharbor"
-
-    static func get(_ key: String) -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status == errSecSuccess, let data = result as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
-    }
-
-    static func set(_ value: String, key: String) {
-        delete(key)
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
-            kSecValueData as String: Data(value.utf8)
-        ]
-        SecItemAdd(query as CFDictionary, nil)
-    }
-
-    static func delete(_ key: String) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key
-        ]
-        SecItemDelete(query as CFDictionary)
-    }
-}
 
 @MainActor
 @propertyWrapper
@@ -81,17 +43,21 @@ private class ObservableString: ObservableObject {
     var value: String {
         get {
             if currentValue == nil {
-                currentValue = NativeKeychain.get(key.keyName) ?? ""
+                currentValue = try? Keychain().get(key.keyName) ?? ""
             }
             return currentValue!
         }
         set {
             objectWillChange.send()
             currentValue = newValue
-            if newValue.isEmpty {
-                NativeKeychain.delete(key.keyName)
-            } else {
-                NativeKeychain.set(newValue, key: key.keyName)
+            do {
+                if newValue.isEmpty {
+                    try Keychain().remove(key.keyName)
+                } else {
+                    try Keychain().set(newValue, key: key.keyName)
+                }
+            } catch {
+                print("Keychain write failed for key \(key.keyName): \(error)")
             }
         }
     }

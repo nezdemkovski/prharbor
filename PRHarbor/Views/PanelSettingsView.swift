@@ -1,7 +1,8 @@
 
 import SwiftUI
 import Defaults
-import ServiceManagement
+import KeychainAccess
+import LaunchAtLogin
 
 struct PanelSettingsView: View {
     @ObservedObject var store: PullRequestStore
@@ -332,12 +333,7 @@ private struct MenubarCard: View {
                 Text("30 min").tag(30)
             }
             SettingsHint("How often to fetch new data from GitHub")
-            Toggle(isOn: Binding(
-                get: { SMAppService.mainApp.status == .enabled },
-                set: { newValue in
-                    try? newValue ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister()
-                }
-            )) {
+            LaunchAtLogin.Toggle {
                 Text("Launch at login")
                     .font(.system(size: 11.5))
             }

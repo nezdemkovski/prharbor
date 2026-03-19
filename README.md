@@ -33,6 +33,8 @@ brew install prharbor
 
 Grab the latest `.dmg` from [GitHub Releases](https://github.com/nezdemkovski/prharbor/releases).
 
+> **First launch:** macOS may show a security warning. Run `xattr -cr /Applications/PRHarbor.app` or right-click → Open → Open.
+
 ## Setup
 
 1. Open PR Harbor from the menu bar

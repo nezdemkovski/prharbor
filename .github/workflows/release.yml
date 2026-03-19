@@ -1,0 +1,114 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  SCHEME: PRHarbor
+  APP_NAME: PRHarbor
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+
+      - name: Get version from tag
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          else
+            echo "version=0.0.0-dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set version in project
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          sed -i '' "s/MARKETING_VERSION = .*/MARKETING_VERSION = $VERSION;/" PRHarbor.xcodeproj/project.pbxproj
+
+      - name: Resolve packages
+        run: xcodebuild -scheme $SCHEME -resolvePackageDependencies
+
+      - name: Build Release
+        run: |
+          xcodebuild -scheme $SCHEME \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Create DMG
+        run: |
+          APP_PATH="build/Build/Products/Release/$APP_NAME.app"
+          hdiutil create -volname "PR Harbor" \
+            -srcfolder "$APP_PATH" \
+            -ov -format UDZO \
+            "$APP_NAME.dmg"
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: PR Harbor v${{ steps.version.outputs.version }}
+          files: ${{ env.APP_NAME }}.dmg
+          generate_release_notes: true
+
+      - name: Get SHA256
+        if: startsWith(github.ref, 'refs/tags/')
+        id: sha
+        run: echo "sha256=$(shasum -a 256 PRHarbor.dmg | awk '{print $1}')" >> $GITHUB_OUTPUT
+
+      - name: Update Homebrew tap
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA256="${{ steps.sha.outputs.sha256 }}"
+          REPO="nezdemkovski/homebrew-tap"
+
+          git clone https://x-access-token:${TAP_TOKEN}@github.com/${REPO}.git tap
+          mkdir -p tap/Casks
+
+          cat > tap/Casks/prharbor.rb << EOF
+          cask "prharbor" do
+            version "$VERSION"
+            sha256 "$SHA256"
+
+            url "https://github.com/nezdemkovski/prharbor/releases/download/v#{version}/PRHarbor.dmg"
+            name "PR Harbor"
+            desc "GitHub pull requests in your menu bar"
+            homepage "https://github.com/nezdemkovski/prharbor"
+
+            app "PRHarbor.app"
+
+            zap trash: [
+              "~/Library/Preferences/com.nezdemkovski.prharbor.plist",
+            ]
+          end
+          EOF
+
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/prharbor.rb
+          git commit -m "Update PR Harbor to $VERSION" || exit 0
+          git push
+
+      - name: Upload artifact (for manual runs)
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}.dmg
+          path: ${{ env.APP_NAME }}.dmg

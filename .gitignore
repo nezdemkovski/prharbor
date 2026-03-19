@@ -1,0 +1,21 @@
+# Xcode
+xcuserdata/
+DerivedData/
+build/
+*.xcscmblueprint
+
+# Build artifacts
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.dmg
+
+# SPM
+.build/
+.swiftpm/
+
+# macOS
+.DS_Store
+
+# Archives
+*.xcarchive

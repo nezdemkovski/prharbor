@@ -13,14 +13,16 @@ func requestNotificationAuthorization() {
         options: [.foreground]
     )
 
-    for categoryId in ["review", "assigned", "created"] {
-        let category = UNNotificationCategory(
-            identifier: categoryId,
-            actions: [openAction],
-            intentIdentifiers: []
-        )
-        center.setNotificationCategories([category])
-    }
+    let categories: Set<UNNotificationCategory> = Set(
+        ["review", "assigned", "created"].map { categoryId in
+            UNNotificationCategory(
+                identifier: categoryId,
+                actions: [openAction],
+                intentIdentifiers: []
+            )
+        }
+    )
+    center.setNotificationCategories(categories)
 }
 
 func sendPRNotifications(

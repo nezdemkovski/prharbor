@@ -164,6 +164,7 @@ struct CollapsibleHeader<Trailing: View>: View {
 
             trailing
         }
+        .frame(minHeight: 20)
         .foregroundStyle(.secondary)
         .padding(.horizontal, 6)
         .padding(.top, 10)

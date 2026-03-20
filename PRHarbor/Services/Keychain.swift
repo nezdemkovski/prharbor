@@ -43,7 +43,7 @@ private class ObservableString: ObservableObject {
     var value: String {
         get {
             if currentValue == nil {
-                currentValue = try? Keychain().get(key.keyName) ?? ""
+                currentValue = try? appKeychain.get(key.keyName) ?? ""
             }
             return currentValue!
         }
@@ -52,9 +52,9 @@ private class ObservableString: ObservableObject {
             currentValue = newValue
             do {
                 if newValue.isEmpty {
-                    try Keychain().remove(key.keyName)
+                    try appKeychain.remove(key.keyName)
                 } else {
-                    try Keychain().set(newValue, key: key.keyName)
+                    try appKeychain.set(newValue, key: key.keyName)
                 }
             } catch {
                 print("Keychain write failed for key \(key.keyName): \(error)")
@@ -67,6 +67,9 @@ struct KeychainAccessKey: Hashable, Sendable {
     let keyName: String
     init(key: String) { self.keyName = key }
 }
+
+@MainActor
+private let appKeychain = Keychain(service: Bundle.main.bundleIdentifier ?? "com.nezdemkovski.prharbor")
 
 @MainActor
 private struct ObservablesStore {

@@ -28,6 +28,7 @@ struct PanelView: View {
 
     @Default(.clickOpensLink) private var clickOpensLink
     @Default(.showAvatar) private var showAvatar
+    @Default(.showLabels) private var showLabels
     @Default(.showUnreadDot) private var showUnreadDot
     @Default(.showLinesChanged) private var showLinesChanged
     @Default(.showApprovals) private var showApprovals
@@ -53,6 +54,7 @@ struct PanelView: View {
     private var displayConfig: PRDisplayConfig {
         PRDisplayConfig(
             showAvatar: showAvatar,
+            showLabels: showLabels,
             showUnreadDot: showUnreadDot,
             showLinesChanged: showLinesChanged,
             showApprovals: showApprovals,

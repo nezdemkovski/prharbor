@@ -31,6 +31,16 @@ struct FeaturesListView: View {
         !features.isEmpty || !autoFeatures.isEmpty
     }
 
+    private func copyPullLinks(_ edges: [Edge]) {
+        let text = edges
+            .map { "\($0.node.title): \($0.node.url.absoluteString)" }
+            .joined(separator: "\n")
+
+        guard !text.isEmpty else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+
     var body: some View {
         if !hasContent {
             EmptyStateView(
@@ -58,6 +68,11 @@ struct FeaturesListView: View {
                             }
                         }
                     ) {
+                        if !featurePulls.isEmpty {
+                            CircleIconButton(icon: "doc.on.doc", help: "Copy PR links") {
+                                copyPullLinks(featurePulls)
+                            }
+                        }
                         CircleIconButton(icon: "pencil", help: "Rename") {
                             onRename?(feature.id)
                         }
@@ -116,6 +131,9 @@ struct FeaturesListView: View {
 
                             VStack { Divider().opacity(0.3) }
 
+                            CircleIconButton(icon: "doc.on.doc", size: 9, frameSize: 18, help: "Copy PR links") {
+                                copyPullLinks(branchEdges)
+                            }
                             CircleIconButton(icon: "puzzlepiece.extension", size: 9, frameSize: 18, help: "Save as feature") {
                                 onPromote?(branch, branchEdges)
                             }

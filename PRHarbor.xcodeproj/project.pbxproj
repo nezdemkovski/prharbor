@@ -8,10 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		761B97072D7CCDA70000378A /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 761B97062D7CCDA70000378A /* LaunchAtLogin */; };
-		76D5F9E428D28958009EBD80 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 76D5F9E328D28958009EBD80 /* KeychainAccess */; };
 		769F4E1B2765A2B900594911 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769F4E1A2765A2B900594911 /* AboutView.swift */; };
 		769F4E7B277B97B300594911 /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769F4E7A277B97B300594911 /* Notifications.swift */; };
 		76C6AA5B2C98E809003472DA /* Defaults in Frameworks */ = {isa = PBXBuildFile; productRef = 76C6AA5A2C98E809003472DA /* Defaults */; };
+		76D5F9E428D28958009EBD80 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 76D5F9E328D28958009EBD80 /* KeychainAccess */; };
 		76D5F9E628D28A29009EBD80 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76D5F9E528D28A29009EBD80 /* Keychain.swift */; };
 		76F7DAD028A88CAB0086A3B0 /* GithubTokenValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76F7DACF28A88CAB0086A3B0 /* GithubTokenValidator.swift */; };
 		8C55444B274AD7B20079CA42 /* DateExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C55444A274AD7B20079CA42 /* DateExtensions.swift */; };
@@ -530,15 +530,15 @@
 			package = 761B97052D7CCDA70000378A /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */;
 			productName = LaunchAtLogin;
 		};
-		76D5F9E328D28958009EBD80 /* KeychainAccess */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 76D5F9E228D28958009EBD80 /* XCRemoteSwiftPackageReference "KeychainAccess" */;
-			productName = KeychainAccess;
-		};
 		76C6AA5A2C98E809003472DA /* Defaults */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 8CECBBF62742ABDA00A2802D /* XCRemoteSwiftPackageReference "Defaults" */;
 			productName = Defaults;
+		};
+		76D5F9E328D28958009EBD80 /* KeychainAccess */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 76D5F9E228D28958009EBD80 /* XCRemoteSwiftPackageReference "KeychainAccess" */;
+			productName = KeychainAccess;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

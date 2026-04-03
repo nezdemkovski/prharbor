@@ -3,6 +3,7 @@ import SwiftUI
 
 struct PRDisplayConfig: Equatable {
     let showAvatar: Bool
+    let showLabels: Bool
     let showUnreadDot: Bool
     let showLinesChanged: Bool
     let showApprovals: Bool
@@ -11,8 +12,9 @@ struct PRDisplayConfig: Equatable {
     let staleDays: Int
     let staleDate: Date?
 
-    init(showAvatar: Bool, showUnreadDot: Bool, showLinesChanged: Bool, showApprovals: Bool, clickOpensLink: Bool, githubUsername: String, staleDays: Int) {
+    init(showAvatar: Bool, showLabels: Bool, showUnreadDot: Bool, showLinesChanged: Bool, showApprovals: Bool, clickOpensLink: Bool, githubUsername: String, staleDays: Int) {
         self.showAvatar = showAvatar
+        self.showLabels = showLabels
         self.showUnreadDot = showUnreadDot
         self.showLinesChanged = showLinesChanged
         self.showApprovals = showApprovals
@@ -151,6 +153,7 @@ struct PRRowView: View, Equatable {
 
 struct PRDetailView: View {
     let pull: Pull
+    let config: PRDisplayConfig
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -159,7 +162,7 @@ struct PRDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(.primary)
 
-            if !pull.labels.nodes.isEmpty {
+            if config.showLabels, !pull.labels.nodes.isEmpty {
                 FlowLayout(spacing: 4) {
                     ForEach(pull.labels.nodes, id: \.name) { label in
                         Text(label.name)
@@ -539,4 +542,3 @@ enum ColorCache {
         return color
     }
 }
-

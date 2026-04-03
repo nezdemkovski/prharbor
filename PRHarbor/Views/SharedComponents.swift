@@ -95,7 +95,7 @@ struct PRRowsContainer: View {
                 }
 
                 if isExpanded {
-                    PRDetailView(pull: edge.node)
+                    PRDetailView(pull: edge.node, config: config)
                         .padding(.horizontal, Theme.rowPaddingH)
                         .padding(.top, 4)
                         .padding(.bottom, Theme.rowPaddingV)

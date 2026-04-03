@@ -4,16 +4,24 @@ import SwiftUI
 struct AboutView: View {
     @Environment(\.openURL) var openURL
 
-    let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
+    private let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
+    private let appIcon = NSImage(named: "AppIcon")
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
 
             VStack(spacing: 14) {
-                Image(nsImage: NSImage(named: "AppIcon")!)
-                    .resizable()
-                    .frame(width: 64, height: 64)
+                if let appIcon {
+                    Image(nsImage: appIcon)
+                        .resizable()
+                        .frame(width: 64, height: 64)
+                } else {
+                    Image(systemName: "app.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 64, height: 64)
+                }
 
                 VStack(spacing: 4) {
                     Text("PR Harbor")
@@ -62,7 +70,8 @@ struct AboutView: View {
 
     private func aboutPill(icon: String, text: String, url: String) -> some View {
         Button {
-            openURL(URL(string: url)!)
+            guard let url = URL(string: url) else { return }
+            openURL(url)
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: icon)

@@ -34,7 +34,8 @@ struct KeychainStorage: DynamicProperty {
 @MainActor
 private class ObservableString: ObservableObject {
     let key: KeychainAccessKey
-    var currentValue: String? = nil
+    private var currentValue = ""
+    private var hasLoadedValue = false
 
     init(_ key: KeychainAccessKey) {
         self.key = key
@@ -42,14 +43,16 @@ private class ObservableString: ObservableObject {
 
     var value: String {
         get {
-            if currentValue == nil {
-                currentValue = try? appKeychain.get(key.keyName) ?? ""
+            if !hasLoadedValue {
+                currentValue = (try? appKeychain.get(key.keyName)) ?? ""
+                hasLoadedValue = true
             }
-            return currentValue!
+            return currentValue
         }
         set {
             objectWillChange.send()
             currentValue = newValue
+            hasLoadedValue = true
             do {
                 if newValue.isEmpty {
                     try appKeychain.remove(key.keyName)

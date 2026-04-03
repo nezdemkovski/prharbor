@@ -3,7 +3,7 @@ import Foundation
 import Defaults
 
 @MainActor
-class PullRequestStore: ObservableObject {
+final class PullRequestStore: ObservableObject {
 
     @Published var assignedPulls: [Edge] = []
     @Published var createdPulls: [Edge] = []
@@ -17,10 +17,12 @@ class PullRequestStore: ObservableObject {
     private let ghClient = GitHubClient()
     private var countdownTimer: Timer?
     private var refreshTimer: Timer?
+    private var refreshTask: Task<Void, Never>?
     private var refreshRateObservation: Defaults.Observation?
     private var counterTypeObservation: Defaults.Observation?
     private var settingsObservations: [Defaults.Observation] = []
     private var hasLoadedOnce = false
+    private var refreshGeneration = 0
 
     private var knownReviewRequestedURLs: Set<String> = []
     private var knownAssignedURLs: Set<String> = []
@@ -51,9 +53,13 @@ class PullRequestStore: ObservableObject {
     }
 
     func clear() {
+        refreshTask?.cancel()
+        refreshTask = nil
+        refreshGeneration += 1
         assignedPulls = []
         createdPulls = []
         reviewRequestedPulls = []
+        isLoading = false
         error = nil
         minutesUntilRefresh = 0
         hasLoadedOnce = false
@@ -61,17 +67,19 @@ class PullRequestStore: ObservableObject {
         knownAssignedURLs = []
         knownCreatedURLs = []
         countdownTimer?.invalidate()
+        countdownTimer = nil
     }
     private func startAutoRefresh() {
         refreshTimer?.invalidate()
         let interval = Double(Defaults[.refreshRate] * 60)
-        refreshTimer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.refresh()
             }
         }
-        RunLoop.main.add(refreshTimer!, forMode: .common)
-        refreshTimer?.fire()
+        refreshTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
+        timer.fire()
     }
 
     private func observeRefreshRate() {
@@ -109,61 +117,62 @@ class PullRequestStore: ObservableObject {
     }
 
     func refresh() {
-        guard isConfigured else { return }
+        guard isConfigured else {
+            refreshTask?.cancel()
+            refreshTask = nil
+            countdownTimer?.invalidate()
+            countdownTimer = nil
+            minutesUntilRefresh = 0
+            isLoading = false
+            error = nil
+            return
+        }
 
+        refreshTask?.cancel()
+        refreshGeneration += 1
+        let generation = refreshGeneration
         CICheck.clearCache()
         isLoading = true
         error = nil
         let username = Defaults[.githubUsername]
+        let showAssigned = Defaults[.showAssigned]
+        let showCreated = Defaults[.showCreated]
+        let showRequested = Defaults[.showRequested]
+        let hideDrafts = Defaults[.hideDrafts]
 
-        Task {
+        refreshTask = Task { [weak self] in
+            guard let self else { return }
             do {
-                async let assigned = Defaults[.showAssigned]
-                    ? ghClient.fetchPulls(filter: "assignee:\(username)")
+                async let assigned = showAssigned
+                    ? self.ghClient.fetchPulls(filter: "assignee:\(username)")
                     : []
-                async let created = Defaults[.showCreated]
-                    ? ghClient.fetchPulls(filter: "author:\(username)")
+                async let created = showCreated
+                    ? self.ghClient.fetchPulls(filter: "author:\(username)")
                     : []
-                async let requested = Defaults[.showRequested]
-                    ? ghClient.fetchPulls(filter: "review-requested:\(username)")
+                async let requested = showRequested
+                    ? self.ghClient.fetchPulls(filter: "review-requested:\(username)")
                     : []
 
                 var (a, c, r) = try await (assigned, created, requested)
+                try Task.checkCancellation()
 
-                if Defaults[.hideDrafts] {
+                if hideDrafts {
                     a = a.filter { !$0.node.isDraft }
                     c = c.filter { !$0.node.isDraft }
                     r = r.filter { !$0.node.isDraft }
                 }
 
-                if hasLoadedOnce {
-                    let newRequested = findNewPulls(in: r, knownURLs: knownReviewRequestedURLs)
-                    let newAssigned = findNewPulls(in: a, knownURLs: knownAssignedURLs)
-                    let newCreated = findNewPulls(in: c, knownURLs: knownCreatedURLs)
-
-                    sendPRNotifications(
-                        newReviewRequested: newRequested,
-                        newAssigned: newAssigned,
-                        newCreated: newCreated
-                    )
-                }
-
-                assignedPulls = a
-                createdPulls = c
-                reviewRequestedPulls = r
-                hasLoadedOnce = true
-
-                knownAssignedURLs = Set(a.map { $0.node.url.absoluteString })
-                knownCreatedURLs = Set(c.map { $0.node.url.absoluteString })
-                knownReviewRequestedURLs = Set(r.map { $0.node.url.absoluteString })
-
-                startCountdown()
-                prefetchAvatars(a + c + r)
+                self.finishRefresh(
+                    generation: generation,
+                    assigned: a,
+                    created: c,
+                    requested: r
+                )
+            } catch is CancellationError {
+                self.finishCancelledRefresh(generation: generation)
             } catch {
-                self.error = error.localizedDescription
+                self.finishFailedRefresh(error, generation: generation)
             }
-
-            isLoading = false
         }
     }
 
@@ -183,5 +192,53 @@ class PullRequestStore: ObservableObject {
                 self.minutesUntilRefresh = max(0, self.minutesUntilRefresh - 1)
             }
         }
+    }
+
+    private func finishRefresh(
+        generation: Int,
+        assigned: [Edge],
+        created: [Edge],
+        requested: [Edge]
+    ) {
+        guard generation == refreshGeneration else { return }
+
+        if hasLoadedOnce {
+            let newRequested = findNewPulls(in: requested, knownURLs: knownReviewRequestedURLs)
+            let newAssigned = findNewPulls(in: assigned, knownURLs: knownAssignedURLs)
+            let newCreated = findNewPulls(in: created, knownURLs: knownCreatedURLs)
+
+            sendPRNotifications(
+                newReviewRequested: newRequested,
+                newAssigned: newAssigned,
+                newCreated: newCreated
+            )
+        }
+
+        assignedPulls = assigned
+        createdPulls = created
+        reviewRequestedPulls = requested
+        hasLoadedOnce = true
+
+        knownAssignedURLs = Set(assigned.map { $0.node.url.absoluteString })
+        knownCreatedURLs = Set(created.map { $0.node.url.absoluteString })
+        knownReviewRequestedURLs = Set(requested.map { $0.node.url.absoluteString })
+
+        startCountdown()
+        prefetchAvatars(assigned + created + requested)
+        isLoading = false
+        refreshTask = nil
+    }
+
+    private func finishFailedRefresh(_ error: Error, generation: Int) {
+        guard generation == refreshGeneration else { return }
+        self.error = error.localizedDescription
+        isLoading = false
+        refreshTask = nil
+    }
+
+    private func finishCancelledRefresh(generation: Int) {
+        guard generation == refreshGeneration else { return }
+        isLoading = false
+        refreshTask = nil
     }
 }

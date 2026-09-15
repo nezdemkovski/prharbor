@@ -41,6 +41,18 @@ Grab the latest `.dmg` from [GitHub Releases](https://github.com/nezdemkovski/pr
 2. Click **Sign in with GitHub** (OAuth) or paste a [Personal Access Token](https://github.com/settings/tokens/new?scopes=repo) with `repo` scope
 3. Done
 
+## Development
+
+- Xcode 27 or newer
+- Swift 6.4 compiler in Swift 6 language mode, with Approachable Concurrency and complete concurrency checking
+- macOS 27 deployment target
+
+Build from the command line:
+
+```sh
+xcodebuild -project PRHarbor.xcodeproj -scheme PRHarbor -destination 'platform=macOS' build
+```
+
 ## Author
 
 Made by [Yuri Nezdemkovski](https://nezdemkovski.com)

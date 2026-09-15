@@ -1,14 +1,13 @@
 
 import SwiftUI
 import Defaults
-import KeychainAccess
 import LaunchAtLogin
 
 struct PanelSettingsView: View {
     @ObservedObject var store: PullRequestStore
 
     @StateObject private var deviceFlowAuth = GitHubDeviceFlowAuth()
-    @StateObject private var githubTokenValidator = GithubTokenValidator()
+    @StateObject private var githubTokenValidator = GitHubTokenValidator()
 
     var body: some View {
         ScrollView {
@@ -27,12 +26,12 @@ struct PanelSettingsView: View {
             .padding(.horizontal, Theme.settingsPaddingH)
             .padding(.vertical, Theme.settingsPaddingV)
         }
-        .onChange(of: deviceFlowAuth.state) { newState in
+        .onChange(of: deviceFlowAuth.state) { _, newState in
             if case .success = newState {
                 store.refresh()
             }
         }
-        .onChange(of: githubTokenValidator.iconName) { newName in
+        .onChange(of: githubTokenValidator.iconName) { _, newName in
             if newName == "checkmark.circle.fill" {
                 store.refresh()
             }
@@ -42,7 +41,7 @@ struct PanelSettingsView: View {
 private struct AccountCard: View {
     @ObservedObject var store: PullRequestStore
     @ObservedObject var deviceFlowAuth: GitHubDeviceFlowAuth
-    @ObservedObject var githubTokenValidator: GithubTokenValidator
+    @ObservedObject var githubTokenValidator: GitHubTokenValidator
 
     @Default(.githubApiBaseUrl) var githubApiBaseUrl
     @Default(.githubUsername) var githubUsername
@@ -166,7 +165,7 @@ private struct DeviceFlowSection: View {
 private struct TokenSection: View {
     @Binding var githubApiBaseUrl: String
     @Binding var githubToken: String
-    @ObservedObject var validator: GithubTokenValidator
+    @ObservedObject var validator: GitHubTokenValidator
 
     var body: some View {
         SettingsHint("Or use a Personal Access Token")

@@ -1,7 +1,7 @@
 import SwiftUI
 
 
-struct PRDisplayConfig: Equatable {
+nonisolated struct PRDisplayConfig: Equatable, Sendable {
     let showAvatar: Bool
     let showLabels: Bool
     let showUnreadDot: Bool
@@ -92,7 +92,7 @@ struct PRRowView: View, Equatable {
                         Text(pull.author?.login ?? "ghost")
                             .foregroundStyle(.tertiary)
                         Text("  ")
-                        Text(pull.createdAt.getElapsedInterval())
+                        Text(pull.createdAt.relativeDescription())
                             .foregroundStyle(.tertiary)
 
                         Spacer(minLength: 4)
@@ -223,7 +223,7 @@ private struct PRInfoColumn: View {
         VStack(alignment: .leading, spacing: 5) {
             CopyableRow(icon: "arrow.triangle.branch", label: pull.headRefName, value: pull.headRefName)
             CopyableRow(icon: "link", label: "\(pull.repository.name) #\(pull.number)", value: pull.url.absoluteString)
-            InfoRow(icon: "clock", label: "Updated \(pull.updatedAt.getElapsedInterval())")
+            InfoRow(icon: "clock", label: "Updated \(pull.updatedAt.relativeDescription())")
 
             if let add = pull.additions, let del = pull.deletions {
                 HStack(spacing: 4) {

@@ -33,10 +33,10 @@ extension Defaults.Keys {
 }
 
 extension KeychainKeys {
-    static let githubToken: KeychainAccessKey = KeychainAccessKey(key: "githubToken")
+    static let githubToken = KeychainKey("githubToken")
 }
 
-struct PRFeature: Codable, Defaults.Serializable, Identifiable, Equatable {
+nonisolated struct PRFeature: Codable, Defaults.Serializable, Identifiable, Equatable, Sendable {
     let id: UUID
     var name: String
     var prURLs: [String]
@@ -48,7 +48,7 @@ struct PRFeature: Codable, Defaults.Serializable, Identifiable, Equatable {
     }
 }
 
-enum SortOrder: String, Defaults.Serializable, CaseIterable, Identifiable {
+nonisolated enum SortOrder: String, Defaults.Serializable, CaseIterable, Identifiable, Sendable {
     case updatedNewest
     case updatedOldest
     case createdNewest
@@ -66,7 +66,7 @@ enum SortOrder: String, Defaults.Serializable, CaseIterable, Identifiable {
     }
 }
 
-enum BuildType: String, Defaults.Serializable, CaseIterable, Identifiable {
+nonisolated enum BuildType: String, Defaults.Serializable, CaseIterable, Identifiable, Sendable {
     case checks
     case commitStatus
     case none
@@ -85,7 +85,7 @@ enum BuildType: String, Defaults.Serializable, CaseIterable, Identifiable {
     }
 }
 
-enum CounterType: String, Defaults.Serializable, CaseIterable, Identifiable {
+nonisolated enum CounterType: String, Defaults.Serializable, CaseIterable, Identifiable, Sendable {
     case assigned
     case created
     case reviewRequested

@@ -1,82 +1,83 @@
-
 import Foundation
-import Defaults
-import KeychainAccess
 
-@MainActor
-struct GitHubClient {
+nonisolated struct GitHubClient: Sendable {
+    let token: String
+    let baseURL: URL
+    let buildType: BuildType
 
-    @FromKeychain(.githubToken) var githubToken
-    func fetchPulls(filter: String) async throws -> [Edge] {
-        guard Defaults[.githubUsername] != "", githubToken != "" else {
-            return []
+    init(token: String, baseURL: String, buildType: BuildType) throws {
+        guard let url = URL(string: baseURL),
+              let scheme = url.scheme,
+              ["http", "https"].contains(scheme),
+              url.host != nil else {
+            throw URLError(.badURL)
         }
 
-        let queryString = "is:open is:pr \(filter) archived:false"
-        let graphQlQuery = buildGraphQlQuery(queryString: queryString)
-        let token = githubToken
-        let baseUrl = Defaults[.githubApiBaseUrl]
+        self.token = token
+        self.baseURL = url
+        self.buildType = buildType
+    }
 
-        let response: GraphQlSearchResp = try await Self.postGraphQL(query: graphQlQuery, token: token, baseUrl: baseUrl)
+    func fetchPulls(filter: String) async throws -> [Edge] {
+        guard !token.isEmpty else { return [] }
+
+        let queryString = "is:open is:pr \(filter) archived:false"
+        let graphQLQuery = buildGraphQLQuery(queryString: queryString)
+        let response: GraphQLSearchResponse = try await postGraphQL(query: graphQLQuery)
         return response.data.search.edges
     }
 
     func fetchUser() async throws -> User {
-        let token = githubToken
-        let baseUrl = Defaults[.githubApiBaseUrl]
-
-        guard let url = URL(string: baseUrl + "/user") else {
-            throw URLError(.badURL)
-        }
-
-        return try await Self.performRequest(
-            url: url,
-            token: token,
+        try await performRequest(
+            url: endpoint("user"),
             cachePolicy: .reloadIgnoringLocalCacheData
         )
     }
-    private static func performRequest<T: Decodable>(
+
+    private func performRequest<T: Decodable>(
         url: URL,
-        token: String,
-        cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy,
-        decoder: JSONDecoder = JSONDecoder()
+        cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
     ) async throws -> T {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.cachePolicy = cachePolicy
 
         let (data, response) = try await URLSession.shared.data(for: request)
-        try validateResponse(response)
-        return try decoder.decode(T.self, from: data)
+        try Self.validateResponse(response)
+        return try JSONDecoder().decode(T.self, from: data)
     }
 
-    private static func postGraphQL<T: Decodable>(query: String, token: String, baseUrl: String) async throws -> T {
-        guard let url = URL(string: baseUrl + "/graphql") else {
-            throw URLError(.badURL)
-        }
-        var request = URLRequest(url: url)
+    private func postGraphQL<T: Decodable>(query: String) async throws -> T {
+        var request = URLRequest(url: graphQLURL)
         request.httpMethod = "POST"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-
-        let body: [String: Any] = ["query": query, "variables": [String: String]()]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(GraphQLRequest(query: query))
 
         let (data, response) = try await URLSession.shared.data(for: request)
-        try validateResponse(response)
-        do {
-            return try GithubDecoder().decode(T.self, from: data)
-        } catch {
-            print("GraphQL decode error: \(error)")
-            if let json = String(data: data, encoding: .utf8) {
-                print("GraphQL response: \(json.prefix(500))")
-            }
-            throw error
+        try Self.validateResponse(response)
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode(T.self, from: data)
+    }
+
+    private func endpoint(_ path: String) -> URL {
+        baseURL.appendingPathComponent(path)
+    }
+
+    private var graphQLURL: URL {
+        let normalizedPath = baseURL.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard normalizedPath.hasSuffix("api/v3") else {
+            return endpoint("graphql")
         }
+
+        return baseURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("graphql")
     }
 
     private static func validateResponse(_ response: URLResponse) throws {
@@ -89,15 +90,15 @@ struct GitHubClient {
         }
     }
 
-    private func buildGraphQlQuery(queryString: String) -> String {
+    private func buildGraphQLQuery(queryString: String) -> String {
         let escapedQuery = queryString
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
-        var build = ""
+        let buildFields: String
 
-        switch Defaults[.buildType] {
+        switch buildType {
         case .checks:
-            build = """
+            buildFields = """
         commits(last: 1) {
             nodes {
                 commit {
@@ -121,20 +122,19 @@ struct GitHubClient {
         }
         """
         case .commitStatus:
-            build = """
+            buildFields = """
         commits(last: 1) {
             nodes {
                 commit {
                     statusCheckRollup {
                         state
-                        contexts (first: 20) {
+                        contexts(first: 20) {
                             nodes {
                                 ... on StatusContext {
                                     context
                                     description
                                     state
                                     targetUrl
-                                    description
                                 }
                                 ... on CheckRun {
                                     name
@@ -149,8 +149,8 @@ struct GitHubClient {
             }
         }
         """
-        default:
-            build = ""
+        case .none:
+            buildFields = ""
         }
 
         return """
@@ -179,12 +179,12 @@ struct GitHubClient {
                             repository {
                                 name
                             }
-                             labels(first: 5) {
+                            labels(first: 5) {
                                 nodes {
-                                  name
-                                  color
+                                    name
+                                    color
                                 }
-                              }
+                            }
                             reviews(states: APPROVED, first: 10) {
                                 totalCount
                                 edges {
@@ -195,7 +195,7 @@ struct GitHubClient {
                                     }
                                 }
                             }
-                            \(build)
+                            \(buildFields)
                         }
                     }
                 }
@@ -205,9 +205,7 @@ struct GitHubClient {
     }
 }
 
-final class GithubDecoder: JSONDecoder, @unchecked Sendable {
-    override init() {
-        super.init()
-        dateDecodingStrategy = .iso8601
-    }
+private nonisolated struct GraphQLRequest: Encodable {
+    let query: String
+    let variables: [String: String] = [:]
 }

@@ -1,33 +1,38 @@
-
-import SwiftUI
+import Combine
 import Defaults
+import SwiftUI
 
 @MainActor
-class GithubTokenValidator: ObservableObject {
-
-    @Published var iconName: String = "clock.fill"
-    @Published var iconColor: Color = Color(.systemGray)
+final class GitHubTokenValidator: ObservableObject {
+    @Published var iconName = "clock.fill"
+    @Published var iconColor = Color(.systemGray)
+    @FromKeychain(.githubToken) private var githubToken
 
     func setLoading() {
-        self.iconName = "clock.fill"
-        self.iconColor = Color(.systemGray)
+        iconName = "clock.fill"
+        iconColor = Color(.systemGray)
     }
 
     func setInvalid() {
-        self.iconName = "exclamationmark.circle.fill"
-        self.iconColor = Color(.systemRed)
+        iconName = "exclamationmark.circle.fill"
+        iconColor = Color(.systemRed)
     }
 
     func setValid() {
-        self.iconName = "checkmark.circle.fill"
-        self.iconColor = Color(.systemGreen)
+        iconName = "checkmark.circle.fill"
+        iconColor = Color(.systemGreen)
     }
 
     func validate() {
         setLoading()
         Task {
             do {
-                let user = try await GitHubClient().fetchUser()
+                let client = try GitHubClient(
+                    token: githubToken,
+                    baseURL: Defaults[.githubApiBaseUrl],
+                    buildType: Defaults[.buildType]
+                )
+                let user = try await client.fetchUser()
                 Defaults[.githubUsername] = user.login
                 setValid()
             } catch {

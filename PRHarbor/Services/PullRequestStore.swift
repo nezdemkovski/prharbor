@@ -1,4 +1,5 @@
 
+import Combine
 import Foundation
 import Defaults
 
@@ -14,7 +15,6 @@ final class PullRequestStore: ObservableObject {
 
     @FromKeychain(.githubToken) private var githubToken
 
-    private let ghClient = GitHubClient()
     private var countdownTimer: Timer?
     private var refreshTimer: Timer?
     private var refreshTask: Task<Void, Never>?
@@ -139,18 +139,31 @@ final class PullRequestStore: ObservableObject {
         let showCreated = Defaults[.showCreated]
         let showRequested = Defaults[.showRequested]
         let hideDrafts = Defaults[.hideDrafts]
+        let client: GitHubClient
+
+        do {
+            client = try GitHubClient(
+                token: githubToken,
+                baseURL: Defaults[.githubApiBaseUrl],
+                buildType: Defaults[.buildType]
+            )
+        } catch {
+            self.error = error.localizedDescription
+            isLoading = false
+            return
+        }
 
         refreshTask = Task { [weak self] in
             guard let self else { return }
             do {
                 async let assigned = showAssigned
-                    ? self.ghClient.fetchPulls(filter: "assignee:\(username)")
+                    ? client.fetchPulls(filter: "assignee:\(username)")
                     : []
                 async let created = showCreated
-                    ? self.ghClient.fetchPulls(filter: "author:\(username)")
+                    ? client.fetchPulls(filter: "author:\(username)")
                     : []
                 async let requested = showRequested
-                    ? self.ghClient.fetchPulls(filter: "review-requested:\(username)")
+                    ? client.fetchPulls(filter: "review-requested:\(username)")
                     : []
 
                 var (a, c, r) = try await (assigned, created, requested)

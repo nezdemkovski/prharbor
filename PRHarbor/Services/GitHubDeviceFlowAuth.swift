@@ -1,4 +1,5 @@
 
+import Combine
 import Foundation
 import SwiftUI
 import Defaults
@@ -86,7 +87,11 @@ final class GitHubDeviceFlowAuth: ObservableObject {
                 if let token = response.accessToken {
                     self.githubToken = token
 
-                    if let user = try? await GitHubClient().fetchUser() {
+                    if let client = try? GitHubClient(
+                        token: token,
+                        baseURL: baseUrl,
+                        buildType: Defaults[.buildType]
+                    ), let user = try? await client.fetchUser() {
                         Defaults[.githubUsername] = user.login
                     }
 

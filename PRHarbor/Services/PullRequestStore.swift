@@ -3,6 +3,33 @@ import Combine
 import Foundation
 import Defaults
 
+nonisolated struct PullRefreshTracker: Sendable {
+    private var knownURLs: Set<String> = []
+    private var wasFetched = false
+
+    mutating func update(edges: [Edge], fetched: Bool, canNotify: Bool) -> [Pull] {
+        let newPulls: [Pull]
+        if canNotify && fetched && wasFetched {
+            newPulls = edges
+                .filter { !knownURLs.contains($0.node.url.absoluteString) }
+                .map(\.node)
+        } else {
+            newPulls = []
+        }
+
+        if fetched {
+            knownURLs = Set(edges.map { $0.node.url.absoluteString })
+        }
+        wasFetched = fetched
+        return newPulls
+    }
+
+    mutating func reset() {
+        knownURLs = []
+        wasFetched = false
+    }
+}
+
 @MainActor
 final class PullRequestStore: ObservableObject {
 
@@ -24,9 +51,9 @@ final class PullRequestStore: ObservableObject {
     private var hasLoadedOnce = false
     private var refreshGeneration = 0
 
-    private var knownReviewRequestedURLs: Set<String> = []
-    private var knownAssignedURLs: Set<String> = []
-    private var knownCreatedURLs: Set<String> = []
+    private var reviewRequestedTracker = PullRefreshTracker()
+    private var assignedTracker = PullRefreshTracker()
+    private var createdTracker = PullRefreshTracker()
 
     init() {
         startAutoRefresh()
@@ -63,9 +90,9 @@ final class PullRequestStore: ObservableObject {
         error = nil
         minutesUntilRefresh = 0
         hasLoadedOnce = false
-        knownReviewRequestedURLs = []
-        knownAssignedURLs = []
-        knownCreatedURLs = []
+        reviewRequestedTracker.reset()
+        assignedTracker.reset()
+        createdTracker.reset()
         countdownTimer?.invalidate()
         countdownTimer = nil
     }
@@ -95,6 +122,7 @@ final class PullRequestStore: ObservableObject {
         counterTypeObservation = Defaults.observe(.counterType) { [weak self] _ in
             Task { @MainActor in
                 self?.objectWillChange.send()
+                self?.refresh()
             }
         }
     }
@@ -112,8 +140,12 @@ final class PullRequestStore: ObservableObject {
         watch(.showAssigned)
         watch(.showCreated)
         watch(.showRequested)
+        watch(.showFeatures)
         watch(.buildType)
         watch(.hideDrafts)
+        watch(.notifyReviewRequested)
+        watch(.notifyAssigned)
+        watch(.notifyCreated)
     }
 
     func refresh() {
@@ -131,13 +163,26 @@ final class PullRequestStore: ObservableObject {
         refreshTask?.cancel()
         refreshGeneration += 1
         let generation = refreshGeneration
-        CICheck.clearCache()
         isLoading = true
         error = nil
         let username = Defaults[.githubUsername]
         let showAssigned = Defaults[.showAssigned]
         let showCreated = Defaults[.showCreated]
         let showRequested = Defaults[.showRequested]
+        let showFeatures = Defaults[.showFeatures]
+        let counterType = Defaults[.counterType]
+        let fetchAssigned = showAssigned
+            || showFeatures
+            || Defaults[.notifyAssigned]
+            || counterType == .assigned
+        let fetchCreated = showCreated
+            || showFeatures
+            || Defaults[.notifyCreated]
+            || counterType == .created
+        let fetchRequested = showRequested
+            || showFeatures
+            || Defaults[.notifyReviewRequested]
+            || counterType == .reviewRequested
         let hideDrafts = Defaults[.hideDrafts]
         let client: GitHubClient
 
@@ -156,13 +201,13 @@ final class PullRequestStore: ObservableObject {
         refreshTask = Task { [weak self] in
             guard let self else { return }
             do {
-                async let assigned = showAssigned
+                async let assigned = fetchAssigned
                     ? client.fetchPulls(filter: "assignee:\(username)")
                     : []
-                async let created = showCreated
+                async let created = fetchCreated
                     ? client.fetchPulls(filter: "author:\(username)")
                     : []
-                async let requested = showRequested
+                async let requested = fetchRequested
                     ? client.fetchPulls(filter: "review-requested:\(username)")
                     : []
 
@@ -179,7 +224,10 @@ final class PullRequestStore: ObservableObject {
                     generation: generation,
                     assigned: a,
                     created: c,
-                    requested: r
+                    requested: r,
+                    fetchedAssigned: fetchAssigned,
+                    fetchedCreated: fetchCreated,
+                    fetchedRequested: fetchRequested
                 )
             } catch is CancellationError {
                 self.finishCancelledRefresh(generation: generation)
@@ -187,12 +235,6 @@ final class PullRequestStore: ObservableObject {
                 self.finishFailedRefresh(error, generation: generation)
             }
         }
-    }
-
-    private func findNewPulls(in edges: [Edge], knownURLs: Set<String>) -> [Pull] {
-        edges
-            .filter { !knownURLs.contains($0.node.url.absoluteString) }
-            .map { $0.node }
     }
 
     private func startCountdown() {
@@ -211,15 +253,30 @@ final class PullRequestStore: ObservableObject {
         generation: Int,
         assigned: [Edge],
         created: [Edge],
-        requested: [Edge]
+        requested: [Edge],
+        fetchedAssigned: Bool,
+        fetchedCreated: Bool,
+        fetchedRequested: Bool
     ) {
         guard generation == refreshGeneration else { return }
 
-        if hasLoadedOnce {
-            let newRequested = findNewPulls(in: requested, knownURLs: knownReviewRequestedURLs)
-            let newAssigned = findNewPulls(in: assigned, knownURLs: knownAssignedURLs)
-            let newCreated = findNewPulls(in: created, knownURLs: knownCreatedURLs)
+        let newRequested = reviewRequestedTracker.update(
+            edges: requested,
+            fetched: fetchedRequested,
+            canNotify: hasLoadedOnce
+        )
+        let newAssigned = assignedTracker.update(
+            edges: assigned,
+            fetched: fetchedAssigned,
+            canNotify: hasLoadedOnce
+        )
+        let newCreated = createdTracker.update(
+            edges: created,
+            fetched: fetchedCreated,
+            canNotify: hasLoadedOnce
+        )
 
+        if hasLoadedOnce {
             sendPRNotifications(
                 newReviewRequested: newRequested,
                 newAssigned: newAssigned,
@@ -231,10 +288,6 @@ final class PullRequestStore: ObservableObject {
         createdPulls = created
         reviewRequestedPulls = requested
         hasLoadedOnce = true
-
-        knownAssignedURLs = Set(assigned.map { $0.node.url.absoluteString })
-        knownCreatedURLs = Set(created.map { $0.node.url.absoluteString })
-        knownReviewRequestedURLs = Set(requested.map { $0.node.url.absoluteString })
 
         startCountdown()
         prefetchAvatars(assigned + created + requested)

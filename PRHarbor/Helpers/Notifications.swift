@@ -64,7 +64,7 @@ func sendPRNotifications(
 private func sendPRNotification(title: String, pr: Pull, category: String) {
     let content = UNMutableNotificationContent()
     content.title = title
-    content.subtitle = "\(pr.repository.name) #\(pr.number)"
+    content.subtitle = "\(pr.repository.nameWithOwner) #\(pr.number)"
     content.body = pr.title
     content.sound = .default
     content.userInfo = ["url": pr.url.absoluteString]

@@ -12,6 +12,12 @@ nonisolated struct ResponseData: Codable, Sendable {
 nonisolated struct Search: Codable, Sendable {
     var edges: [Edge]
     var issueCount: Int
+    var pageInfo: PageInfo
+}
+
+nonisolated struct PageInfo: Codable, Sendable {
+    var hasNextPage: Bool
+    var endCursor: String?
 }
 
 nonisolated struct Edge: Codable, Sendable, Equatable {
@@ -63,6 +69,7 @@ nonisolated struct User: Codable, Sendable, Equatable {
 
 nonisolated struct Repository: Codable, Sendable, Equatable {
     var name: String
+    var nameWithOwner: String
 }
 
 nonisolated struct CommitsNodes: Codable, Sendable, Equatable {

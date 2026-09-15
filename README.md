@@ -53,6 +53,12 @@ Build from the command line:
 xcodebuild -project PRHarbor.xcodeproj -scheme PRHarbor -destination 'platform=macOS' build
 ```
 
+Run the Swift Testing suite:
+
+```sh
+xcodebuild test -project PRHarbor.xcodeproj -scheme PRHarbor -destination 'platform=macOS'
+```
+
 ## Author
 
 Made by [Yuri Nezdemkovski](https://nezdemkovski.com)

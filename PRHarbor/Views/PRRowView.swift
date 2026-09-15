@@ -86,7 +86,7 @@ struct PRRowView: View, Equatable {
                     }
 
                     HStack(spacing: 0) {
-                        Text(pull.repository.name)
+                        Text(pull.repository.nameWithOwner)
                             .fontWeight(.medium)
                         Text("  ")
                         Text(pull.author?.login ?? "ghost")
@@ -222,7 +222,7 @@ private struct PRInfoColumn: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             CopyableRow(icon: "arrow.triangle.branch", label: pull.headRefName, value: pull.headRefName)
-            CopyableRow(icon: "link", label: "\(pull.repository.name) #\(pull.number)", value: pull.url.absoluteString)
+            CopyableRow(icon: "link", label: "\(pull.repository.nameWithOwner) #\(pull.number)", value: pull.url.absoluteString)
             InfoRow(icon: "clock", label: "Updated \(pull.updatedAt.relativeDescription())")
 
             if let add = pull.additions, let del = pull.deletions {
@@ -335,7 +335,7 @@ private struct CopyableRow: View {
     }
 }
 
-struct CICheck: Identifiable {
+nonisolated struct CICheck: Identifiable, Equatable, Sendable {
     let name: String
     let status: String
     let url: URL?
@@ -343,14 +343,7 @@ struct CICheck: Identifiable {
 
     var id: String { "\(name)-\(status)-\(index)" }
 
-    nonisolated(unsafe) private static var cache: [String: [CICheck]] = [:]
-
     static func from(commits: CommitsNodes) -> [CICheck] {
-        let key = commits.nodes.first?.commit.checkSuites?.nodes.first?.checkRuns.nodes.first?.name
-            ?? commits.nodes.first?.commit.statusCheckRollup?.state
-            ?? "empty"
-        if let cached = cache[key] { return cached }
-
         var result: [CICheck] = []
         if let suites = commits.nodes.first?.commit.checkSuites {
             for suite in suites.nodes {
@@ -366,12 +359,8 @@ struct CICheck: Identifiable {
                 result.append(CICheck(name: name, status: status, url: url, index: result.count))
             }
         }
-
-        cache[key] = result
         return result
     }
-
-    static func clearCache() { cache.removeAll() }
 }
 
 struct CIDetailView: View {
@@ -421,12 +410,32 @@ struct CIDetailView: View {
     }
 }
 
+nonisolated enum CIStatusKind: Equatable, Sendable {
+    case success
+    case failure
+    case pending
+    case neutral
+}
+
+nonisolated func ciStatusKind(_ status: String) -> CIStatusKind {
+    switch status.uppercased() {
+    case "SUCCESS":
+        .success
+    case "ERROR", "FAILURE", "CANCELLED", "STALE", "STARTUP_FAILURE", "TIMED_OUT":
+        .failure
+    case "EXPECTED", "PENDING", "QUEUED", "IN_PROGRESS", "WAITING", "ACTION_REQUIRED":
+        .pending
+    default:
+        .neutral
+    }
+}
+
 private func ciStatusColor(_ status: String) -> Color {
-    switch status {
-    case "SUCCESS": Theme.success
-    case "FAILURE": Theme.failure
-    case "PENDING", "ACTION_REQUIRED": Theme.pending
-    default: Theme.neutral
+    switch ciStatusKind(status) {
+    case .success: Theme.success
+    case .failure: Theme.failure
+    case .pending: Theme.pending
+    case .neutral: Theme.neutral
     }
 }
 

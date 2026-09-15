@@ -7,6 +7,8 @@ final class GitHubTokenValidator: ObservableObject {
     @Published var iconName = "clock.fill"
     @Published var iconColor = Color(.systemGray)
     @FromKeychain(.githubToken) private var githubToken
+    private var validationTask: Task<Void, Never>?
+    private var validationGeneration = 0
 
     func setLoading() {
         iconName = "clock.fill"
@@ -24,18 +26,33 @@ final class GitHubTokenValidator: ObservableObject {
     }
 
     func validate() {
+        validationTask?.cancel()
+        validationGeneration += 1
+        let generation = validationGeneration
+        let token = githubToken
+        let baseURL = Defaults[.githubApiBaseUrl]
+        let buildType = Defaults[.buildType]
         setLoading()
-        Task {
+
+        validationTask = Task { [weak self] in
+            guard let self else { return }
             do {
                 let client = try GitHubClient(
-                    token: githubToken,
-                    baseURL: Defaults[.githubApiBaseUrl],
-                    buildType: Defaults[.buildType]
+                    token: token,
+                    baseURL: baseURL,
+                    buildType: buildType
                 )
                 let user = try await client.fetchUser()
+                try Task.checkCancellation()
+                guard generation == validationGeneration else { return }
                 Defaults[.githubUsername] = user.login
+                validationTask = nil
                 setValid()
+            } catch is CancellationError {
+                return
             } catch {
+                guard generation == validationGeneration, !Task.isCancelled else { return }
+                validationTask = nil
                 setInvalid()
             }
         }

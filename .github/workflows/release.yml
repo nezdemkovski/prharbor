@@ -15,12 +15,9 @@ permissions:
 
 jobs:
   build-and-release:
-    runs-on: macos-15
+    runs-on: xcode-27
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Select Xcode
-        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+      - uses: actions/checkout@v6
 
       - name: Get version from tag
         id: version
@@ -37,11 +34,22 @@ jobs:
           sed -i '' "s/MARKETING_VERSION = .*/MARKETING_VERSION = $VERSION;/" PRHarbor.xcodeproj/project.pbxproj
 
       - name: Resolve packages
-        run: xcodebuild -scheme $SCHEME -resolvePackageDependencies
+        run: xcodebuild -project PRHarbor.xcodeproj -scheme $SCHEME -resolvePackageDependencies
+
+      - name: Run tests
+        run: |
+          xcodebuild test \
+            -project PRHarbor.xcodeproj \
+            -scheme $SCHEME \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Build Release
         run: |
-          xcodebuild -scheme $SCHEME \
+          xcodebuild \
+            -project PRHarbor.xcodeproj \
+            -scheme $SCHEME \
             -configuration Release \
             -derivedDataPath build \
             CODE_SIGN_IDENTITY="-" \
@@ -58,7 +66,7 @@ jobs:
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: PR Harbor v${{ steps.version.outputs.version }}
           files: ${{ env.APP_NAME }}.dmg
@@ -108,7 +116,7 @@ jobs:
 
       - name: Upload artifact (for manual runs)
         if: "!startsWith(github.ref, 'refs/tags/')"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.APP_NAME }}.dmg
           path: ${{ env.APP_NAME }}.dmg

@@ -124,6 +124,11 @@ struct PanelView: View {
         }
         .frame(width: Theme.panelWidth, height: Theme.panelHeight)
         .background(Theme.panelMaterial)
+        .onChange(of: enabledTabs) { _, tabs in
+            guard !tabs.contains(selectedTab), let firstTab = tabs.first else { return }
+            selectedTab = firstTab
+            expandedPRUrl = nil
+        }
     }
     private var headerView: some View {
         VStack(spacing: 0) {
@@ -317,7 +322,20 @@ struct PanelView: View {
             tabContent
         }
     }
+    @ViewBuilder
     private var tabContent: some View {
+        if enabledTabs.isEmpty {
+            EmptyStateView(
+                icon: "rectangle.on.rectangle.slash",
+                title: "No tabs enabled",
+                subtitle: "Enable at least one tab in Settings"
+            )
+        } else {
+            enabledTabContent
+        }
+    }
+
+    private var enabledTabContent: some View {
         VStack(spacing: 0) {
             if let prUrl = addingToFeaturePR {
                 featurePickerBar(for: prUrl)

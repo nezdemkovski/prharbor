@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A10000000000000000000005 /* PRHarborTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* PRHarborTests.swift */; };
 		761B97072D7CCDA70000378A /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 761B97062D7CCDA70000378A /* LaunchAtLogin */; };
 		769F4E1B2765A2B900594911 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769F4E1A2765A2B900594911 /* AboutView.swift */; };
 		769F4E7B277B97B300594911 /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769F4E7A277B97B300594911 /* Notifications.swift */; };
@@ -33,7 +34,19 @@
 		FF000001FFFFFF0000000001 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000001FFFFFF0000000002 /* ThemeColors.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		A1000000000000000000000D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8CECBBD72742AAF800A2802D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8CECBBDE2742AAF800A2802D;
+			remoteInfo = PRHarbor;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		A10000000000000000000002 /* PRHarborTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PRHarborTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000004 /* PRHarborTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRHarborTests.swift; sourceTree = "<group>"; };
 		769F4E1A2765A2B900594911 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		769F4E7A277B97B300594911 /* Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifications.swift; sourceTree = "<group>"; };
 		76D5F9E528D28A29009EBD80 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
@@ -61,6 +74,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		A10000000000000000000007 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8CECBBDC2742AAF800A2802D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -84,6 +104,7 @@
 			isa = PBXGroup;
 			children = (
 				8CECBBE12742AAF800A2802D /* PRHarbor */,
+				A10000000000000000000003 /* PRHarborTests */,
 				8CECBBE02742AAF800A2802D /* Products */,
 				76C6AA592C98E809003472DA /* Frameworks */,
 			);
@@ -93,6 +114,7 @@
 			isa = PBXGroup;
 			children = (
 				8CECBBDF2742AAF800A2802D /* PRHarbor.app */,
+				A10000000000000000000002 /* PRHarborTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -167,9 +189,37 @@
 			path = Helpers;
 			sourceTree = "<group>";
 		};
+		A10000000000000000000003 /* PRHarborTests */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000004 /* PRHarborTests.swift */,
+			);
+			path = PRHarborTests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		A10000000000000000000001 /* PRHarborTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000009 /* Build configuration list for PBXNativeTarget "PRHarborTests" */;
+			buildPhases = (
+				A10000000000000000000006 /* Sources */,
+				A10000000000000000000007 /* Frameworks */,
+				A10000000000000000000008 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A1000000000000000000000C /* PBXTargetDependency */,
+			);
+			name = PRHarborTests;
+			packageProductDependencies = (
+			);
+			productName = PRHarborTests;
+			productReference = A10000000000000000000002 /* PRHarborTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		8CECBBDE2742AAF800A2802D /* PRHarbor */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 8CECBBEE2742AAFB00A2802D /* Build configuration list for PBXNativeTarget "PRHarbor" */;
@@ -198,9 +248,13 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1300;
-				LastUpgradeCheck = 2630;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
+					A10000000000000000000001 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 8CECBBDE2742AAF800A2802D;
+					};
 					8CECBBDE2742AAF800A2802D = {
 						CreatedOnToolsVersion = 13.0;
 					};
@@ -224,11 +278,19 @@
 			projectRoot = "";
 			targets = (
 				8CECBBDE2742AAF800A2802D /* PRHarbor */,
+				A10000000000000000000001 /* PRHarborTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		A10000000000000000000008 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8CECBBDD2742AAF800A2802D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -240,6 +302,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		A10000000000000000000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000005 /* PRHarborTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8CECBBDB2742AAF800A2802D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -270,7 +340,53 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		A1000000000000000000000C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8CECBBDE2742AAF800A2802D /* PRHarbor */;
+			targetProxy = A1000000000000000000000D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		A1000000000000000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = DBVKAAM5R6;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nezdemkovski.prharbor.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PRHarbor.app/Contents/MacOS/PRHarbor";
+			};
+			name = Debug;
+		};
+		A1000000000000000000000B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = DBVKAAM5R6;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nezdemkovski.prharbor.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PRHarbor.app/Contents/MacOS/PRHarbor";
+			};
+			name = Release;
+		};
 		8CECBBEC2742AAFB00A2802D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -479,6 +595,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		A10000000000000000000009 /* Build configuration list for PBXNativeTarget "PRHarborTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000000000000000000000A /* Debug */,
+				A1000000000000000000000B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		8CECBBDA2742AAF800A2802D /* Build configuration list for PBXProject "PRHarbor" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

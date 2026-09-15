@@ -30,7 +30,7 @@ struct PRListView: View {
         let base = query.isEmpty ? edges : edges.filter { edge in
             let p = edge.node
             return p.title.lowercased().contains(query)
-                || p.repository.name.lowercased().contains(query)
+                || p.repository.nameWithOwner.lowercased().contains(query)
                 || (p.author?.login.lowercased().contains(query) ?? false)
                 || "#\(p.number)".contains(query)
                 || p.headRefName.lowercased().contains(query)
@@ -46,7 +46,7 @@ struct PRListView: View {
     }
 
     private var groupedByRepo: [(String, [Edge])] {
-        let dict = Dictionary(grouping: filtered) { $0.node.repository.name }
+        let dict = Dictionary(grouping: filtered) { $0.node.repository.nameWithOwner }
         return dict.sorted { $0.key < $1.key }
     }
 

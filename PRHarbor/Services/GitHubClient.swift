@@ -4,27 +4,54 @@ nonisolated struct GitHubClient: Sendable {
     let token: String
     let baseURL: URL
     let buildType: BuildType
+    let session: URLSession
 
-    init(token: String, baseURL: String, buildType: BuildType) throws {
+    init(
+        token: String,
+        baseURL: String,
+        buildType: BuildType,
+        session: URLSession = .shared
+    ) throws {
         guard let url = URL(string: baseURL),
-              let scheme = url.scheme,
-              ["http", "https"].contains(scheme),
-              url.host != nil else {
+              url.scheme == "https",
+              url.host != nil,
+              url.user == nil,
+              url.password == nil,
+              url.query == nil,
+              url.fragment == nil else {
             throw URLError(.badURL)
         }
 
         self.token = token
         self.baseURL = url
         self.buildType = buildType
+        self.session = session
     }
 
     func fetchPulls(filter: String) async throws -> [Edge] {
         guard !token.isEmpty else { return [] }
 
         let queryString = "is:open is:pr \(filter) archived:false"
-        let graphQLQuery = buildGraphQLQuery(queryString: queryString)
-        let response: GraphQLSearchResponse = try await postGraphQL(query: graphQLQuery)
-        return response.data.search.edges
+        let graphQLQuery = buildGraphQLQuery()
+        var edges: [Edge] = []
+        var cursor: String?
+
+        while true {
+            let response: GraphQLSearchResponse = try await postGraphQL(
+                query: graphQLQuery,
+                variables: GraphQLVariables(searchQuery: queryString, cursor: cursor)
+            )
+            edges.append(contentsOf: response.data.search.edges)
+
+            guard response.data.search.pageInfo.hasNextPage else { break }
+            guard let nextCursor = response.data.search.pageInfo.endCursor,
+                  nextCursor != cursor else {
+                throw URLError(.cannotParseResponse)
+            }
+            cursor = nextCursor
+        }
+
+        return edges
     }
 
     func fetchUser() async throws -> User {
@@ -44,20 +71,20 @@ nonisolated struct GitHubClient: Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.cachePolicy = cachePolicy
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         try Self.validateResponse(response)
         return try JSONDecoder().decode(T.self, from: data)
     }
 
-    private func postGraphQL<T: Decodable>(query: String) async throws -> T {
+    private func postGraphQL<T: Decodable>(query: String, variables: GraphQLVariables) async throws -> T {
         var request = URLRequest(url: graphQLURL)
         request.httpMethod = "POST"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(GraphQLRequest(query: query))
+        request.httpBody = try JSONEncoder().encode(GraphQLRequest(query: query, variables: variables))
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         try Self.validateResponse(response)
 
         let decoder = JSONDecoder()
@@ -90,10 +117,7 @@ nonisolated struct GitHubClient: Sendable {
         }
     }
 
-    private func buildGraphQLQuery(queryString: String) -> String {
-        let escapedQuery = queryString
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
+    private func buildGraphQLQuery() -> String {
         let buildFields: String
 
         switch buildType {
@@ -154,9 +178,13 @@ nonisolated struct GitHubClient: Sendable {
         }
 
         return """
-        {
-            search(query: "\(escapedQuery)", type: ISSUE, first: 30) {
+        query PullRequests($query: String!, $cursor: String) {
+            search(query: $query, type: ISSUE, first: 100, after: $cursor) {
                 issueCount
+                pageInfo {
+                    hasNextPage
+                    endCursor
+                }
                 edges {
                     node {
                         ... on PullRequest {
@@ -178,6 +206,7 @@ nonisolated struct GitHubClient: Sendable {
                             }
                             repository {
                                 name
+                                nameWithOwner
                             }
                             labels(first: 5) {
                                 nodes {
@@ -207,5 +236,15 @@ nonisolated struct GitHubClient: Sendable {
 
 private nonisolated struct GraphQLRequest: Encodable {
     let query: String
-    let variables: [String: String] = [:]
+    let variables: GraphQLVariables
+}
+
+nonisolated struct GraphQLVariables: Encodable, Sendable {
+    let searchQuery: String
+    let cursor: String?
+
+    enum CodingKeys: String, CodingKey {
+        case searchQuery = "query"
+        case cursor
+    }
 }

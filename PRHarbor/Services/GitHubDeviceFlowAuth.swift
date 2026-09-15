@@ -17,17 +17,22 @@ final class GitHubDeviceFlowAuth: ObservableObject {
     @Published var state: AuthState = .idle
     @FromKeychain(.githubToken) private var githubToken
 
-    private var pollTask: Task<Void, Never>?
+    private var authTask: Task<Void, Never>?
+    private var authGeneration = 0
 
     func startLogin() {
-        pollTask?.cancel()
-        pollTask = nil
+        authTask?.cancel()
+        authGeneration += 1
+        let generation = authGeneration
         state = .idle
         let baseUrl = Defaults[.githubApiBaseUrl]
 
-        Task {
+        authTask = Task { [weak self] in
+            guard let self else { return }
             do {
                 let deviceCode = try await requestDeviceCode(baseUrl: baseUrl)
+                try Task.checkCancellation()
+                guard generation == authGeneration else { return }
 
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(deviceCode.userCode, forType: .string)
@@ -41,22 +46,26 @@ final class GitHubDeviceFlowAuth: ObservableObject {
                     NSWorkspace.shared.open(url)
                 }
 
-                pollTask = Task {
-                    await pollForToken(
-                        deviceCode: deviceCode.deviceCode,
-                        interval: deviceCode.interval,
-                        baseUrl: baseUrl
-                    )
-                }
+                await pollForToken(
+                    deviceCode: deviceCode.deviceCode,
+                    interval: deviceCode.interval,
+                    baseUrl: baseUrl,
+                    generation: generation
+                )
+            } catch is CancellationError {
+                return
             } catch {
+                guard generation == authGeneration, !Task.isCancelled else { return }
+                authTask = nil
                 state = .error(error.localizedDescription)
             }
         }
     }
 
     func cancel() {
-        pollTask?.cancel()
-        pollTask = nil
+        authGeneration += 1
+        authTask?.cancel()
+        authTask = nil
         state = .idle
     }
     private func requestDeviceCode(baseUrl: String) async throws -> DeviceCodeResponse {
@@ -74,28 +83,34 @@ final class GitHubDeviceFlowAuth: ObservableObject {
         return try JSONDecoder().decode(DeviceCodeResponse.self, from: data)
     }
 
-    private func pollForToken(deviceCode: String, interval: Int, baseUrl: String) async {
+    private func pollForToken(
+        deviceCode: String,
+        interval: Int,
+        baseUrl: String,
+        generation: Int
+    ) async {
         var currentInterval = interval
 
         while !Task.isCancelled {
             try? await Task.sleep(for: .seconds(currentInterval))
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, generation == authGeneration else { return }
 
             do {
                 let response = try await exchangeDeviceCode(deviceCode: deviceCode, baseUrl: baseUrl)
 
                 if let token = response.accessToken {
-                    self.githubToken = token
-
-                    if let client = try? GitHubClient(
+                    let client = try GitHubClient(
                         token: token,
                         baseURL: baseUrl,
                         buildType: Defaults[.buildType]
-                    ), let user = try? await client.fetchUser() {
-                        Defaults[.githubUsername] = user.login
-                    }
+                    )
+                    let user = try await client.fetchUser()
+                    try Task.checkCancellation()
+                    guard generation == authGeneration else { return }
 
-                    pollTask = nil
+                    githubToken = token
+                    Defaults[.githubUsername] = user.login
+                    authTask = nil
                     state = .success
                     return
                 }
@@ -107,21 +122,21 @@ final class GitHubDeviceFlowAuth: ObservableObject {
                     currentInterval += 5
                     continue
                 case "expired_token":
-                    pollTask = nil
+                    authTask = nil
                     state = .error("Code expired. Please try again.")
                     return
                 case "access_denied":
-                    pollTask = nil
+                    authTask = nil
                     state = .error("Authorization denied.")
                     return
                 default:
-                    pollTask = nil
+                    authTask = nil
                     state = .error(response.errorDescription ?? "Unknown error")
                     return
                 }
             } catch {
                 if !Task.isCancelled {
-                    pollTask = nil
+                    authTask = nil
                     state = .error(error.localizedDescription)
                 }
                 return

@@ -7,7 +7,7 @@ struct PRListView: View {
     let config: PRDisplayConfig
     @Binding var expandedPRUrl: String?
     @Binding var searchText: String
-    var onAddToFeature: ((String) -> Void)?
+    let onRebaseStack: (PullRequestStack) async throws -> StackRebaseResult
 
     @Default(.sortOrder) private var sortOrder
     @Default(.groupByRepo) private var groupByRepo
@@ -74,7 +74,7 @@ struct PRListView: View {
                                 edges: repoEdges,
                                 config: config,
                                 expandedPRUrl: $expandedPRUrl,
-                                onAddToFeature: onAddToFeature
+                                onRebaseStack: onRebaseStack
                             )
                         }
                     }
@@ -83,7 +83,7 @@ struct PRListView: View {
                         edges: filtered,
                         config: config,
                         expandedPRUrl: $expandedPRUrl,
-                        onAddToFeature: onAddToFeature
+                        onRebaseStack: onRebaseStack
                     )
                 }
             }

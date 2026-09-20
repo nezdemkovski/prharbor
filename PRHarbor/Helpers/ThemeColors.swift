@@ -53,7 +53,6 @@ enum Theme {
     static let avatarSize: CGFloat = 30
     static let unreadDotSize: CGFloat = 7
     static let ciDotSize: CGFloat = 8
-    static let ciDotInlineSize: CGFloat = 6
     static let cornerRadius: CGFloat = 8
     static let cardCornerRadius: CGFloat = 10
     static let rowCornerRadius: CGFloat = 8

@@ -140,7 +140,6 @@ final class PullRequestStore: ObservableObject {
         watch(.showAssigned)
         watch(.showCreated)
         watch(.showRequested)
-        watch(.showFeatures)
         watch(.buildType)
         watch(.hideDrafts)
         watch(.notifyReviewRequested)
@@ -169,18 +168,14 @@ final class PullRequestStore: ObservableObject {
         let showAssigned = Defaults[.showAssigned]
         let showCreated = Defaults[.showCreated]
         let showRequested = Defaults[.showRequested]
-        let showFeatures = Defaults[.showFeatures]
         let counterType = Defaults[.counterType]
         let fetchAssigned = showAssigned
-            || showFeatures
             || Defaults[.notifyAssigned]
             || counterType == .assigned
         let fetchCreated = showCreated
-            || showFeatures
             || Defaults[.notifyCreated]
             || counterType == .created
         let fetchRequested = showRequested
-            || showFeatures
             || Defaults[.notifyReviewRequested]
             || counterType == .reviewRequested
         let hideDrafts = Defaults[.hideDrafts]
@@ -235,6 +230,17 @@ final class PullRequestStore: ObservableObject {
                 self.finishFailedRefresh(error, generation: generation)
             }
         }
+    }
+
+    func rebaseStack(_ stack: PullRequestStack) async throws -> StackRebaseResult {
+        let client = try GitHubClient(
+            token: githubToken,
+            baseURL: Defaults[.githubApiBaseUrl],
+            buildType: Defaults[.buildType]
+        )
+        let result = try await client.rebaseStack(stack)
+        refresh()
+        return result
     }
 
     private func startCountdown() {

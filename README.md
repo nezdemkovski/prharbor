@@ -7,10 +7,9 @@ A native macOS menu bar app that keeps you on top of your code reviews, assignme
 ## Features
 
 - **Three PR tabs** — Review Requested, Assigned, My PRs
-- **CI status** — GitHub Actions and status checks with colored dots
+- **CI status** — A compact summary with full check details on expansion
 - **Badges** — Draft, Stale, Merge Conflict, Changes Requested
-- **Features** — Group related PRs across repos into named collections
-- **Auto-detect** — PRs with matching branch names across repos are grouped automatically
+- **PR stacks** — GitHub-style dependency rails, tip-to-base ordering, rebase, and an interactive layer map
 - **Search** — Filter PRs by title, repo, author, number, or branch
 - **Sort & Group** — Sort by date, group by repository with collapsible headers
 - **Notifications** — Desktop alerts for new PRs with "Open PR" action button

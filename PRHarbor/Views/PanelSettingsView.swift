@@ -21,7 +21,6 @@ struct PanelSettingsView: View {
                 AppearanceCard()
                 MenubarCard()
                 NotificationsCard()
-                HiddenBranchesCard()
             }
             .padding(.horizontal, Theme.settingsPaddingH)
             .padding(.vertical, Theme.settingsPaddingV)
@@ -215,7 +214,6 @@ private struct VisibilityCard: View {
     @Default(.showCreated) var showCreated
     @Default(.showRequested) var showRequested
     @Default(.hideDrafts) var hideDrafts
-    @Default(.showFeatures) var showFeatures
 
     var body: some View {
         SettingsSection("FILTERS") {
@@ -223,44 +221,9 @@ private struct VisibilityCard: View {
             SettingsToggle("Review requested", isOn: $showRequested)
             SettingsToggle("Assigned to me", isOn: $showAssigned)
             SettingsToggle("My PRs", isOn: $showCreated)
-            SettingsToggle("Features", isOn: $showFeatures)
-            SettingsHint("Group PRs into features and auto-detect by branch")
             SectionDivider()
             SettingsToggle("Hide drafts", isOn: $hideDrafts)
             SettingsHint("Filter out PRs marked as draft")
-        }
-    }
-}
-private struct HiddenBranchesCard: View {
-    @Default(.hiddenAutoBranches) var hiddenBranches
-
-    var body: some View {
-        if !hiddenBranches.isEmpty {
-            SettingsSection("HIDDEN BRANCHES") {
-                SettingsHint("Auto-detected branches you've hidden")
-                ForEach(hiddenBranches, id: \.self) { branch in
-                    HStack(spacing: 6) {
-                        Image(systemName: "eye.slash")
-                            .font(.system(size: 9))
-                            .foregroundStyle(.tertiary)
-                        Text(branch)
-                            .font(.system(size: 11))
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                        Spacer()
-                        Button {
-                            withAnimation(.snappy(duration: 0.2)) {
-                                hiddenBranches.removeAll { $0 == branch }
-                            }
-                        } label: {
-                            Text("Unhide")
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
         }
     }
 }

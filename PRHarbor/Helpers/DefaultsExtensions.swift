@@ -16,7 +16,6 @@ extension Defaults.Keys {
     static let showLinesChanged = Key<Bool>("showLinesChanged", default: true)
     static let showApprovals = Key<Bool>("showApprovals", default: true)
     static let hideDrafts = Key<Bool>("hideDrafts", default: false)
-    static let showFeatures = Key<Bool>("showFeatures", default: true)
     static let notifyReviewRequested = Key<Bool>("notifyReviewRequested", default: true)
     static let notifyAssigned = Key<Bool>("notifyAssigned", default: true)
     static let notifyCreated = Key<Bool>("notifyCreated", default: false)
@@ -25,8 +24,6 @@ extension Defaults.Keys {
     static let sortOrder = Key<SortOrder>("sortOrder", default: .updatedNewest)
     static let groupByRepo = Key<Bool>("groupByRepo", default: true)
     static let collapsedRepos = Key<[String]>("collapsedRepos", default: [])
-    static let hiddenAutoBranches = Key<[String]>("hiddenAutoBranches", default: [])
-    static let features = Key<[PRFeature]>("features", default: [])
     static let refreshRate = Key<Int>("refreshRate", default: 5)
     static let buildType = Key<BuildType>("buildType", default: .checks)
     static let counterType = Key<CounterType>("counterType", default: .reviewRequested)
@@ -34,18 +31,6 @@ extension Defaults.Keys {
 
 extension KeychainKeys {
     static let githubToken = KeychainKey("githubToken")
-}
-
-nonisolated struct PRFeature: Codable, Defaults.Serializable, Identifiable, Equatable, Sendable {
-    let id: UUID
-    var name: String
-    var prURLs: [String]
-
-    init(name: String, prURLs: [String] = []) {
-        self.id = UUID()
-        self.name = name
-        self.prURLs = prURLs
-    }
 }
 
 nonisolated enum SortOrder: String, Defaults.Serializable, CaseIterable, Identifiable, Sendable {

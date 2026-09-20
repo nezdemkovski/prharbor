@@ -46,7 +46,6 @@ struct AboutView: View {
                     featureRow(icon: "checkmark.circle", color: Theme.success, text: "CI status and review tracking")
                     featureRow(icon: "magnifyingglass", color: Theme.neutral, text: "Search and filter across repos")
                     featureRow(icon: "arrow.triangle.branch", color: Theme.stale, text: "Quick copy branch & URL")
-                    featureRow(icon: "puzzlepiece.extension.fill", color: Theme.unread, text: "Group PRs into features across repos")
                 }
             }
             .padding(.horizontal, 40)

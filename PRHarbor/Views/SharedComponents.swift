@@ -70,39 +70,288 @@ struct PRRowsContainer: View {
     let edges: [Edge]
     let config: PRDisplayConfig
     @Binding var expandedPRUrl: String?
-    var onAddToFeature: ((String) -> Void)? = nil
+    let onRebaseStack: (PullRequestStack) async throws -> StackRebaseResult
     var idPrefix: String? = nil
 
-    var body: some View {
-        ForEach(edges, id: \.node.url) { edge in
-            let urlString = edge.node.url.absoluteString
-            let isExpanded = !config.clickOpensLink && expandedPRUrl == urlString
+    private var groups: [PullDisplayGroup] {
+        groupPullsForDisplay(edges)
+    }
 
-            VStack(spacing: 0) {
-                PRRowView(
-                    pull: edge.node,
-                    isSelected: isExpanded,
+    var body: some View {
+        ForEach(groups) { group in
+            if let stack = group.stack {
+                PRStackGroupView(
+                    stack: stack,
+                    edges: group.edges,
                     config: config,
-                    onAddToFeature: onAddToFeature != nil ? { onAddToFeature?(urlString) } : nil
-                ) {
-                    if config.clickOpensLink {
-                        NSWorkspace.shared.open(edge.node.url)
-                    } else {
-                        withAnimation(.snappy(duration: 0.25)) {
-                            expandedPRUrl = isExpanded ? nil : urlString
-                        }
+                    expandedPRUrl: $expandedPRUrl,
+                    onRebaseStack: onRebaseStack
+                )
+                .id(idPrefix.map { "\($0)-stack-\(group.id)" } ?? "stack-\(group.id)")
+            } else if let edge = group.edges.first {
+                standardRow(edge)
+            }
+        }
+    }
+
+    private func standardRow(_ edge: Edge) -> some View {
+        let urlString = edge.node.url.absoluteString
+        let isExpanded = !config.clickOpensLink && expandedPRUrl == urlString
+
+        return VStack(spacing: 0) {
+            PRRowView(
+                pull: edge.node,
+                isSelected: isExpanded,
+                config: config
+            ) {
+                if config.clickOpensLink {
+                    NSWorkspace.shared.open(edge.node.url)
+                } else {
+                    withAnimation(.snappy(duration: 0.25)) {
+                        expandedPRUrl = isExpanded ? nil : urlString
                     }
                 }
+            }
 
-                if isExpanded {
-                    PRDetailView(pull: edge.node, config: config)
-                        .padding(.horizontal, Theme.rowPaddingH)
-                        .padding(.top, 4)
-                        .padding(.bottom, Theme.rowPaddingV)
+            if isExpanded {
+                PRDetailView(pull: edge.node, config: config)
+                    .padding(.horizontal, Theme.rowPaddingH)
+                    .padding(.top, 4)
+                    .padding(.bottom, Theme.rowPaddingV)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: Theme.rowCornerRadius))
+        .id(idPrefix.map { "\($0)-\(urlString)" } ?? urlString)
+    }
+}
+
+private struct PRStackGroupView: View {
+    let stack: PullRequestStack
+    let edges: [Edge]
+    let config: PRDisplayConfig
+    @Binding var expandedPRUrl: String?
+    let onRebaseStack: (PullRequestStack) async throws -> StackRebaseResult
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(edges.enumerated()), id: \.element.node.url) { index, edge in
+                PRStackLayerView(
+                    edge: edge,
+                    config: config,
+                    expandedPRUrl: $expandedPRUrl,
+                    isFirst: index == 0
+                )
+            }
+
+            PRStackBaseView(stack: stack, onRebase: onRebaseStack)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Stack #\(stack.number), \(stack.size) pull requests into \(stack.baseRefName)")
+    }
+}
+
+private struct PRStackLayerView: View {
+    let edge: Edge
+    let config: PRDisplayConfig
+    @Binding var expandedPRUrl: String?
+    let isFirst: Bool
+
+    private var urlString: String { edge.node.url.absoluteString }
+    private var isExpanded: Bool {
+        !config.clickOpensLink && expandedPRUrl == urlString
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            PRRowView(
+                pull: edge.node,
+                isSelected: isExpanded,
+                config: config,
+                style: .stackLayer(isFirst: isFirst)
+            ) {
+                if config.clickOpensLink {
+                    NSWorkspace.shared.open(edge.node.url)
+                } else {
+                    withAnimation(.snappy(duration: 0.25)) {
+                        expandedPRUrl = isExpanded ? nil : urlString
+                    }
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: Theme.rowCornerRadius))
-            .id(idPrefix.map { "\($0)-\(urlString)" } ?? urlString)
+
+            if isExpanded {
+                PRDetailView(pull: edge.node, config: config)
+                    .padding(.horizontal, Theme.rowPaddingH)
+                    .padding(.top, 4)
+                    .padding(.bottom, Theme.rowPaddingV)
+                    .overlay(alignment: .leading) {
+                        Rectangle()
+                            .fill(Theme.pending.opacity(0.30))
+                            .frame(width: 1.5)
+                            .padding(.leading, 4.75)
+                            .allowsHitTesting(false)
+                    }
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: Theme.rowCornerRadius))
+    }
+}
+
+private enum StackRebaseViewState: Equatable {
+    case idle
+    case confirming
+    case running
+    case success(Int)
+    case failure(String)
+}
+
+private struct PRStackBaseView: View {
+    let stack: PullRequestStack
+    let onRebase: (PullRequestStack) async throws -> StackRebaseResult
+
+    @State private var rebaseState: StackRebaseViewState = .idle
+
+    private var openPulls: [StackedPullRequest] {
+        (stack.entries?.nodes ?? [])
+            .compactMap(\.pullRequest)
+            .filter { $0.state == "OPEN" }
+    }
+
+    private var disabledReason: String? {
+        guard (stack.entries?.nodes.count ?? 0) >= stack.size else {
+            return "Refresh to load every stack layer"
+        }
+        if let conflicting = openPulls.first(where: { $0.mergeable == "CONFLICTING" }) {
+            return "Resolve conflicts in \(conflicting.headRefName) first"
+        }
+        guard !openPulls.isEmpty else {
+            return "No open pull requests to rebase"
+        }
+        return nil
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                VStack(spacing: 0) {
+                    Rectangle()
+                        .fill(Theme.pending.opacity(0.30))
+                        .frame(width: 1.5, height: 9)
+
+                    Circle()
+                        .stroke(Theme.neutral, lineWidth: 1.5)
+                        .frame(width: 7, height: 7)
+
+                    Spacer(minLength: 0)
+                }
+                .frame(width: 7, height: 25)
+
+                Text(stack.baseRefName)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+
+                Spacer(minLength: 8)
+
+                rebaseControls
+            }
+
+            statusMessage
+                .padding(.leading, 15)
+                .font(.system(size: 9.5))
+                .lineLimit(2)
+        }
+        .padding(.leading, 2)
+    }
+
+    @ViewBuilder
+    private var rebaseControls: some View {
+        switch rebaseState {
+        case .idle, .failure:
+            Button {
+                withAnimation(.snappy(duration: 0.15)) {
+                    rebaseState = .confirming
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
+                    Text("Rebase stack")
+                }
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(disabledReason == nil ? Theme.unread : Theme.neutral.opacity(0.65))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(disabledReason != nil)
+            .help(disabledReason ?? "Rebase every open branch from the base upward")
+
+        case .confirming:
+            HStack(spacing: 7) {
+                Button("Cancel") {
+                    withAnimation(.snappy(duration: 0.15)) {
+                        rebaseState = .idle
+                    }
+                }
+                .foregroundStyle(.secondary)
+
+                Button("Rebase \(openPulls.count)") {
+                    performRebase()
+                }
+                .foregroundStyle(Theme.unread)
+            }
+            .font(.system(size: 10, weight: .semibold))
+            .buttonStyle(.plain)
+
+        case .running:
+            HStack(spacing: 5) {
+                ProgressView()
+                    .controlSize(.mini)
+                Text("Rebasing…")
+            }
+            .font(.system(size: 10, weight: .medium))
+            .foregroundStyle(.secondary)
+
+        case .success(let count):
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark.circle.fill")
+                Text("Rebased \(count)")
+            }
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Theme.success)
+        }
+    }
+
+    @ViewBuilder
+    private var statusMessage: some View {
+        switch rebaseState {
+        case .confirming:
+            Text("Server-side rebase; new commits won’t be signed")
+                .foregroundStyle(.tertiary)
+        case .failure(let message):
+            Text(message)
+                .foregroundStyle(Theme.failure)
+        default:
+            EmptyView()
+        }
+    }
+
+    private func performRebase() {
+        rebaseState = .running
+        Task { @MainActor in
+            do {
+                let result = try await onRebase(stack)
+                withAnimation(.snappy(duration: 0.2)) {
+                    rebaseState = .success(result.rebasedCount)
+                }
+            } catch {
+                withAnimation(.snappy(duration: 0.2)) {
+                    rebaseState = .failure(error.localizedDescription)
+                }
+            }
         }
     }
 }
@@ -169,93 +418,6 @@ struct CollapsibleHeader<Trailing: View>: View {
         .padding(.horizontal, 6)
         .padding(.top, 10)
         .padding(.bottom, 4)
-    }
-}
-
-struct HeaderConfirmBar: View {
-    let message: String
-    let action: String
-    let isDestructive: Bool
-    let onConfirm: () -> Void
-    let onCancel: () -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 6) {
-                Text(message)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-
-                Spacer()
-
-                Button(action: onConfirm) {
-                    Text(action)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(isDestructive ? Theme.failure : .primary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(isDestructive ? Theme.failure.opacity(0.1) : Theme.tabSelected, in: Capsule())
-                }
-                .buttonStyle(.plain)
-
-                Button(action: onCancel) {
-                    Text("Cancel")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Theme.cardBackground, in: Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, Theme.headerPaddingH)
-            .padding(.vertical, 6)
-            Divider().opacity(0.5)
-        }
-        .background(Theme.cardBackground)
-    }
-}
-
-struct HeaderInputBar: View {
-    let label: String
-    @Binding var text: String
-    let action: String
-    let onSubmit: () -> Void
-    let onCancel: () -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 6) {
-                Text(label)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
-                TextField("Name...", text: $text)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 11))
-                    .onSubmit(onSubmit)
-                Button(action: onSubmit) {
-                    Text(action)
-                        .font(.system(size: 10, weight: .semibold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Theme.tabSelected, in: Capsule())
-                }
-                .buttonStyle(.plain)
-                .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
-
-                Button(action: onCancel) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, Theme.headerPaddingH)
-            .padding(.vertical, 6)
-            Divider().opacity(0.5)
-        }
-        .background(Theme.cardBackground)
     }
 }
 

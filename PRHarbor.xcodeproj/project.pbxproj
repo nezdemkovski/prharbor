@@ -26,7 +26,6 @@
 		CC000001CCCCCC0000000001 /* GitHubDeviceFlowAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000001CCCCCC0000000002 /* GitHubDeviceFlowAuth.swift */; };
 		DD000002AAAA000000000001 /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002AAAA000000000002 /* SharedComponents.swift */; };
 		DD000003AAAA000000000001 /* PRListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000003AAAA000000000002 /* PRListView.swift */; };
-		DD000004AAAA000000000001 /* FeaturesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000004AAAA000000000002 /* FeaturesListView.swift */; };
 		EE000002EEEEEE0000000001 /* PanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000002EEEEEE0000000002 /* PanelView.swift */; };
 		EE000003EEEEEE0000000001 /* PRRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000003EEEEEE0000000002 /* PRRowView.swift */; };
 		EE000004EEEEEE0000000001 /* PullRequestStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000004EEEEEE0000000002 /* PullRequestStore.swift */; };
@@ -65,7 +64,6 @@
 		CC000001CCCCCC0000000002 /* GitHubDeviceFlowAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubDeviceFlowAuth.swift; sourceTree = "<group>"; };
 		DD000002AAAA000000000002 /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
 		DD000003AAAA000000000002 /* PRListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRListView.swift; sourceTree = "<group>"; };
-		DD000004AAAA000000000002 /* FeaturesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeaturesListView.swift; sourceTree = "<group>"; };
 		EE000002EEEEEE0000000002 /* PanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelView.swift; sourceTree = "<group>"; };
 		EE000003EEEEEE0000000002 /* PRRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRRowView.swift; sourceTree = "<group>"; };
 		EE000004EEEEEE0000000002 /* PullRequestStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PullRequestStore.swift; sourceTree = "<group>"; };
@@ -138,7 +136,6 @@
 			children = (
 				EE000002EEEEEE0000000002 /* PanelView.swift */,
 				DD000003AAAA000000000002 /* PRListView.swift */,
-				DD000004AAAA000000000002 /* FeaturesListView.swift */,
 				DD000002AAAA000000000002 /* SharedComponents.swift */,
 				EE000003EEEEEE0000000002 /* PRRowView.swift */,
 				EE000005EEEEEE0000000002 /* PanelSettingsView.swift */,
@@ -331,7 +328,6 @@
 				EE000002EEEEEE0000000001 /* PanelView.swift in Sources */,
 				DD000002AAAA000000000001 /* SharedComponents.swift in Sources */,
 				DD000003AAAA000000000001 /* PRListView.swift in Sources */,
-				DD000004AAAA000000000001 /* FeaturesListView.swift in Sources */,
 				EE000003EEEEEE0000000001 /* PRRowView.swift in Sources */,
 				EE000004EEEEEE0000000001 /* PullRequestStore.swift in Sources */,
 				EE000005EEEEEE0000000001 /* PanelSettingsView.swift in Sources */,

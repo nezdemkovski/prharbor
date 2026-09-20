@@ -25,12 +25,16 @@ nonisolated struct PRDisplayConfig: Equatable, Sendable {
     }
 }
 
+nonisolated enum PRRowStyle: Equatable, Sendable {
+    case standard
+    case stackLayer(isFirst: Bool)
+}
 
 struct PRRowView: View, Equatable {
     let pull: Pull
     let isSelected: Bool
     let config: PRDisplayConfig
-    var onAddToFeature: (() -> Void)?
+    var style: PRRowStyle = .standard
     let onTap: () -> Void
 
     @State private var isHovering = false
@@ -39,8 +43,11 @@ struct PRRowView: View, Equatable {
         lhs.pull.url == rhs.pull.url
             && lhs.pull.updatedAt == rhs.pull.updatedAt
             && lhs.pull.isReadByViewer == rhs.pull.isReadByViewer
+            && lhs.pull.stack == rhs.pull.stack
+            && lhs.pull.stackEntry == rhs.pull.stackEntry
             && lhs.isSelected == rhs.isSelected
             && lhs.config == rhs.config
+            && lhs.style == rhs.style
     }
 
     private var approvedByMe: Bool {
@@ -83,6 +90,10 @@ struct PRRowView: View, Equatable {
                         Text(pull.title)
                             .font(.system(size: 12.5, weight: .medium))
                             .lineLimit(1)
+
+                        if let commits = pull.commits {
+                            CISummaryView(commits: commits)
+                        }
                     }
 
                     HStack(spacing: 0) {
@@ -113,22 +124,13 @@ struct PRRowView: View, Equatable {
                                     Text("-\(del)")
                                         .foregroundStyle(Theme.failure)
                                 }
-                            }
-
-                            if let commits = pull.commits {
-                                CIDotsView(commits: commits)
+                                .layoutPriority(1)
                             }
                         }
                     }
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                }
-
-                if isHovering, let onAddToFeature {
-                    CircleIconButton(icon: "puzzlepiece.extension", size: 9, frameSize: 18, help: "Add to feature") {
-                        onAddToFeature()
-                    }
                 }
 
                 if !config.clickOpensLink {
@@ -144,10 +146,54 @@ struct PRRowView: View, Equatable {
                 RoundedRectangle(cornerRadius: Theme.rowCornerRadius, style: .continuous)
                     .fill(isSelected ? Theme.selectedBackground : isHovering ? Theme.hoverBackground : .clear)
             )
+            .overlay(alignment: .leading) {
+                if case let .stackLayer(isFirst) = style {
+                    StackConnectionIndicator(pull: pull, isFirst: isFirst)
+                        .padding(.leading, 2)
+                        .allowsHitTesting(false)
+                }
+            }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
+    }
+}
+
+private struct StackConnectionIndicator: View {
+    let pull: Pull
+    let isFirst: Bool
+
+    private var nodeColor: Color {
+        if pull.mergeable == "CONFLICTING" || pull.reviewDecision == "CHANGES_REQUESTED" {
+            return Theme.failure
+        }
+        if pull.isDraft {
+            return Theme.neutral
+        }
+        if pull.reviewDecision == "APPROVED" {
+            return Theme.success
+        }
+        return Theme.pending
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(Theme.pending.opacity(isFirst ? 0 : 0.30))
+                .frame(width: 1.5)
+                .frame(maxHeight: .infinity)
+
+            Circle()
+                .fill(nodeColor)
+                .frame(width: 7, height: 7)
+
+            Rectangle()
+                .fill(Theme.pending.opacity(0.30))
+                .frame(width: 1.5)
+                .frame(maxHeight: .infinity)
+        }
+        .frame(width: 7)
     }
 }
 
@@ -174,6 +220,10 @@ struct PRDetailView: View {
                             .clipShape(Capsule())
                     }
                 }
+            }
+
+            if let stack = pull.stack, let position = pull.stackEntry?.position {
+                PRStackView(stack: stack, currentURL: pull.url, currentPosition: position)
             }
 
             HStack(alignment: .top, spacing: 8) {
@@ -209,6 +259,112 @@ struct PRDetailView: View {
             RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
                 .fill(Theme.groupedBackground)
         )
+    }
+}
+
+private struct PRStackView: View {
+    let stack: PullRequestStack
+    let currentURL: URL
+    let currentPosition: Int
+
+    private var entries: [PullRequestStackEntry] {
+        (stack.entries?.nodes ?? []).sorted { $0.position > $1.position }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 5) {
+                Image(systemName: "square.stack.3d.up.fill")
+                    .foregroundStyle(Theme.unread)
+                Text("STACK #\(stack.number)")
+                    .font(.system(size: 9, weight: .bold))
+                    .tracking(0.6)
+                Spacer()
+                Text("Layer \(currentPosition) of \(stack.size)")
+                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                    .foregroundStyle(.tertiary)
+            }
+
+            ForEach(entries) { entry in
+                if let member = entry.pullRequest {
+                    Button {
+                        NSWorkspace.shared.open(member.url)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(statusColor(for: member))
+                                .frame(width: 6, height: 6)
+                                .frame(width: 10)
+                            Text("#\(member.number)")
+                                .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                            Text(member.title)
+                                .font(.system(size: 10.5, weight: member.url == currentURL ? .semibold : .regular))
+                                .lineLimit(1)
+                            Spacer(minLength: 4)
+                            Text("\(entry.position)")
+                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .foregroundStyle(member.url == currentURL ? Theme.unread : Theme.neutral.opacity(0.65))
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 7, weight: .semibold))
+                                .foregroundStyle(.quaternary)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                        .background(
+                            member.url == currentURL ? Theme.unread.opacity(0.10) : Color.clear,
+                            in: RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Open \(member.headRefName)")
+                }
+            }
+
+            if entries.count < stack.size {
+                Text("Showing \(entries.count) of \(stack.size) layers")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.tertiary)
+                    .padding(.leading, 16)
+            }
+
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.turn.down.right")
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 10)
+                Text(stack.baseRefName)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                Text("trunk")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 6)
+            .padding(.top, 1)
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
+                .fill(Theme.cardBackground)
+        )
+    }
+
+    private func statusColor(for pull: StackedPullRequest) -> Color {
+        if pull.state == "MERGED" || pull.reviewDecision == "APPROVED" {
+            return Theme.success
+        }
+        if pull.mergeable == "CONFLICTING" {
+            return Theme.failure
+        }
+        if pull.reviewDecision == "CHANGES_REQUESTED" {
+            return Theme.pending
+        }
+        if pull.isDraft || pull.state == "CLOSED" {
+            return Theme.neutral
+        }
+        return Theme.unread
     }
 }
 
@@ -439,20 +595,60 @@ private func ciStatusColor(_ status: String) -> Color {
     }
 }
 
-struct CIDotsView: View {
+nonisolated func ciSummaryStatus(_ checks: [CICheck]) -> CIStatusKind? {
+    guard !checks.isEmpty else { return nil }
+    let kinds = checks.map { ciStatusKind($0.status) }
+    if kinds.contains(.failure) { return .failure }
+    if kinds.contains(.pending) { return .pending }
+    if kinds.contains(.success) { return .success }
+    return .neutral
+}
+
+private struct CISummaryView: View {
     let checks: [CICheck]
 
     init(commits: CommitsNodes) {
         self.checks = CICheck.from(commits: commits)
     }
 
+    private var summary: CIStatusKind? {
+        ciSummaryStatus(checks)
+    }
+
+    private var symbol: String {
+        switch summary {
+        case .success: "checkmark.circle.fill"
+        case .failure: "xmark.circle.fill"
+        case .pending: "clock.fill"
+        case .neutral: "circle.dashed"
+        case nil: ""
+        }
+    }
+
+    private var color: Color {
+        switch summary {
+        case .success: Theme.success
+        case .failure: Theme.failure
+        case .pending: Theme.pending
+        case .neutral, nil: Theme.neutral
+        }
+    }
+
+    private var helpText: String {
+        let failures = checks.count { ciStatusKind($0.status) == .failure }
+        let pending = checks.count { ciStatusKind($0.status) == .pending }
+        if failures > 0 { return "CI failed: \(failures) of \(checks.count) checks" }
+        if pending > 0 { return "CI running: \(pending) of \(checks.count) checks" }
+        return "CI passed: \(checks.count) checks"
+    }
+
     var body: some View {
-        HStack(spacing: 2) {
-            ForEach(checks) { check in
-                Circle()
-                    .fill(ciStatusColor(check.status))
-                    .frame(width: Theme.ciDotInlineSize, height: Theme.ciDotInlineSize)
-            }
+        if summary != nil {
+            Image(systemName: symbol)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(color)
+                .help(helpText)
+                .accessibilityLabel(helpText)
         }
     }
 }

@@ -1,16 +1,18 @@
 import Foundation
 
+nonisolated protocol GitHubAPITransport: Sendable {
+    func api(_ endpoint: String, body: Data?) async throws -> Data
+}
+
 nonisolated struct GitHubClient: Sendable {
-    let token: String
     let baseURL: URL
     let buildType: BuildType
-    let session: URLSession
+    private let transport: any GitHubAPITransport
 
     init(
-        token: String,
         baseURL: String,
         buildType: BuildType,
-        session: URLSession = .shared
+        transport: any GitHubAPITransport
     ) throws {
         guard let url = URL(string: baseURL),
               url.scheme == "https",
@@ -22,15 +24,13 @@ nonisolated struct GitHubClient: Sendable {
             throw URLError(.badURL)
         }
 
-        self.token = token
         self.baseURL = url
         self.buildType = buildType
-        self.session = session
+        self.transport = transport
     }
 
+    @concurrent
     func fetchPulls(filter: String) async throws -> [Edge] {
-        guard !token.isEmpty else { return [] }
-
         let queryString = "is:open is:pr \(filter) archived:false"
         let cacheKey = graphQLURL.absoluteString
         let cachedStackSupport = await StackCapabilityCache.shared.value(for: cacheKey)
@@ -53,17 +53,26 @@ nonisolated struct GitHubClient: Sendable {
         let graphQLQuery = buildGraphQLQuery(includeStacks: includeStacks)
         var edges: [Edge] = []
         var cursor: String?
+        var pageSize = 20
 
+        var visitedCursors = Set<String>()
         while true {
-            let response: GraphQLSearchResponse = try await postGraphQL(
-                query: graphQLQuery,
-                variables: GraphQLVariables(searchQuery: queryString, cursor: cursor)
-            )
+            try Task.checkCancellation()
+            let response: GraphQLSearchResponse
+            do {
+                response = try await postGraphQL(
+                    query: graphQLQuery,
+                    variables: GraphQLVariables(searchQuery: queryString, cursor: cursor, pageSize: pageSize)
+                )
+            } catch let error as GraphQLAPIError where error.isResourceLimit && pageSize > 1 {
+                pageSize = max(1, pageSize / 2)
+                continue
+            }
             edges.append(contentsOf: response.data.search.edges)
 
             guard response.data.search.pageInfo.hasNextPage else { break }
             guard let nextCursor = response.data.search.pageInfo.endCursor,
-                  nextCursor != cursor else {
+                  nextCursor != cursor, visitedCursors.insert(nextCursor).inserted else {
                 throw URLError(.cannotParseResponse)
             }
             cursor = nextCursor
@@ -98,6 +107,7 @@ nonisolated struct GitHubClient: Sendable {
         }
     }
 
+    @concurrent
     func rebaseStack(_ stack: PullRequestStack) async throws -> StackRebaseResult {
         let entries = stack.entries?.nodes ?? []
         guard entries.count >= stack.size else {
@@ -128,6 +138,7 @@ nonisolated struct GitHubClient: Sendable {
 
         var completed = 0
         for entry in openEntries {
+            try Task.checkCancellation()
             guard let pullRequest = entry.pullRequest else { continue }
             do {
                 let _: GraphQLRebaseResponse = try await postGraphQL(
@@ -141,6 +152,10 @@ nonisolated struct GitHubClient: Sendable {
                 completed += 1
             } catch is CancellationError {
                 throw CancellationError()
+            } catch let error as GitHubCLIError where error == .accountChanged {
+                // Keep account mismatch identifiable so the store can invalidate
+                // its old identity rather than treating it as ordinary partial progress.
+                throw error
             } catch {
                 throw StackRebaseError.partial(
                     completed: completed,
@@ -154,41 +169,18 @@ nonisolated struct GitHubClient: Sendable {
         return StackRebaseResult(rebasedCount: completed, totalCount: openEntries.count)
     }
 
+    @concurrent
     func fetchUser() async throws -> User {
-        try await performRequest(
-            url: endpoint("user"),
-            cachePolicy: .reloadIgnoringLocalCacheData
-        )
-    }
-
-    private func performRequest<T: Decodable>(
-        url: URL,
-        cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
-    ) async throws -> T {
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.cachePolicy = cachePolicy
-
-        let (data, response) = try await session.data(for: request)
-        try Self.validateResponse(response)
-        return try JSONDecoder().decode(T.self, from: data)
+        let data = try await transport.api("user", body: nil)
+        return try JSONDecoder().decode(User.self, from: data)
     }
 
     private func postGraphQL<T: Decodable, Variables: Encodable>(
         query: String,
         variables: Variables
     ) async throws -> T {
-        var request = URLRequest(url: graphQLURL)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(GraphQLRequest(query: query, variables: variables))
-
-        let (data, response) = try await session.data(for: request)
-        try Self.validateResponse(response)
+        let body = try JSONEncoder().encode(GraphQLRequest(query: query, variables: variables))
+        let data = try await transport.api("graphql", body: body)
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -214,16 +206,6 @@ nonisolated struct GitHubClient: Sendable {
             .appendingPathComponent("graphql")
     }
 
-    private static func validateResponse(_ response: URLResponse) throws {
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200..<300).contains(httpResponse.statusCode) else {
-            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-            throw URLError(.badServerResponse, userInfo: [
-                NSLocalizedDescriptionKey: "HTTP \(statusCode)"
-            ])
-        }
-    }
-
     private func buildGraphQLQuery(includeStacks: Bool) -> String {
         let buildFields: String
         let stackFields = includeStacks ? """
@@ -244,6 +226,7 @@ nonisolated struct GitHubClient: Sendable {
         commits(last: 1) {
             nodes {
                 commit {
+                    statusCheckRollup { state }
                     checkSuites(first: 10) {
                         nodes {
                             app {
@@ -296,8 +279,8 @@ nonisolated struct GitHubClient: Sendable {
         }
 
         return """
-        query PullRequests($query: String!, $cursor: String) {
-            search(query: $query, type: ISSUE, first: 100, after: $cursor) {
+        query PullRequests($query: String!, $cursor: String, $pageSize: Int!) {
+            search(query: $query, type: ISSUE, first: $pageSize, after: $cursor) {
                 issueCount
                 pageInfo {
                     hasNextPage
@@ -311,6 +294,31 @@ nonisolated struct GitHubClient: Sendable {
                             updatedAt
                             title
                             headRefName
+                            baseRefName
+                            timelineItems(last: 60, itemTypes: [ISSUE_COMMENT, PULL_REQUEST_COMMIT, PULL_REQUEST_REVIEW, REVIEW_REQUESTED_EVENT]) {
+                                pageInfo { hasPreviousPage }
+                                nodes {
+                                    __typename
+                                    ... on IssueComment { createdAt author { login avatarUrl } }
+                                    ... on PullRequestCommit { commit { committedDate } }
+                                    ... on PullRequestReview { submittedAt state author { login avatarUrl } }
+                                    ... on ReviewRequestedEvent {
+                                        createdAt
+                                        requestedReviewer {
+                                            __typename
+                                            ... on User { login avatarUrl }
+                                        }
+                                    }
+                                }
+                            }
+                            reviewRequests(first: 30) {
+                                nodes {
+                                    requestedReviewer {
+                                        __typename
+                                        ... on User { login avatarUrl }
+                                    }
+                                }
+                            }
                             url
                             deletions
                             additions
@@ -397,7 +405,12 @@ private nonisolated struct GraphQLAPIError: LocalizedError, Sendable {
     let messages: [String]
 
     var errorDescription: String? {
-        messages.joined(separator: "\n")
+        var seen: Set<String> = []
+        return messages.filter { seen.insert($0).inserted }.joined(separator: "\n")
+    }
+
+    var isResourceLimit: Bool {
+        messages.contains { $0.lowercased().contains("resource limits for this query exceeded") }
     }
 
     var isMissingStackSchema: Bool {
@@ -431,10 +444,12 @@ private nonisolated struct GraphQLRequest<Variables: Encodable>: Encodable {
 nonisolated struct GraphQLVariables: Encodable, Sendable {
     let searchQuery: String
     let cursor: String?
+    var pageSize: Int = 20
 
     enum CodingKeys: String, CodingKey {
         case searchQuery = "query"
         case cursor
+        case pageSize
     }
 }
 

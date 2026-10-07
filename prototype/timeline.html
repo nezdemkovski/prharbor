@@ -1,0 +1,1635 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PR Timeline</title>
+<style>
+:root {
+  --bg: #eceef2;
+  --panel: #ffffff;
+  --line: #eef0f3;
+  --line-strong: #e3e6eb;
+  --text: #16181c;
+  --muted: #858c96;
+  --faint: #b5bbc4;
+  --track: #f8f9fa;
+  --active: #e3e6eb;
+  --hover: #f6f7f9;
+  --accent: #3d82f6;
+  --accent-soft: #e9f1fe;
+  --fresh: #22b25b;
+  --aging: #d4a106;
+  --stale: #f07a1a;
+  --rotting: #e5484d;
+  --shadow: 0 1px 2px rgba(20,24,30,.04), 0 12px 40px rgba(20,24,30,.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e0f11; --panel: #1a1b1f; --line: #26282d; --line-strong: #2f3237;
+    --text: #eceef1; --muted: #8b919a; --faint: #5b6068; --track: #1f2125;
+    --active: #33363c; --hover: #222428; --accent: #5b9cff; --accent-soft: #1d2a40;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 40px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e0f11; --panel: #1a1b1f; --line: #26282d; --line-strong: #2f3237;
+  --text: #eceef1; --muted: #8b919a; --faint: #5b6068; --track: #1f2125;
+  --active: #33363c; --hover: #222428; --accent: #5b9cff; --accent-soft: #1d2a40;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 40px rgba(0,0,0,.4);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+  min-height: 100vh;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+
+/* faux menu bar, for context */
+.menubar {
+  height: 28px; display: flex; align-items: center; justify-content: flex-end; gap: 18px;
+  padding: 0 16px; font-size: 13px; font-weight: 500;
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--line);
+}
+.menubar .item { display: flex; align-items: center; gap: 5px; opacity: .8; }
+.menubar .pullbar { opacity: 1; padding: 2px 7px; border-radius: 5px; background: color-mix(in srgb, var(--text) 10%, transparent); }
+.menubar .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rotting); }
+
+.stage { display: flex; justify-content: center; padding: 18px 16px 40px; }
+.panel {
+  width: 780px; max-width: 100%;
+  background: var(--panel);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  position: relative;
+}
+
+/* command bar */
+.cmd { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+.cmd-icon {
+  width: 38px; height: 38px; border-radius: 11px; flex: none;
+  display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.field { position: relative; flex: 1; height: 28px; }
+.field input, .field .hl {
+  position: absolute; inset: 0; width: 100%;
+  font: 500 18px/28px -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  letter-spacing: -.01em; padding: 0; margin: 0; border: 0; white-space: pre;
+}
+.field input { background: transparent; color: transparent; caret-color: var(--accent); outline: none; }
+.field input::placeholder { color: var(--faint); }
+.field .hl { pointer-events: none; color: var(--text); overflow: hidden; }
+.field .tok { color: var(--accent); background: var(--accent-soft); border-radius: 5px; box-shadow: 0 0 0 2px var(--accent-soft); }
+.kbd {
+  min-width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 600; padding: 0 8px;
+}
+
+/* header */
+.head { display: flex; align-items: center; gap: 10px; padding: 16px 18px 6px; }
+.head h1 { white-space: nowrap; font-size: 15px; font-weight: 650; margin: 0; letter-spacing: -.01em; }
+.head .date { color: var(--faint); font-weight: 500; margin-left: 6px; }
+.spacer { flex: 1; }
+.seg { display: flex; background: var(--track); border: 1px solid var(--line); border-radius: 9px; padding: 2px; }
+.seg button { padding: 4px 10px; border-radius: 7px; color: var(--muted); font-weight: 550; font-size: 12px; transition: background .15s, color .15s; }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px var(--line-strong); }
+.seg .n { color: var(--faint); margin-left: 4px; font-weight: 500; }
+
+.summary { display: flex; align-items: center; flex-wrap: wrap; row-gap: 4px; gap: 14px; padding: 2px 18px 12px; color: var(--muted); font-size: 12px; }
+.rotbar { display: flex; width: 120px; height: 6px; border-radius: 3px; overflow: hidden; gap: 2px; }
+.rotbar span { display: block; height: 100%; border-radius: 2px; transition: flex-grow .3s; }
+.summary > span { white-space: nowrap; }
+.summary b { color: var(--text); font-weight: 600; }
+.summary .warn { color: var(--rotting); font-weight: 550; }
+.legend { display: flex; gap: 10px; margin-left: auto; }
+.legend i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: 0; }
+
+/* timeline */
+.tl { position: relative; padding: 0 18px; }
+.axis { display: grid; grid-template-columns: 270px 1fr; height: 30px; position: relative; }
+.axis .ticks { position: relative; }
+.tick { position: absolute; bottom: 7px; transform: translateX(-50%); font-size: 11px; color: var(--faint); white-space: nowrap; }
+.today-pill {
+  position: absolute; bottom: 3px; transform: translateX(-50%);
+  background: var(--text); color: var(--panel); font-size: 10.5px; font-weight: 650;
+  padding: 2px 7px; border-radius: 10px; z-index: 3;
+}
+.cursor-pill {
+  position: absolute; bottom: 3px; transform: translateX(-50%);
+  background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 650;
+  padding: 2px 8px; border-radius: 10px; z-index: 4; white-space: nowrap;
+  opacity: 0; transition: opacity .12s;
+}
+
+.rows { position: relative; max-height: max(456px, calc(100vh - 470px)); overflow-y: auto; overflow-x: hidden; margin: 0 -18px; padding: 0 18px 4px; scrollbar-width: thin; }
+.rows-in { position: relative; }
+.grid { position: absolute; top: 0; bottom: 0; left: 270px; right: 0; pointer-events: none; }
+.grid .gl { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); }
+.grid .we { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--track) 70%, transparent); }
+.grid .now { position: absolute; top: 0; bottom: 0; width: 1.5px; background: var(--text); opacity: .75; z-index: 2; }
+.grid .future { position: absolute; top: 0; bottom: 0; right: 0; background: repeating-linear-gradient(90deg, transparent 0 3px, color-mix(in srgb, var(--line) 60%, transparent) 3px 4px); opacity: .6; }
+.grid .cursor { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--accent); opacity: 0; transition: opacity .12s; z-index: 3; }
+
+.section {
+  display: grid; grid-template-columns: 270px 1fr; height: 30px; align-items: end;
+  font-size: 11px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted);
+  padding-bottom: 5px; position: relative;
+}
+.section .count { color: var(--faint); margin-left: 5px; }
+.section.today { color: var(--accent); }
+
+.row {
+  display: grid; grid-template-columns: 270px 1fr; height: 50px; align-items: center;
+  position: relative; border-radius: 12px; cursor: pointer;
+  transition: opacity .25s, transform .3s, height .3s;
+}
+.row::before {
+  content: ""; position: absolute; inset: 2px -8px; border-radius: 12px;
+  background: transparent; transition: background .12s; z-index: 0;
+}
+.row:hover::before { background: color-mix(in srgb, var(--hover) 70%, transparent); }
+.row.sel::before { background: var(--accent-soft); opacity: .55; }
+.row > * { position: relative; z-index: 1; }
+.row.snoozed { opacity: .5; }
+.row.leaving { opacity: 0; transform: translateX(24px); height: 0; overflow: hidden; }
+
+.who { display: flex; align-items: center; gap: 10px; min-width: 0; padding-right: 14px; }
+.av {
+  width: 30px; height: 30px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; font-size: 12px; font-weight: 650; color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+}
+.who .txt { min-width: 0; }
+.who .title { font-weight: 560; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -.005em; }
+.who .meta { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; gap: 5px; align-items: center; }
+.meta .smell { font-weight: 600; }
+.chip-s { font-size: 10px; font-weight: 650; padding: 0 5px; border-radius: 4px; background: var(--track); border: 1px solid var(--line-strong); color: var(--muted); line-height: 15px; }
+
+.track { position: relative; height: 34px; background: var(--track); border-radius: 10px; border: 1px solid var(--line); overflow: visible; }
+.seg-a, .seg-i, .seg-z {
+  position: absolute; top: 5px; bottom: 5px;
+  transition: left .45s cubic-bezier(.2,.8,.2,1), width .45s cubic-bezier(.2,.8,.2,1);
+}
+.seg-a { background: var(--active); border-radius: 7px 0 0 7px; }
+.seg-a.clip { border-radius: 0; -webkit-mask-image: linear-gradient(90deg, transparent, #000 24px); mask-image: linear-gradient(90deg, transparent, #000 24px); }
+.seg-i {
+  --c: var(--muted);
+  border-radius: 0 7px 7px 0;
+  background: repeating-linear-gradient(135deg,
+    color-mix(in srgb, var(--c) 50%, transparent) 0 2px,
+    color-mix(in srgb, var(--c) 14%, transparent) 2px 6px);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent);
+}
+.seg-i.solo { border-radius: 7px; }
+.seg-i.clip { border-radius: 0 7px 7px 0; -webkit-mask-image: linear-gradient(90deg, transparent, #000 24px); mask-image: linear-gradient(90deg, transparent, #000 24px); }
+.seg-z {
+  border: 1.5px dashed color-mix(in srgb, var(--muted) 70%, transparent); border-left: 0;
+  border-radius: 0 7px 7px 0;
+  display: flex; align-items: center; justify-content: flex-end; padding-right: 4px; font-size: 11px;
+}
+.clip-label {
+  position: absolute; left: 6px; top: 50%; transform: translateY(-50%);
+  font-size: 10.5px; font-weight: 650; color: var(--muted); z-index: 2;
+}
+.stall-label {
+  position: absolute; top: 50%; transform: translate(calc(-100% - 6px), -50%);
+  font-size: 10.5px; font-weight: 700; z-index: 2; white-space: nowrap;
+  transition: left .45s cubic-bezier(.2,.8,.2,1);
+}
+
+/* suggestions */
+.suggest { display: flex; align-items: center; gap: 8px; padding: 12px 18px 4px; flex-wrap: wrap; }
+.suggest .lbl { color: var(--muted); font-weight: 550; display: flex; gap: 6px; align-items: center; margin-right: 2px; }
+.pill {
+  padding: 6px 12px; border-radius: 20px; font-weight: 580; font-size: 12.5px;
+  border: 1px solid var(--line-strong); background: var(--panel);
+  box-shadow: 0 1px 2px rgba(0,0,0,.04); transition: background .15s, border-color .15s, color .15s;
+}
+.pill:hover { background: var(--hover); }
+.pill.on { background: color-mix(in srgb, var(--fresh) 16%, var(--panel)); border-color: color-mix(in srgb, var(--fresh) 50%, transparent); color: color-mix(in srgb, var(--fresh) 80%, var(--text)); }
+
+/* shared chrome */
+.card { margin: 12px 18px 18px; border: 1px solid var(--line-strong); border-radius: 14px; }
+.ghost { height: 32px; padding: 0 12px; border-radius: 8px; color: var(--muted); font-weight: 560; }
+.ghost:hover { background: var(--hover); color: var(--text); }
+.tooltip {
+  position: fixed; pointer-events: none; z-index: 50; background: var(--text); color: var(--panel);
+  font-size: 11.5px; font-weight: 550; padding: 5px 9px; border-radius: 7px; white-space: pre; text-align: left;
+  opacity: 0; transform: translate(-50%, calc(-100% - 10px)); transition: opacity .1s;
+}
+.toast {
+  position: absolute; left: 50%; bottom: 20px; transform: translate(-50%, 20px);
+  background: var(--text); color: var(--panel); padding: 9px 16px; border-radius: 12px; font-weight: 560;
+  opacity: 0; transition: opacity .2s, transform .25s cubic-bezier(.2,.8,.2,1); pointer-events: none; z-index: 20;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.hint { text-align: center; color: var(--faint); font-size: 11.5px; padding: 0 0 20px; }
+.hint kbd { font: inherit; padding: 1px 5px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--panel); color: var(--muted); }
+.empty { padding: 40px 0; text-align: center; color: var(--muted); }
+.caret { width: 22px; height: 22px; border-radius: 6px; color: var(--muted); flex: none; display: grid; place-items: center; font-size: 11px; }
+.caret:hover { background: var(--hover); color: var(--text); }
+.stack-ic { width: 30px; height: 30px; border-radius: 9px; flex: none; display: grid; place-items: center; background: var(--track); border: 1px solid var(--line-strong); color: var(--muted); }
+
+/* live data */
+img.av { object-fit: cover; background: var(--track); }
+.live { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--fresh); padding: 3px 9px; border-radius: 10px; background: color-mix(in srgb, var(--fresh) 12%, transparent); }
+.live i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.live.mock { color: var(--muted); background: var(--track); }
+
+/* freshness zones */
+.zones { display: flex; background: var(--track); border: 1px solid var(--line); border-radius: 9px; padding: 2px; gap: 2px; }
+.zone { display: flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 7px; font-size: 12px; font-weight: 550; color: var(--muted); transition: background .15s, color .15s; }
+.zone i { width: 7px; height: 7px; border-radius: 50%; }
+.zone b { color: var(--text); font-weight: 650; }
+.zone:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.zone.on { background: var(--panel); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px var(--line-strong); }
+.zone:disabled { opacity: .45; cursor: default; }
+
+/* timeline axis: today is the right edge */
+.today-pill { transform: translateX(-100%); }
+.tick.edge { transform: none; }
+.snz-tag { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font-size: 10.5px; font-weight: 650; color: var(--muted); z-index: 2; }
+
+/* repo groups */
+.repo-head { display: grid; grid-template-columns: 270px 1fr; height: 34px; align-items: center; cursor: pointer; margin-top: 6px; border-radius: 8px; }
+.repo-head:hover .rh-name { color: var(--text); }
+.rh-name { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 650; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.rh-name .caret { width: 16px; height: 16px; margin: 0 2px 0 0; font-size: 12px; }
+.rh-owner { color: var(--faint); font-weight: 500; }
+.rh-name .count { color: var(--faint); font-weight: 500; margin-left: 4px; }
+.rh-ic { display: inline-grid; place-items: center; margin-right: 4px; color: var(--muted); }
+.rh-track { position: relative; height: 100%; }
+.rh-track .dot { position: absolute; width: 7px; height: 7px; border-radius: 50%; transform: translate(-50%, -50%); opacity: .75; box-shadow: 0 0 0 1.5px var(--panel); }
+
+/* stack: avatars melt into one liquid capsule that ends in the target branch */
+.row.layer { height: 44px; }
+.stack-group { position: relative; margin: 4px 0; }
+.liquid { position: absolute; z-index: 1; left: -6px; top: 0; width: 42px; pointer-events: none; overflow: visible; }
+.liquid g { fill: var(--active); }
+.stack-group .row.layer .who { gap: 10px; }
+.stack-group .row.layer .av { box-shadow: 0 0 0 2px var(--panel); }
+.av-wrap { position: relative; z-index: 2; flex: none; display: flex; }
+.lnum {
+  position: absolute; right: -5px; bottom: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  display: grid; place-items: center; font-size: 9.5px; font-weight: 700; color: var(--muted);
+  background: var(--panel); box-shadow: 0 0 0 1px var(--line-strong);
+}
+.stack-tail { display: grid; grid-template-columns: 270px 1fr; height: 32px; align-items: start; }
+.stack-tail .who { position: relative; z-index: 2; gap: 10px; height: 26px; align-items: center; }
+.cap-node {
+  width: 22px; height: 22px; margin: 0 4px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  color: var(--muted); background: var(--panel); box-shadow: inset 0 0 0 1px var(--line-strong); position: relative; z-index: 2;
+}
+.cap-node svg { width: 11px; height: 11px; }
+.tail-text { display: flex; align-items: baseline; gap: 5px; min-width: 0; white-space: nowrap; }
+.tail-branch { font: 600 11.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.tail-merged { font-size: 11px; font-weight: 500; color: var(--faint); }
+
+/* event marks: commits are ticks, people are tiny avatars */
+.tick-c { position: absolute; top: 50%; width: 1.5px; height: 12px; transform: translate(-50%, -50%); border-radius: 1px; z-index: 2;
+  background: color-mix(in srgb, var(--text) 38%, transparent); }
+.tick-c::after { content: ""; position: absolute; inset: -5px -3px; }
+.tick-c:hover { background: var(--text); }
+.mk { position: absolute; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; z-index: 3; transition: transform .12s; }
+.mk:hover { transform: translate(-50%, -50%) scale(1.25); z-index: 4; }
+.mk-av { --ring: var(--faint); width: 16px; height: 16px; border-radius: 50%; overflow: hidden; flex: none; display: grid; place-items: center;
+  background: var(--track); box-shadow: 0 0 0 1.5px var(--ring), 0 0 0 3px var(--panel); }
+.mk-av + .mk-av { margin-left: -5px; }
+.mk-av img { width: 100%; height: 100%; object-fit: cover; }
+.mk-av b { font-size: 8.5px; font-weight: 700; color: var(--muted); }
+.mk-av.approved { --ring: var(--fresh); }
+.mk-av.changes { --ring: var(--stale); }
+.mk-av.comment { --ring: color-mix(in srgb, var(--muted) 70%, transparent); }
+.mk-av.requested { --ring: var(--accent); opacity: .65; }
+.mk-av.requested img { filter: grayscale(.6); }
+.mk-av.ci_fail { --ring: var(--rotting); width: 8px; height: 8px; border-radius: 2px; background: var(--rotting); }
+.mk-more { font-size: 9.5px; font-weight: 700; color: var(--muted); margin-left: 3px; text-shadow: 0 0 3px var(--panel); }
+
+/* brushing */
+.track { cursor: crosshair; }
+body.brushing, body.brushing * { cursor: ew-resize !important; user-select: none; }
+.grid .brush { position: absolute; top: 0; bottom: 0; display: none; z-index: 1;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); border-right: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); }
+.brush-pill { position: absolute; bottom: 3px; transform: translateX(-50%); display: none; z-index: 5; white-space: nowrap;
+  background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 650; padding: 2px 8px; border-radius: 10px; }
+.brush-pill button { margin-left: 5px; color: #fff; opacity: .8; font-size: 12px; line-height: 1; }
+.brush-pill button:hover { opacity: 1; }
+body.brushing .cursor-pill, body.brushing .grid .cursor { opacity: 0 !important; }
+
+/* settings: bots */
+.gear { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: var(--muted); font-size: 15px; border: 1px solid var(--line); background: var(--track); }
+.gear:hover, .gear.on { color: var(--text); background: var(--hover); }
+.pop {
+  position: absolute; right: 18px; top: 118px; width: 340px; z-index: 30;
+  background: var(--panel); border: 1px solid var(--line-strong); border-radius: 14px; padding: 14px 16px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.18), 0 1px 3px rgba(0,0,0,.08);
+}
+.pop[hidden] { display: none; }
+.pop-h { display: flex; align-items: center; font-weight: 650; font-size: 14px; margin-bottom: 4px; }
+.pop-x { margin-left: auto; width: 22px; height: 22px; border-radius: 6px; color: var(--muted); font-size: 16px; }
+.pop-x:hover { background: var(--hover); color: var(--text); }
+.pop-sub { color: var(--muted); font-size: 12px; margin: 6px 0; }
+.pop-sub code { font: 600 11px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--track); padding: 0 4px; border-radius: 4px; }
+.bot-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.bchip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 9px; border-radius: 8px; background: var(--track); border: 1px solid var(--line-strong); font: 560 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.bchip .bn { color: var(--faint); font: 500 11px -apple-system, system-ui, sans-serif; }
+.bchip button { width: 18px; height: 18px; border-radius: 5px; color: var(--muted); }
+.bchip button:hover { background: var(--hover); color: var(--rotting); }
+.bchip.add { padding-right: 9px; color: var(--accent); border-style: dashed; cursor: pointer; }
+.bchip.add:hover { background: var(--accent-soft); }
+.bot-form { display: flex; gap: 6px; }
+.bot-form input { flex: 1; height: 32px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--track); color: var(--text); padding: 0 10px; font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; outline: none; }
+.bot-form input:focus { border-color: var(--accent); }
+.pop-foot { display: flex; justify-content: flex-end; border-top: 1px solid var(--line); margin-top: 4px; padding-top: 8px; }
+.pop-foot .ghost { height: 28px; font-size: 12px; }
+
+/* detail card: quiet, Get Info-like */
+.card { padding: 16px 18px 14px; }
+.c-title { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c-line { margin: 3px 0 0; color: var(--muted); font-size: 12.5px; }
+.c-state { margin: 12px 0 0; font-size: 13px; display: flex; align-items: baseline; gap: 8px; }
+.c-state i { width: 7px; height: 7px; border-radius: 50%; flex: none; transform: translateY(-1px); }
+.c-empty { margin: 8px 0; color: var(--muted); }
+.c-info { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; margin-top: 12px; }
+.i-col { display: grid; grid-template-columns: 74px minmax(0, 1fr); row-gap: 4px; align-content: start; font-size: 12.5px; }
+.i-k { color: var(--muted); }
+.i-v { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.i-v .bad { color: var(--rotting); }
+.i-v .soft, .c-line .soft { color: var(--muted); }
+.ellip { display: block; overflow: hidden; text-overflow: ellipsis; }
+.link { color: var(--accent); font: inherit; }
+.link:hover { text-decoration: underline; }
+.c-actions { display: flex; align-items: center; gap: 6px; margin-top: 16px; }
+.btn {
+  height: 28px; padding: 0 12px; border-radius: 7px; font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap;
+  background: color-mix(in srgb, var(--text) 6%, var(--panel)); box-shadow: inset 0 0 0 .5px var(--line-strong), 0 .5px 1px rgba(0,0,0,.12);
+}
+.btn:hover { background: color-mix(in srgb, var(--text) 10%, var(--panel)); }
+.btn:active { background: color-mix(in srgb, var(--text) 14%, var(--panel)); }
+.btn.default { background: var(--accent); color: #fff; box-shadow: inset 0 .5px 0 rgba(255,255,255,.2), 0 .5px 1px rgba(0,0,0,.2); }
+.btn.default:hover { filter: brightness(1.06); }
+.btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 1px; }
+.chev { font-size: 9px; color: var(--muted); margin-left: 2px; }
+.menu-wrap { position: relative; }
+.menu { position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 20; min-width: 140px; padding: 4px; border-radius: 9px;
+  background: var(--panel); box-shadow: 0 0 0 .5px var(--line-strong), 0 8px 24px rgba(0,0,0,.22); }
+.menu[hidden] { display: none; }
+.menu button { display: block; width: 100%; text-align: left; padding: 5px 10px; border-radius: 5px; font-size: 13px; }
+.menu button:hover { background: var(--accent); color: #fff; }
+.layer-list { margin-top: 10px; display: flex; flex-direction: column; }
+.layer-row { display: flex; align-items: center; gap: 10px; padding: 4px 6px; margin: 0 -6px; border-radius: 6px; text-align: left; font-size: 13px; }
+.layer-row:hover { background: var(--hover); }
+.layer-row .av-wrap .av { width: 20px; height: 20px; font-size: 9px; }
+.layer-row .lnum { min-width: 13px; height: 13px; font-size: 8px; right: -4px; bottom: -3px; }
+.lr-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lr-num { color: var(--muted); font-size: 12px; }
+
+/* card: accent bar, title, quiet facts line, controls row */
+.card { padding: 14px 16px 12px; }
+.pc { display: flex; gap: 12px; }
+.pc-bar { width: 3px; border-radius: 2px; flex: none; align-self: stretch; }
+.pc-main { flex: 1; min-width: 0; }
+.pc-top { display: flex; align-items: center; gap: 12px; }
+.pc-title { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; letter-spacing: -.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-faces { display: flex; flex: none; }
+.pc-faces .mk-av { width: 22px; height: 22px; }
+.pc-faces .mk-av + .mk-av { margin-left: -5px; }
+.pc-faces .mk-av.bot { --ring: var(--line-strong); }
+.pc-sub { margin-top: 3px; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-sub .sep { color: var(--faint); }
+.pc-sub .bad { color: var(--rotting); }
+.pc-controls { display: flex; align-items: center; gap: 6px; margin-top: 12px; padding-left: 15px; }
+.tbtn { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; color: var(--muted); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.tbtn svg { width: 15px; height: 15px; }
+.tbtn:hover, .tbtn.on { color: var(--text); background: var(--hover); }
+.pc-controls .btn.default { height: 30px; padding: 0 14px; border-radius: 8px; }
+.btn kbd { font: inherit; opacity: .7; margin-left: 4px; }
+.menu { left: 0; right: auto; }
+
+/* settings window */
+.win-back { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: rgba(10,12,16,.28); padding: 16px; }
+.win-back[hidden] { display: none; }
+.win { width: 780px; max-width: 100%; height: 600px; max-height: 100%; display: flex; flex-direction: column; overflow: hidden; border-radius: 12px; background: var(--panel);
+  box-shadow: 0 0 0 .5px rgba(0,0,0,.25), 0 24px 70px rgba(0,0,0,.35); }
+.win-bar { height: 38px; flex: none; display: flex; align-items: center; justify-content: center; position: relative; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--track) 70%, var(--panel)); }
+.lights { position: absolute; left: 12px; display: flex; gap: 8px; }
+.light { width: 12px; height: 12px; border-radius: 50%; display: block; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.2); }
+.light.r { background: #ff5f57; } .light.y { background: #febc2e; } .light.g { background: #28c840; }
+.win-title { font-size: 13px; font-weight: 600; color: var(--muted); }
+.st { flex: 1; min-height: 0; display: grid; grid-template-columns: 196px 1fr; }
+.st-side { background: color-mix(in srgb, var(--track) 70%, var(--panel)); border-right: 1px solid var(--line); padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; overflow: auto; }
+.st-me { display: flex; align-items: center; gap: 8px; padding: 4px 8px 12px; }
+.st-me .av { width: 28px; height: 28px; } .st-me b { font-size: 12.5px; }
+.st-item { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 7px; font-size: 13px; text-align: left; }
+.st-item i { width: 20px; height: 20px; border-radius: 5px; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 11px; flex: none; }
+.st-item:hover { background: var(--hover); }
+.st-item.on { background: var(--accent); color: #fff; }
+.st-pane { padding: 18px 22px 22px; overflow: auto; }
+.st-pane h3 { margin: 0 0 2px; font-size: 18px; font-weight: 650; letter-spacing: -.01em; }
+.st-pane > p { margin: 0 0 14px; color: var(--muted); font-size: 12.5px; }
+.st-group { background: color-mix(in srgb, var(--track) 80%, var(--panel)); border-radius: 12px; box-shadow: inset 0 0 0 1px var(--line); }
+.st-row { display: flex; align-items: center; gap: 16px; padding: 10px 14px; min-height: 44px; }
+.st-row + .st-row { border-top: 1px solid var(--line); }
+.st-row.block { display: block; }
+.st-lbl { flex: 1; min-width: 0; } .st-lbl > div:first-child { font-size: 13px; }
+.st-hint { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+.st-acct { display: flex; align-items: center; gap: 12px; flex: 1; } .st-acct .av { width: 36px; height: 36px; }
+.st-switch { width: 34px; height: 20px; border-radius: 10px; background: var(--active); position: relative; flex: none; transition: background .15s; }
+.st-switch::after { content: ""; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+.st-switch.on { background: var(--accent); } .st-switch.on::after { transform: translateX(14px); }
+.st-select { appearance: none; background: var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='10' viewBox='0 0 8 10'%3E%3Cpath d='M1 4l3-3 3 3M1 6l3 3 3-3' fill='none' stroke='%23858c96' stroke-width='1.2'/%3E%3C/svg%3E") no-repeat right 8px center;
+  border: 0; box-shadow: inset 0 0 0 .5px var(--line-strong), 0 .5px 1px rgba(0,0,0,.1); border-radius: 6px; padding: 3px 24px 3px 9px; font: inherit; font-size: 12.5px; color: var(--text); }
+.st-input { background: var(--panel); border: 0; box-shadow: inset 0 0 0 1px var(--line-strong); border-radius: 7px; padding: 5px 9px; width: 220px; font: inherit; font-size: 12.5px; color: var(--text); outline: none; }
+.st-input:focus { box-shadow: inset 0 0 0 1.5px var(--accent); } .st-time { width: 80px; }
+.st-fz-bar { position: relative; height: 10px; border-radius: 5px; margin: 28px 10px 30px; }
+.st-fz-zone { position: absolute; top: 0; bottom: 0; }
+.st-fz-zone:first-child { border-radius: 5px 0 0 5px; } .st-fz-zone:nth-child(4) { border-radius: 0 5px 5px 0; }
+.st-fz-h { position: absolute; top: 50%; width: 18px; height: 18px; border-radius: 50%; background: #fff; transform: translate(-50%, -50%); cursor: ew-resize; touch-action: none; box-shadow: 0 0 0 .5px rgba(0,0,0,.2), 0 1px 4px rgba(0,0,0,.25); }
+.st-fz-h span { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 650; white-space: nowrap; color: var(--text); }
+.st-fz-lbls { position: absolute; top: 18px; left: 0; right: 0; font-size: 11px; color: var(--muted); }
+.st-fz-lbls span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.st-fz-prev { display: flex; flex-direction: column; gap: 6px; }
+.st-fz-row { display: grid; grid-template-columns: 170px 1fr 92px; align-items: center; gap: 10px; font-size: 12px; }
+.st-fz-t { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-fz-tr { position: relative; height: 18px; background: var(--track); border-radius: 6px; box-shadow: inset 0 0 0 1px var(--line); }
+.st-fz-tr i { position: absolute; top: 3px; bottom: 3px; right: 3px; border-radius: 4px;
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 55%, transparent) 0 2px, color-mix(in srgb, var(--c) 15%, transparent) 2px 6px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent); }
+.st-fz-z { font-weight: 650; text-align: right; white-space: nowrap; }
+
+/* bottom detail: one surface, type does the work */
+.dr-head { display: flex; align-items: flex-start; gap: 10px; }
+.dr-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; margin-top: 6px; }
+.dr-titles { flex: 1; min-width: 0; }
+.dr-title { font-size: 13.5px; font-weight: 600; letter-spacing: -.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dr-sub { display: flex; align-items: center; gap: 0; margin-top: 2px; font-size: 11.5px; color: var(--muted); min-width: 0; white-space: nowrap; }
+.dr-sub > span + span::before { content: "·"; color: var(--faint); margin: 0 7px; }
+.dr-sub > span { flex: none; }
+.dr-sub > .dr-branch { flex: 0 1 auto; min-width: 90px; }
+.dm-fail { min-width: 0; } .dm-name { overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.dr-branch { display: inline-flex; align-items: center; gap: 4px; min-width: 120px; flex: 0 1 auto; max-width: 320px; font: 500 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.dr-branch > svg { width: 11px; height: 11px; flex: none; color: var(--faint); }
+.dr-branch > span { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.dr-branch button { width: 18px; height: 18px; border-radius: 4px; display: grid; place-items: center; color: var(--faint); flex: none; }
+.dr-branch button:hover { color: var(--text); background: var(--hover); }
+.dr-branch button svg { width: 11px; height: 11px; }
+.dm-ok, .dm-fail, .dm-pend { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.dm-fail > span, .dm-fail { overflow: hidden; text-overflow: ellipsis; }
+.dr-sub > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.dm-ok svg, .dm-fail svg, .dm-pend svg { width: 11px; height: 11px; }
+.dm-ok svg { color: var(--fresh); } .dm-fail { color: var(--rotting); } .dm-pend svg { color: var(--aging); }
+.dr-sub .dg-act { margin-left: 8px; font-size: 11.5px; color: var(--text); }
+.dr-tools { display: flex; align-items: center; gap: 2px; flex: none; }
+.dr-tools .tbtn { box-shadow: none; width: 28px; height: 28px; }
+.dr-tools .btn.default { margin-left: 8px; }
+.dr-tools .btn.default { height: 30px; padding: 0 14px; border-radius: 8px; }
+.dr-face { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; flex: none; font-size: 12px; color: var(--text); }
+.dr-face > span:last-child { text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+.dr-face:hover > span:last-child { text-decoration-color: var(--text); }
+.dr-face .mk-av { width: 18px; height: 18px; box-shadow: none; }
+.dr-mono { font: 500 11.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: inherit; }
+.dh { display: flex; align-items: center; gap: 10px; height: 24px; margin: 9px 0 0 18px; font-size: 11px; color: var(--faint); }
+.dh-l { white-space: nowrap; flex: none; }
+.dh-lane { position: relative; flex: 1; height: 22px; border-radius: 6px; background: var(--track); }
+.dh-quiet { position: absolute; top: 3px; bottom: 3px; right: 3px; border-radius: 0 6px 6px 0; border-left: 1.5px dashed color-mix(in srgb, var(--c) 60%, transparent);
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 22%, transparent) 0 2px, transparent 2px 7px); }
+.dh-tick { position: absolute; top: 50%; width: 2px; height: 12px; border-radius: 1px; transform: translate(-50%, -50%); background: var(--text); opacity: .55; }
+.dh-pm { position: absolute; top: 50%; transform: translate(-50%, -50%); display: flex; }
+.dh-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, 5px); gap: 2px; flex: none; }
+.dh-grid i { width: 5px; height: 5px; border-radius: 1.5px; background: color-mix(in srgb, var(--fresh) 70%, transparent); }
+.dh-grid i.fail { background: var(--rotting); } .dh-grid i.pending { background: var(--aging); }
+
+@media (max-width: 640px) {
+  .axis, .section, .row { grid-template-columns: 150px 1fr; }
+  .repo-head, .stack-tail { grid-template-columns: 150px 1fr; }
+  .grid { left: 150px; }
+  .legend { display: none; }
+  .head { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+<div class="menubar">
+  <span class="item">􀙇</span>
+  <span class="item pullbar" id="mbIcon">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 3.25a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25Zm5.677-.177L9.573.677A.25.25 0 0 1 10 .854V2.5h1A2.5 2.5 0 0 1 13.5 5v5.628a2.251 2.251 0 1 1-1.5 0V5a1 1 0 0 0-1-1h-1v1.646a.25.25 0 0 1-.427.177L7.177 3.427a.25.25 0 0 1 0-.354Z"/></svg>
+    <span class="dot"></span><span id="mbCount">3</span>
+  </span>
+  <span class="item">Wed 30 Sep  10:42</span>
+</div>
+
+<div class="stage">
+  <div class="panel" id="panel">
+    <div class="cmd">
+      <div class="cmd-icon">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 3.25a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25Zm5.677-.177L9.573.677A.25.25 0 0 1 10 .854V2.5h1A2.5 2.5 0 0 1 13.5 5v5.628a2.251 2.251 0 1 1-1.5 0V5a1 1 0 0 0-1-1h-1v1.646a.25.25 0 0 1-.427.177L7.177 3.427a.25.25 0 0 1 0-.354ZM3.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm0 9.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm8.25.75a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Z"/></svg>
+      </div>
+      <div class="field">
+        <div class="hl" id="hl"></div>
+        <input id="q" placeholder="Filter… try “mine stale” or “noona-api >2w”" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="kbd" title="Press / to focus">/</div>
+    </div>
+
+    <div class="head">
+      <div class="seg" id="tabs"></div>
+      <div id="source"></div>
+      <div class="spacer"></div>
+      <div class="seg" id="sorts"></div>
+      <div class="seg" id="ranges"></div>
+      <button class="gear" id="gear" data-ui="settings" title="Settings">⚙︎</button>
+    </div>
+    <div class="summary" id="summary"></div>
+
+    <div class="tl">
+      <div class="axis"><div></div><div class="ticks" id="ticks"></div></div>
+      <div class="rows" id="rows"></div>
+    </div>
+
+    <div class="card" id="card"></div>
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+<div class="hint"><kbd>↑</kbd> <kbd>↓</kbd> select · <kbd>⏎</kbd> do next action · <kbd>S</kbd> snooze · <kbd>/</kbd> filter · <kbd>O</kbd> open on GitHub · hatched = time nobody moved it · actions are simulated</div>
+<div class="tooltip" id="tip"></div>
+<div class="win-back" id="settingsWin" hidden></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="stack-goo"><feGaussianBlur in="SourceGraphic" stdDeviation="7"/><feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9"/></filter>
+</defs></svg>
+
+<!-- data.js is regenerated by fetch_prs.py; bust the cache so a reload always shows fresh data -->
+<script>document.write('<script src="data.js?' + Date.now() + '"><\/script>');</script>
+<script>
+// ---------- data ----------
+const AGENTS = new Set(['noona-ai']);
+// Bots are a user-editable list of logins; "*" is a wildcard. Stored per browser.
+const DEFAULT_BOTS = ['dependabot', 'github-actions', 'renovate', 'greptile-apps', '*[bot]'];
+function loadBots() { try { const v = JSON.parse(localStorage.getItem('bots')); return Array.isArray(v) ? v : [...DEFAULT_BOTS]; } catch { return [...DEFAULT_BOTS]; } }
+function saveBots() { try { localStorage.setItem('bots', JSON.stringify(BOTS)); } catch {} }
+let BOTS = loadBots();
+const botRe = pat => new RegExp('^' + pat.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$', 'i');
+const isBot = n => !!n && BOTS.some(b => botRe(b).test(n));
+function applyBots() {
+  PRS.forEach(p => {
+    p.botReviewers = p.allReviewers.filter(isBot);
+    p.reviewers = p.allReviewers.filter(r => !isBot(r));
+  });
+}
+const IS_LIVE = !!window.LIVE;
+const DECIDE_DAYS = 60;
+const ICON_STACK = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M8 1.75 14.25 5 8 8.25 1.75 5Z"/><path d="m1.75 8 6.25 3.25L14.25 8"/><path d="m1.75 11 6.25 3.25L14.25 11"/></svg>';
+const ICON_TEAM = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="5.5" r="2.25"/><path d="M1.75 13.25c.5-2.3 2.2-3.5 4.25-3.5s3.75 1.2 4.25 3.5"/><path d="M10.5 3.5a2.1 2.1 0 0 1 0 4.1M12 9.9c1.2.4 2 1.5 2.25 3.1"/></svg>';
+const ICON_BOT = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="2.5" y="5" width="11" height="8" rx="2.5"/><path d="M8 2.25V5M6 9h.01M10 9h.01" stroke-linecap="round"/></svg>';
+
+let ME, PEOPLE, PRS, TODAY;
+if (IS_LIVE) {
+  TODAY = new Date(LIVE.fetchedAt);
+  ME = LIVE.me;
+  PEOPLE = LIVE.people;
+  PEOPLE[ME].name = 'You';
+  const ago = iso => (TODAY - new Date(iso)) / 864e5;
+  PRS = LIVE.prs.map(p => ({
+    ...p, created: ago(p.created),
+    events: p.events.map(e => ({ ...e, t: ago(e.at) })),
+    allReviewers: p.reviewers,
+  }));
+} else {
+  TODAY = new Date(2026, 8, 30, 10, 42);
+  ME = 'yuri';
+  PEOPLE = {
+    yuri:  { name: 'You',   color: 'linear-gradient(135deg,#f59e0b,#ef4444)' },
+    anna:  { name: 'Anna',  color: 'linear-gradient(135deg,#8b5cf6,#6366f1)' },
+    marek: { name: 'Marek', color: 'linear-gradient(135deg,#06b6d4,#3b82f6)' },
+    tomas: { name: 'Tomás', color: 'linear-gradient(135deg,#10b981,#059669)' },
+    lena:  { name: 'Lena',  color: 'linear-gradient(135deg,#ec4899,#f43f5e)' },
+  };
+  const S = (id, num, pos) => ({ id, num, pos, base: 'main' });
+  PRS = [
+    { id: 1, repo: 'prharbor', num: 418, title: 'Timeline view for open pull requests', author: ME, created: 2.1, draft: true, ci: 'pass', review: 'none', reviewers: [], add: 812, del: 140,
+      events: [{ t: 2.1, type: 'opened' }, { t: 1.4, type: 'commit' }, { t: 0.3, type: 'commit' }] },
+    { id: 2, repo: 'prharbor', num: 412, title: 'Harden token refresh in device flow', author: ME, created: 9.2, ci: 'pass', review: 'approved', reviewers: ['anna'], add: 96, del: 31,
+      events: [{ t: 9.2, type: 'opened' }, { t: 8.5, type: 'commit' }, { t: 6.8, type: 'comment', who: 'anna' }, { t: 6, type: 'commit' }, { t: 3.2, type: 'approved', who: 'anna' }] },
+    { id: 3, repo: 'noona-web', num: 2291, title: 'Booking widget: timezone-aware slots', author: ME, created: 34, ci: 'pass', review: 'changes', reviewers: ['marek', 'lena'], add: 420, del: 198,
+      events: [{ t: 34, type: 'opened' }, { t: 31, type: 'commit' }, { t: 27.5, type: 'commit' }, { t: 22.4, type: 'changes', who: 'marek' }, { t: 21.8, type: 'comment', who: 'lena' }] },
+    { id: 4, repo: 'noona-web', num: 2304, title: 'Migrate calendar to Temporal API', author: ME, created: 18, ci: 'fail', review: 'none', reviewers: ['anna'], add: 1310, del: 902,
+      events: [{ t: 18, type: 'opened' }, { t: 16.2, type: 'commit' }, { t: 14.1, type: 'ci_fail' }] },
+    { id: 5, repo: 'noona-api', num: 881, title: 'Idempotency keys for payment intents', author: ME, created: 96, ci: 'pass', review: 'none', conflict: true, reviewers: ['marek'], add: 244, del: 12,
+      events: [{ t: 96, type: 'opened' }, { t: 90, type: 'commit' }, { t: 84, type: 'commit' }, { t: 71, type: 'comment', who: 'marek' }] },
+    { id: 6, repo: 'noona-api', num: 902, title: 'Extract slot engine into module', author: ME, created: 12.2, ci: 'pass', review: 'approved', reviewers: ['tomas'], add: 380, del: 344, stack: S('s37', 37, 1),
+      events: [{ t: 12.2, type: 'opened' }, { t: 11, type: 'commit' }, { t: 4.4, type: 'approved', who: 'tomas' }] },
+    { id: 7, repo: 'noona-api', num: 903, title: 'Cache computed slots per venue', author: ME, created: 11.4, ci: 'pass', review: 'none', reviewers: ['tomas'], add: 172, del: 20, stack: S('s37', 37, 2),
+      events: [{ t: 11.4, type: 'opened' }, { t: 10.2, type: 'commit' }, { t: 6.1, type: 'comment', who: 'tomas' }] },
+    { id: 8, repo: 'noona-api', num: 904, title: 'Expose /slots endpoint', author: ME, created: 10.5, draft: true, ci: 'pending', review: 'none', reviewers: [], add: 88, del: 4, stack: S('s37', 37, 3),
+      events: [{ t: 10.5, type: 'opened' }] },
+    { id: 9, repo: 'noona-web', num: 2310, title: 'Settings: notification preferences', author: 'anna', created: 5.3, ci: 'pass', review: 'requested', reviewers: [ME], add: 260, del: 45,
+      events: [{ t: 5.3, type: 'opened' }, { t: 5.1, type: 'requested', who: ME }, { t: 3.9, type: 'commit' }, { t: 1.2, type: 'commit' }] },
+    { id: 10, repo: 'homelab', num: 57, title: 'Bump cilium to 1.19', author: 'tomas', created: 0.8, ci: 'pass', review: 'requested', reviewers: [ME], add: 6, del: 6,
+      events: [{ t: 0.8, type: 'opened' }, { t: 0.7, type: 'requested', who: ME }] },
+    { id: 14, repo: 'noona-api', num: 889, title: 'Webhook delivery log table', author: 'marek', created: 27, ci: 'pass', review: 'requested', reviewers: [ME], add: 210, del: 3, stack: S('s41', 41, 1),
+      events: [{ t: 27, type: 'opened' }, { t: 26.8, type: 'requested', who: ME }, { t: 20.5, type: 'commit' }] },
+    { id: 11, repo: 'noona-api', num: 890, title: 'Rate-limit webhook retries', author: 'marek', created: 26, ci: 'pass', review: 'requested', reviewers: [ME, 'lena'], add: 133, del: 58, stack: S('s41', 41, 2),
+      events: [{ t: 26, type: 'opened' }, { t: 25.6, type: 'requested', who: ME }, { t: 19, type: 'comment', who: 'lena' }, { t: 12.3, type: 'commit' }] },
+    { id: 12, repo: 'dotfiles', num: 19, title: 'zsh: lazy-load nvm', author: ME, created: 48, ci: 'pass', review: 'none', reviewers: [], add: 22, del: 9,
+      events: [{ t: 48, type: 'opened' }] },
+    { id: 13, repo: 'noona-web', num: 2279, title: 'Experiment: new onboarding copy', author: ME, created: 40, ci: 'pass', review: 'none', reviewers: ['lena'], add: 58, del: 41, snooze: -4,
+      events: [{ t: 40, type: 'opened' }, { t: 37, type: 'commit' }, { t: 30, type: 'comment', who: 'lena' }] },
+    { id: 15, repo: 'noona-web', num: 2201, title: 'Bump vite from 5.4.6 to 6.4.2', author: 'dependabot', created: 120, ci: 'pass', review: 'none', reviewers: [], add: 4, del: 4,
+      events: [{ t: 120, type: 'opened' }] },
+    { id: 16, repo: 'noona-api', num: 812, title: 'Tune mongo pool size', author: 'lena', created: 44, ci: 'pass', review: 'none', reviewers: [], add: 3, del: 3,
+      events: [{ t: 44, type: 'opened' }] },
+  ];
+  PRS.forEach(p => { p.allReviewers = p.reviewers; p.fullRepo = `acme/${p.repo}`; });
+}
+const cleanTitle = t => t
+  .replace(/^(\s*\[?[A-Z]{2,}-\d+\]?\s*[:,\-–]?\s*)+/, '')
+  .replace(/(\s*\[[^\]]*\]?)+\s*$/, '')
+  .replace(/^\s*[-–:]\s*/, '').trim() || t;
+PRS.forEach(p => {
+  p.tickets = [...new Set(p.title.match(/\b[A-Z]{2,}-\d+\b/g) || [])];
+  p.clean = cleanTitle(p.title);
+});
+const STACK_ENTRIES = window.LIVE?.stackEntries ?? {};
+applyBots();
+const REPOS = [...new Set(PRS.map(p => p.repo.toLowerCase()))];
+
+const RANGES = [{ k: 14, l: '2W' }, { k: 30, l: '1M' }, { k: 90, l: '3M' }, { k: 'log', l: '6M' }];
+const TABS = [{ k: 'all', l: 'All' }, { k: 'mine', l: 'Mine' }, { k: 'review', l: 'Reviewing' }];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// Settings: one object, persisted per browser. Defaults mirror the current app where it has an equivalent.
+const DEFAULT_SETTINGS = {
+  thresholds: [2, 7, 21], range: 3, sort: 0, showReview: true, showAssigned: false, showMine: true, hideDrafts: false,
+  ci: 0, ownComments: true, merged: 0, counter: 0, refresh: 1, login: true, wake: true, apiUrl: 'https://api.github.com',
+  nReview: true, nAssigned: true, nRot: true, nMorningOn: true, nMorning: '09:00',
+};
+function loadSettings() { try { return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('settings') || '{}') }; } catch { return { ...DEFAULT_SETTINGS }; } }
+function saveSettings() { try { localStorage.setItem('settings', JSON.stringify(SET)); } catch {} }
+const SET = loadSettings();
+const RANGE_KEYS = [14, 30, 90, 'log'];
+const state = { range: RANGE_KEYS[SET.range], tab: 'all', sort: SET.sort ? 'created' : 'updated', sel: null, q: '', snoozeDays: 3, toggled: loadToggled() };
+function loadToggled() { try { return new Set(JSON.parse(localStorage.getItem('collapsed') || '[]')); } catch { return new Set(); } }
+function saveToggled() { try { localStorage.setItem('collapsed', JSON.stringify([...state.toggled])); } catch {} }
+
+// ---------- model ----------
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const isMine = p => p.author === ME;
+const who = n => PEOPLE[n]?.name ?? n;
+const dateOf = t => new Date(TODAY - t * 864e5);
+const fmtDate = d => `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+const fmtDays = d => d < 1 ? `${Math.max(1, Math.round(d * 24))}h` : d < 60 ? `${Math.round(d)}d` : d < 365 ? `${Math.round(d / 30.4)}mo` : `${(d / 365).toFixed(1)}y`;
+const byId = id => PRS.find(p => String(p.id) === String(id));
+const STACK = 'stack:', REPO = 'repo:';
+
+const layersOf = sid => PRS.filter(p => p.stack?.id === sid).sort((a, b) => b.stack.pos - a.stack.pos);
+const baseOf = sid => layersOf(sid).at(-1);
+const inStack = p => !!p.stack && layersOf(p.stack.id).length > 1;
+const isBlocked = p => inStack(p) && baseOf(p.stack.id) !== p;
+const personalReq = p => p.events.some(e => e.type === 'requested' && e.who === ME);
+
+function stallFrom(p) {
+  if (!isMine(p)) {
+    const req = p.events.filter(e => e.type === 'requested' && e.who === ME).at(-1);
+    return req ? req.t : p.created;
+  }
+  return Math.min(...p.events.filter(e => SET.ownComments || !(e.type === 'comment' && e.who === p.author)).map(e => e.t));
+}
+// active: yours to move or personally asked of you · decide: yours, dead for 60d+ · team/bots: background noise
+function bucket(p) {
+  if (isMine(p)) return stallFrom(p) > DECIDE_DAYS ? 'decide' : 'active';
+  if (isBot(p.author)) return 'bots';
+  return personalReq(p) ? 'active' : 'team';
+}
+function smell(days) {
+  const [a, b, c] = SET.thresholds;
+  if (days < a) return { k: 'fresh', l: 'fresh', c: 'var(--fresh)' };
+  if (days < b) return { k: 'aging', l: 'aging', c: 'var(--aging)' };
+  if (days < c) return { k: 'stale', l: 'stale', c: 'var(--stale)' };
+  return { k: 'rotting', l: 'rotting', c: 'var(--rotting)' };
+}
+const smellOf = p => nextAction(p).kind === 'wait' ? { k: 'blocked', l: 'blocked', c: 'var(--faint)' } : smell(stallFrom(p));
+
+function nextAction(p) {
+  const s = stallFrom(p), b = bucket(p);
+  if (b === 'bots') return { label: 'Triage', why: `${who(p.author)} · ${fmtDays(p.created)} old`, kind: 'bot' };
+  if (b === 'team') return { label: 'Review', why: 'Requested from a team you are in', kind: 'team' };
+  if (!isMine(p)) return { label: 'Review', why: `${who(p.author)} has waited ${fmtDays(s)} for you`, kind: 'review' };
+  if (b === 'decide') return { label: 'Revive or close', why: `No movement for ${fmtDays(s)}${p.conflict ? ' · conflicts' : ''}`, kind: 'decide' };
+  if (p.conflict) return { label: 'Rebase', why: 'Conflicts with base branch', kind: 'fix' };
+  if (p.ci === 'fail') return { label: 'Fix CI', why: `Checks are red · idle ${fmtDays(s)}`, kind: 'fix' };
+  if (p.review === 'changes') {
+    const e = [...p.events].reverse().find(e => e.type === 'changes');
+    return { label: 'Address feedback', why: e ? `${who(e.who)} requested changes ${fmtDays(e.t)} ago` : 'Changes requested', kind: 'fix' };
+  }
+  if (isBlocked(p)) {
+    const base = baseOf(p.stack.id);
+    return { label: `After #${base.num}`, why: `Lands once #${base.num} merges`, kind: 'wait' };
+  }
+  if (p.review === 'approved' && p.ci !== 'fail') {
+    const e = p.events.filter(e => e.type === 'approved').at(-1);
+    return { label: 'Merge', why: `Approved${e ? ` by ${who(e.who)}` : ''} · checks ${p.ci === 'pass' ? 'green' : p.ci}`, kind: 'win' };
+  }
+  if (p.draft) return { label: 'Mark ready', why: 'Still a draft', kind: 'fix' };
+  if (!p.reviewers.length) return { label: 'Request review', why: p.botReviewers.length ? `Only ${p.botReviewers.join(', ')} is looking at this` : 'Nobody is reviewing this', kind: 'ask' };
+  if (s < 2) return { label: 'In review', why: `With ${p.reviewers.map(who).join(', ')}`, kind: 'ok' };
+  return { label: 'Nudge', why: `No reply from ${p.reviewers.map(who).join(', ')} in ${fmtDays(s)}`, kind: 'nudge' };
+}
+function stackAction(sid) {
+  const L = layersOf(sid), b = L.at(-1), a = nextAction(b), up = L.length - 1;
+  if (a.kind === 'win') return { label: 'Merge & restack', why: `#${b.num} approved · ${up} layer${up > 1 ? 's' : ''} rebase onto ${b.stack.base}`, kind: 'win' };
+  return { ...a, label: `${a.label} #${b.num}`, why: `Base layer: ${a.why} · ${up} layer${up > 1 ? 's' : ''} waiting` };
+}
+function score(p) {
+  if (p.snooze != null) return -1000 - p.snooze;
+  const s = Math.min(stallFrom(p), 45), a = nextAction(p);
+  let v = s * 1.2 + Math.min(p.created, 60) * 0.1;
+  if (!isMine(p)) v += 10 + s * 1.5;
+  v += { win: 14, ask: 10, fix: 3, wait: -8, ok: -4 }[a.kind] ?? 0;
+  if (p.draft) v -= 4;
+  return v;
+}
+
+function toUnits(list) {
+  const seen = new Set(), out = [];
+  for (const p of list) {
+    if (!inStack(p)) { out.push({ kind: 'pr', id: String(p.id), pr: p, prs: [p] }); continue; }
+    if (seen.has(p.stack.id)) continue;
+    seen.add(p.stack.id);
+    const layers = layersOf(p.stack.id);
+    out.push({ kind: 'stack', id: STACK + p.stack.id, sid: p.stack.id, layers, prs: layers });
+  }
+  return out;
+}
+const unitAction = u => u.kind === 'pr' ? nextAction(u.pr) : stackAction(u.sid);
+const unitSnoozed = u => u.kind === 'pr' && u.pr.snooze != null;
+const unitScore = u => u.kind === 'pr' ? score(u.pr) : score(u.layers.at(-1)) + 4 * (u.layers.length - 1);
+const unitMine = u => isMine(u.prs[0]);
+const BOTS_GROUP = 'repo:__bots';
+const isCollapsed = id => (id === BOTS_GROUP) !== state.toggled.has(id);
+const lastTouch = p => Math.min(...p.events.map(e => e.t));
+
+// ---------- query ----------
+const sk = p => smellOf(p).k;
+const KEYWORDS = {
+  mine: isMine, my: isMine,
+  review: p => !isMine(p), reviews: p => !isMine(p), reviewing: p => !isMine(p),
+  fresh: p => sk(p) === 'fresh', aging: p => sk(p) === 'aging',
+  stale: p => ['stale', 'rotting'].includes(sk(p)), rotting: p => sk(p) === 'rotting',
+  smelly: p => ['stale', 'rotting'].includes(sk(p)), blocked: p => sk(p) === 'blocked',
+  draft: p => !!p.draft, failing: p => p.ci === 'fail', red: p => p.ci === 'fail',
+  approved: p => p.review === 'approved', conflict: p => !!p.conflict,
+  stack: inStack, stacks: inStack, snoozed: p => p.snooze != null,
+  bots: p => isBot(p.author), bot: p => isBot(p.author), team: p => bucket(p) === 'team',
+  decide: p => bucket(p) === 'decide', dead: p => bucket(p) === 'decide',
+  unreviewed: p => nextAction(p).kind === 'ask', agent: p => AGENTS.has(p.author),
+};
+function parseToken(w) {
+  const lw = w.toLowerCase();
+  if (KEYWORDS[lw]) return KEYWORDS[lw];
+  if (REPOS.includes(lw)) return p => p.repo.toLowerCase() === lw;
+  let m = lw.match(/^#(\d+)$/); if (m) return p => String(p.num) === m[1] || String(p.stack?.num) === m[1];
+  m = lw.match(/^([a-z]{2,})-(\d+)$/); if (m) return p => p.tickets.includes(w.toUpperCase());
+  m = lw.match(/^>(\d+)([dwm])$/); if (m) { const d = +m[1] * ({ d: 1, w: 7, m: 30 })[m[2]]; return p => p.created > d; }
+  m = lw.match(/^@([\w-]+)$/); if (m) return p => p.author.toLowerCase() === m[1] || p.reviewers.some(r => r.toLowerCase() === m[1]);
+  if (IDLE_RE.test(lw)) { const [lo, hi] = parseIdle(lw); return p => stallFrom(p) >= lo && stallFrom(p) <= hi; }
+  return null;
+}
+// "idle:12d-45d" — went quiet (the hatched tail starts) between 12 and 45 days ago. Written by brushing the timeline.
+// "idle:21d+" is open-ended.
+const IDLE_RE = /^idle:(\d+)d?(?:-(\d+)d|\+|d\+)$/;
+function parseIdle(w) {
+  const m = w.match(IDLE_RE);
+  return m[2] == null ? [+m[1], Infinity] : [+m[1], +m[2]].sort((a, b) => a - b);
+}
+function idleRange() {
+  const w = state.q.split(/\s+/).map(w => w.toLowerCase()).find(w => IDLE_RE.test(w));
+  return w ? parseIdle(w) : null;
+}
+const sameRange = (a, b) => !!a && !!b && a[0] === b[0] && a[1] === b[1];
+// Friendly labels for snapped day counts.
+const fmtSpan = d => d === Infinity ? '∞' : ({ 0: 'now', 7: '1w', 14: '2w', 21: '3w', 30: '1mo', 60: '2mo', 90: '3mo', 182: '6mo' })[d] ?? fmtDays(d);
+const fmtRange = ([lo, hi]) => hi === Infinity ? `idle ${fmtSpan(lo)}+` : lo === 0 ? `idle < ${fmtSpan(hi)}` : `idle ${fmtSpan(lo)} – ${fmtSpan(hi)}`;
+function setIdleRange(range) {
+  const rest = state.q.split(/\s+/).filter(w => w && !IDLE_RE.test(w.toLowerCase()));
+  const tok = range && (range[1] === Infinity ? `idle:${range[0]}d+` : `idle:${range[0]}d-${range[1]}d`);
+  state.q = [...rest, ...(tok ? [tok] : [])].join(' ');
+  q.value = state.q; renderHighlight(); renderRows(); renderCard();
+}
+function applyQuery(list) {
+  const words = state.q.trim().split(/\s+/).filter(Boolean);
+  return list.filter(p => words.every(w => {
+    const f = parseToken(w);
+    return f ? f(p) : `${p.title} ${p.repo}`.toLowerCase().includes(w.toLowerCase());
+  }));
+}
+function renderHighlight() {
+  $('hl').innerHTML = state.q.split(/(\s+)/).map(w => w.trim() && parseToken(w) ? `<span class="tok">${esc(w)}</span>` : esc(w)).join('');
+}
+
+// ---------- scale ----------
+// Linear for 2W/1M/3M. "All" is logarithmic: the last two weeks stay wide, a year of rot still fits.
+// Today is the right edge; nothing is drawn in the future.
+const isLog = () => state.range === 'log';
+const R = () => isLog() ? 182 : state.range;
+// 6M uses a soft log: recent weeks get more room than months, but not so much that the last few days hog the width.
+// Anything older than the range starts at the left edge with a fade and an age label.
+const SOFT = 4;   // > 1 flattens the log near today; higher = closer to linear
+const L1 = Math.log1p;
+function x(t) {
+  if (t <= 0) return 100;
+  return (isLog() ? 1 - L1(t / SOFT) / L1(R() / SOFT) : 1 - t / R()) * 100;
+}
+function tAt(pct) {
+  const u = pct / 100;
+  return isLog() ? SOFT * Math.expm1((1 - u) * L1(R() / SOFT)) : (1 - u) * R();
+}
+const clampX = t => Math.max(0, Math.min(100, x(t)));
+
+// ---------- render ----------
+const $ = id => document.getElementById(id);
+function visible() {
+  let list = PRS.filter(p => {
+    const rel = p.relations ?? [isMine(p) ? 'author' : 'review'];
+    return (SET.showMine && rel.includes('author')) || (SET.showReview && rel.includes('review')) || (SET.showAssigned && rel.includes('assignee'));
+  });
+  if (SET.hideDrafts) list = list.filter(p => !p.draft);
+  if (state.tab === 'mine') list = list.filter(isMine);
+  if (state.tab === 'review') list = list.filter(p => !isMine(p));
+  return applyQuery(list);
+}
+
+function renderControls() {
+  const counts = { all: PRS.length, mine: PRS.filter(isMine).length, review: PRS.filter(p => !isMine(p)).length };
+  $('tabs').innerHTML = TABS.map(t => `<button aria-pressed="${state.tab === t.k}" data-tab="${t.k}">${t.l}<span class="n">${counts[t.k]}</span></button>`).join('');
+  $('sorts').innerHTML = [['updated', 'Updated'], ['created', 'Created']].map(([k, l]) => `<button aria-pressed="${state.sort === k}" data-sort="${k}">${l}</button>`).join('');
+  $('ranges').innerHTML = RANGES.map(r => `<button aria-pressed="${state.range === r.k}" data-range="${r.k}">${r.l}</button>`).join('');
+  const mins = Math.round((Date.now() - TODAY) / 6e4);
+  $('source').innerHTML = IS_LIVE
+    ? `<span class="live" title="Synced from GitHub"><i></i>Live · ${mins < 1 ? 'just now' : mins < 60 ? `${mins}m ago` : mins < 1440 ? `${Math.round(mins / 60)}h ago` : `${Math.round(mins / 1440)}d ago`}</span>`
+    : `<span class="live mock"><i></i>Mock data</span>`;
+}
+
+// Freshness zones are the same idle ranges the colors use; clicking one filters to it.
+function freshZones() {
+  const [a, b, c] = SET.thresholds;
+  return [{ k: 'fresh', l: 'fresh', range: [0, a] }, { k: 'aging', l: 'aging', range: [a, b] },
+    { k: 'stale', l: 'stale', range: [b, c] }, { k: 'rotting', l: 'rotting', range: [c, Infinity] }];
+}
+function renderSummary() {
+  const open = PRS.filter(p => p.snooze == null);
+  const inTab = open.filter(p => state.tab === 'all' || (state.tab === 'mine') === isMine(p));
+  const cur = idleRange();
+  const waiting = open.filter(p => !isMine(p) && personalReq(p));
+  const people = new Set(waiting.map(p => p.author)).size;
+  const zones = freshZones().map(z => {
+    const n = inTab.filter(p => stallFrom(p) >= z.range[0] && stallFrom(p) < z.range[1]).length;
+    return `<button class="zone ${sameRange(cur, z.range) ? 'on' : ''}" data-zone="${z.k}" title="${fmtRange(z.range)}" ${n ? '' : 'disabled'}>
+      <i style="background:var(--${z.k})"></i>${z.l}<b>${n}</b></button>`;
+  }).join('');
+  $('summary').innerHTML = `
+    <div class="zones">${zones}</div>
+    ${people ? `<span>blocking <b>${people}</b> ${people === 1 ? 'person' : 'people'}</span>` : ''}
+`;
+  $('mbCount').textContent = [open.filter(p => stallFrom(p) >= SET.thresholds[2]).length, waiting.length, open.filter(p => !isMine(p) && p.review === 'requested').length, ''][SET.counter];
+}
+
+function renderAxis() {
+  const ticks = [], grid = [], r = R();
+  if (isLog()) {
+    let lastLabel = 100;
+    ticks.push(`<div class="tick edge" style="left:0">6mo</div>`);
+    [[1, '1d'], [3, '3d'], [7, '1w'], [14, '2w'], [30, '1mo'], [60, '2mo'], [90, '3mo']]
+      .filter(([t]) => t < r).forEach(([t, l]) => {
+        const px = x(t);
+        grid.push(`<div class="gl" style="left:${px}%"></div>`);
+        if (Math.abs(px - x(0)) > 13 && lastLabel - px > 5.5 && px > 3) { ticks.push(`<div class="tick" style="left:${px}%">${l}</div>`); lastLabel = px; }
+      });
+  } else {
+    const step = r <= 14 ? 1 : r <= 30 ? 7 : 14, labelEvery = r <= 14 ? 2 : 1;
+    const offset = r <= 14 ? 0 : (TODAY.getDay() + 6) % 7;   // weekly ticks on Mondays
+    let i = 0;
+    for (let t = offset; t <= r; t += step, i++) {
+      const px = x(t);
+      if (t > 0) grid.push(`<div class="gl" style="left:${px}%"></div>`);
+      if (i % labelEvery === 0 && Math.abs(px - x(0)) > 13 && px > 3) ticks.push(`<div class="tick" style="left:${px}%">${fmtDate(dateOf(t))}</div>`);
+    }
+    if (r <= 14) for (let t = 0; t <= r; t++) {
+      if (dateOf(t).getDay() === 6) grid.push(`<div class="we" style="left:${x(t + 0.44)}%;width:${x(t - 1.56) - x(t + 0.44)}%"></div>`);
+    }
+  }
+  ticks.push(`<div class="today-pill" style="left:${x(0)}%">Today</div>`, `<div class="cursor-pill" id="cpill"></div>`, `<div class="brush-pill" id="bpill"></div>`);
+  $('ticks').innerHTML = ticks.join('');
+  return `<div class="grid">${grid.join('')}<div class="now" style="left:${x(0)}%"></div><div class="cursor" id="cline"></div><div class="brush" id="brush"></div></div>`;
+}
+
+function hashHue(s) { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
+function avatar(n, extra = '') {
+  const p = PEOPLE[n] ?? { name: n };
+  if (p.avatar) return `<img class="av" src="${esc(p.avatar)}${p.avatar.includes('?') ? '&' : '?'}s=64" alt="" loading="lazy" ${extra}>`;
+  const bg = p.color ?? `linear-gradient(135deg,hsl(${hashHue(n)} 70% 60%),hsl(${(hashHue(n) + 40) % 360} 70% 50%))`;
+  return `<div class="av" style="background:${bg}" ${extra}>${esc((p.name || n)[0].toUpperCase())}</div>`;
+}
+function evLabel(e) {
+  const w = e.who ? who(e.who) : '';
+  return ({ opened: 'Opened', commit: 'Commit pushed', approved: `Approved by ${w}`, changes: `Changes requested by ${w}`,
+    comment: `${w} commented`, ci_fail: 'Checks failed', requested: `Review requested from ${w === 'You' ? 'you' : w}` })[e.type];
+}
+
+// Events on the bar: commits are thin ticks (a barcode of work); people's actions are tiny avatars with a ring
+// colored by what they did. Marks closer than CLUSTER % merge into one overlapping pile with +N.
+const CLUSTER = 3.2;
+const MARK_TYPES = ['approved', 'changes', 'comment', 'requested', 'ci_fail'];
+function miniAvatar(n) {
+  const a = PEOPLE[n]?.avatar;
+  return a ? `<img src="${esc(a)}${a.includes('?') ? '&' : '?'}s=32" alt="" loading="lazy">` : `<b>${esc((who(n) || '?')[0].toUpperCase())}</b>`;
+}
+function eventMarks(p, r) {
+  const evs = p.events.filter(e => e.t <= r && !(e.who && isBot(e.who)));
+  const tip = e => `${evLabel(e)} · ${fmtDate(dateOf(e.t))}`;
+  // the author's own comments are their work, same as commits; avatars are reserved for other people
+  const own = e => e.type === 'commit' || (e.type === 'comment' && e.who === p.author);
+  const ticks = evs.filter(own)
+    .map(e => `<i class="tick-c" style="left:${x(e.t)}%" data-tip="${esc(tip(e))}"></i>`).join('');
+  const marks = evs.filter(e => !own(e) && MARK_TYPES.includes(e.type)).sort((a, b) => b.t - a.t);
+  const clusters = [];
+  for (const m of marks) {
+    const px = x(m.t), last = clusters.at(-1);
+    if (last && px - last.x0 < CLUSTER) last.items.push(m), last.x = (last.x0 + px) / 2;
+    else clusters.push({ x0: px, x: px, items: [m] });
+  }
+  // one face per person in a pile; the strongest signal wins its ring (changes > approved > requested > comment)
+  const rank = { ci_fail: 5, changes: 4, approved: 3, requested: 2, comment: 1 };
+  const pile = clusters.map(c => {
+    const faces = Object.values(c.items.reduce((m, e) => {
+      const k = e.who ?? e.type;
+      if (!m[k] || rank[e.type] > rank[m[k].type]) m[k] = e;
+      return m;
+    }, {}));
+    return `<div class="mk" style="left:${c.x}%" data-tip="${esc(c.items.map(tip).join('\n'))}">` +
+      faces.slice(0, 3).map(e => `<span class="mk-av ${e.type}">${e.type === 'ci_fail' ? '' : miniAvatar(e.who)}</span>`).join('') +
+      (faces.length > 3 ? `<span class="mk-more">+${faces.length - 3}</span>` : '') + `</div>`;
+  }).join('');
+  return ticks + pile;
+}
+function trackHTML(p, layer = null) {
+  const s = stallFrom(p), sm = smellOf(p), r = R();
+  const clipped = p.created > r;
+  const a0 = clampX(p.created), aEnd = clampX(Math.max(s, 0)), now = x(0);
+  const hasActive = s < p.created - 0.05 && aEnd > a0 + 0.2;
+  const segA = hasActive ? `<div class="seg-a ${clipped ? 'clip' : ''}" style="left:${a0}%;width:${aEnd - a0}%"></div>` : '';
+  const iStart = hasActive ? aEnd : a0;
+  const segI = `<div class="seg-i ${hasActive ? '' : clipped ? 'clip' : 'solo'}" style="--c:${sm.c};left:${iStart}%;width:${Math.max(0.6, now - iStart)}%"></div>`;
+  const segZ = p.snooze != null ? `<div class="snz-tag">💤 ${fmtDate(dateOf(p.snooze))}</div>` : '';
+  const evs = eventMarks(p, r);
+  const clipLabel = clipped ? `<div class="clip-label">← ${fmtDays(p.created)}</div>` : '';
+  const stallLabel = s >= 2 && now - iStart > 7 ? `<div class="stall-label" style="left:${now}%;color:${sm.c}">${fmtDays(s)}</div>` : '';
+  return `<div class="track">${clipLabel}${segA}${segI}${segZ}${evs}${stallLabel}</div>`;
+}
+
+const ticketChips = p => p.tickets.slice(0, 2).map(t => `<span class="chip-s tk">${t}</span>`).join('');
+// Left column stays quiet: title + "#num · ticket/author". Idle time lives on the bar, the next action in the card.
+function rowHTML(p, layer = null) {
+  const sm = smellOf(p);
+  const lead = layer
+    ? `<div class="av-wrap">${avatar(p.author)}<span class="lnum" title="Layer ${p.stack.pos}">${p.stack.pos}</span></div>`
+    : avatar(p.author);
+  const meta = [
+    isBot(p.author) ? `${esc(p.repo)} #${p.num}` : `#${p.num}`,
+    isMine(p) ? p.tickets[0] : who(p.author),
+    p.draft && 'draft',
+    p.snooze != null && `💤 ${fmtDate(dateOf(p.snooze))}`,
+  ].filter(Boolean).map(esc).join(' · ');
+  return `<div class="row ${layer ? 'layer' : ''} ${state.sel === String(p.id) ? 'sel' : ''} ${p.snooze != null ? 'snoozed' : ''}" data-id="${p.id}">
+    <div class="who">${lead}<div class="txt"><div class="title" title="${esc(p.title)}">${esc(p.clean)}</div>
+      <div class="meta" ${layer ? `title="${esc(p.branch ?? `#${p.num}`)} → ${esc(layer.below ? layer.below.branch ?? `#${layer.below.num}` : p.stack.base)}"` : ''}>${meta}</div></div></div>
+    ${trackHTML(p, layer)}
+  </div>`;
+}
+
+function miniLanes(L) {
+  const n = L.length, now = x(0);
+  return L.map((p, i) => {
+    const s = stallFrom(p), a0 = clampX(p.created), a1 = clampX(Math.max(s, 0));
+    const top = 16 - (n * 7 - 2) / 2 + i * 7;
+    return `<div class="lane" style="top:${top}px;left:${a0}%;width:${a1 - a0}%;background:var(--active)"></div>` +
+      `<div class="lane" style="top:${top}px;left:${a1}%;width:${now - a1}%;background:${smellOf(p).c};opacity:.6"></div>`;
+  }).join('');
+}
+const mergedBelow = L => Math.min(...L.map(p => p.stack.pos)) - 1;
+
+// A stack is its layers as regular rows whose avatars share one capsule, ending in the branch it lands in.
+// Already-merged layers are only counted there (titles in the tooltip and the stack card).
+const ICON_BRANCH = '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M9.5 3.25a2.25 2.25 0 1 1 3 2.122V6A2.5 2.5 0 0 1 10 8.5H6a1 1 0 0 0-1 1v1.128a2.251 2.251 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.5 0v1.836A2.493 2.493 0 0 1 6 7h4a1 1 0 0 0 1-1v-.628A2.25 2.25 0 0 1 9.5 3.25Zm-6 0a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Zm8.25-.75a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5ZM4.25 12a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z"/></svg>';
+function mergedLayers(L) {
+  const sid = L[0].stack.id, known = (STACK_ENTRIES[sid] ?? []).filter(e => e.state === 'MERGED');
+  if (known.length) return known.sort((a, b) => b.pos - a.pos).map(e => ({ ...e, title: cleanTitle(e.title) }));
+  return Array.from({ length: mergedBelow(L) }, (_, i) => ({ pos: mergedBelow(L) - i }));
+}
+function stackHTML(u) {
+  const L = u.layers, b = L.at(-1), merged = mergedLayers(L);
+  const rows = L.map((p, i) => rowHTML(p, { first: i === 0, last: i === L.length - 1, below: L[i + 1] })).join('');
+  const tip = [...merged.map(m => m.num ? `✓ #${m.num} ${m.title}` : `✓ layer ${m.pos}`), `→ ${b.stack.base}`].join('\n');
+  const tail = `<div class="stack-tail" title="${esc(tip)}"><div class="who"><span class="cap-node">${ICON_BRANCH}</span>
+      <span class="tail-text"><span class="tail-branch">${esc(b.stack.base)}</span>${merged.length && SET.merged !== 2 ? `<span class="tail-merged">· ${SET.merged === 1 ? merged.map(m => m.num ? `#${m.num}` : `layer ${m.pos}`).join(' ') : `${merged.length} merged`}</span>` : ''}</span></div><div></div></div>`;
+  // Liquid capsule: one drop per layer avatar plus a drop for the branch, melted together by the goo filter.
+  // Geometry follows the CSS: layer rows are 44px, the tail drop sits 13px into the tail.
+  const ROW = 44, cy = i => 22 + i * ROW, tailY = L.length * ROW + 13, H = L.length * ROW + 32;
+  const drops = L.map((_, i) => `<circle cx="21" cy="${cy(i)}" r="18"/>`).join('') +
+    `<circle cx="21" cy="${tailY}" r="13"/><rect x="12" y="${cy(0)}" width="18" height="${tailY - cy(0)}"/>`;
+  const liquid = `<svg class="liquid" viewBox="0 0 42 ${H}" style="height:${H}px" aria-hidden="true"><g filter="url(#stack-goo)">${drops}</g></svg>`;
+  return `<div class="stack-group">${liquid}${rows}${tail}</div>`;
+}
+
+const unitHTML = u => u.kind === 'pr' ? rowHTML(u.pr) : stackHTML(u);
+
+// Grouped by repository, alphabetically — same as the menu bar app. Newest first inside a repo.
+// PRs authored by anyone on the bot list go to a single "Bots" group at the bottom instead.
+function layout() {
+  const groups = {}, bots = [];
+  visible().forEach(p => isBot(p.author) ? bots.push(p) : (groups[p.fullRepo] ??= []).push(p));
+  const key = state.sort === 'created' ? p => p.created : lastTouch;
+  const out = Object.keys(groups).sort((a, b) => a.localeCompare(b)).map(repo => ({
+    id: REPO + repo, repo, prs: groups[repo],
+    units: toUnits([...groups[repo]].sort((a, b) => key(a) - key(b))),
+  }));
+  if (bots.length) out.push({ id: BOTS_GROUP, repo: 'Bots', bots: true, prs: bots,
+    units: [...bots].sort((a, b) => a.repo.localeCompare(b.repo) || key(a) - key(b)).map(p => ({ kind: 'pr', id: String(p.id), pr: p, prs: [p] })) });
+  return out;
+}
+
+function repoHeadHTML(g) {
+  const collapsed = isCollapsed(g.id);
+  const [owner, name] = g.repo.includes('/') ? g.repo.split('/') : ['', g.repo];
+  const showOwner = new Set(PRS.map(p => p.fullRepo.split('/')[0])).size > 1;
+  const dots = collapsed ? g.prs.map(p => {
+    const jitter = (hashHue(String(p.id)) % 5) * 4 - 8;
+    return `<div class="dot" style="left:${clampX(stallFrom(p))}%;top:calc(50% + ${jitter}px);background:${smellOf(p).c}"></div>`;
+  }).join('') : '';
+  return `<div class="repo-head ${collapsed ? 'collapsed' : ''}" data-toggle="${esc(g.id)}">
+    <div class="rh-name"><span class="caret">${collapsed ? '▸' : '▾'}</span>${g.bots ? `<span class="rh-ic">${ICON_BOT}</span>` : owner && showOwner ? `<span class="rh-owner">${esc(owner)}/</span>` : ''}${esc(name)}
+      <span class="count">${g.prs.length}</span></div>
+    <div class="rh-track">${dots}</div>
+  </div>`;
+}
+
+function renderRows() {
+  const groups = layout();
+  const html = [renderAxis()];
+  groups.forEach(g => { html.push(repoHeadHTML(g)); if (!isCollapsed(g.id)) html.push(...g.units.map(unitHTML)); });
+  if (!groups.length) html.push(`<div class="empty">Nothing matches. Nice and clean.</div>`);
+  $('rows').innerHTML = `<div class="rows-in">${html.join('')}</div>`;
+  const r = idleRange(); paintBrush(r && clampX(r[1]), r && clampX(r[0]), r);
+  const ids = [...document.querySelectorAll('#rows .row')].map(r => r.dataset.id);
+  const known = new Set(groups.flatMap(g => g.prs.map(p => String(p.id))));
+  if (!ids.includes(state.sel) && !known.has(state.sel) && !state.sel?.startsWith(STACK)) {
+    state.sel = ids[0] ?? null;
+    document.querySelector(`#rows .row[data-id="${CSS.escape(state.sel ?? '')}"]`)?.classList.add('sel');
+  }
+  renderSummary();
+}
+
+// ---------- detail card ----------
+// Quiet, Get Info-style: a title, one plain sentence about where the PR stands, a two-column list of facts, native buttons.
+// Color is only used where it carries meaning: the freshness dot, failing checks, and the default button.
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+function fmtLong(d) {
+  if (d < 1) return 'less than a day';
+  if (d < 45) return plural(Math.round(d), 'day');
+  if (d < 365) return plural(Math.round(d / 30.4), 'month');
+  return plural(Math.round(d / 365), 'year');
+}
+const first = n => n === ME ? 'you' : who(n);
+function standing(p, s, sm) {
+  if (sm.k === 'blocked') return `Can't merge until #${baseOf(p.stack.id).num} lands.`;
+  if (p.snooze != null) return `Snoozed until ${fmtDate(dateOf(p.snooze))}.`;
+  if (!isMine(p)) return personalReq(p) ? `Waiting on you for ${fmtLong(s)}.` : `Opened ${fmtLong(p.created)} ago.`;
+  return s < 1 ? 'Worked on today.' : `Quiet for ${fmtLong(s)}.`;
+}
+function reason(p) {
+  const a = nextAction(p), last = t => [...p.events].reverse().find(e => e.type === t);
+  switch (a.kind) {
+    case 'ask': return p.botReviewers.length ? `Only ${p.botReviewers.map(who).join(' and ')} has looked at it.` : 'Nobody has been asked to review it.';
+    case 'fix':
+      if (p.conflict) return 'It has conflicts with its base branch.';
+      if (p.ci === 'fail') return 'Checks are failing.';
+      if (p.review === 'changes') { const e = last('changes'); return e ? `${who(e.who)} asked for changes ${fmtLong(e.t)} ago.` : 'Changes were requested.'; }
+      return p.draft ? 'It is still a draft.' : '';
+    case 'win': { const e = last('approved'); return `${e ? `Approved by ${who(e.who)}` : 'Approved'}, ready to merge.`; }
+    case 'nudge': return `No reply from ${p.reviewers.map(who).join(' or ')} yet.`;
+    case 'ok': return `In review with ${p.reviewers.map(who).join(' and ')}.`;
+    case 'review': return `${who(p.author)} asked for your review.`;
+    case 'team': return 'Your team was asked to review it.';
+    case 'bot': return `Opened by ${who(p.author)}.`;
+    case 'decide': return 'Revive it or close it.';
+    default: return '';
+  }
+}
+const info = (k, v) => `<div class="i-k">${k}</div><div class="i-v">${v}</div>`;
+function snoozeMenu(p) {
+  if (inStack(p)) return '';
+  if (p.snooze != null) return `<button class="btn" data-act="snooze">Wake up</button>`;
+  return `<div class="menu-wrap"><button class="btn" data-ui="snooze-menu">Snooze <span class="chev">▾</span></button>
+    <div class="menu" id="snoozeMenu" hidden>
+      <button data-snooze="1">Tomorrow</button><button data-snooze="3">In 3 days</button><button data-snooze="7">Next week</button>
+    </div></div>`;
+}
+
+// Compact strip: two lines on the left (title, short status), quiet icons and the default action on the right.
+const ICON = {
+  open: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h-3v9h9v-3M9.5 3h3.5v3.5M13 3 7.5 8.5"/></svg>',
+  snooze: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 9.5A5.5 5.5 0 1 1 6.5 2.5a4.5 4.5 0 0 0 7 7Z"/></svg>',
+  close: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>',
+  pass: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 8.5 3 3 6-7"/></svg>',
+  fail: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>',
+  pending: '<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="3"/></svg>',
+  changes: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a5 5 0 1 0 1.5-3.5M3 2.5v2.5h2.5"/></svg>',
+  review: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.75 8s2.25-4.5 6.25-4.5S14.25 8 14.25 8 12 12.5 8 12.5 1.75 8 1.75 8Z"/><circle cx="8" cy="8" r="1.75"/></svg>',
+};
+function shortStatus(p, s, sm) {
+  if (sm.k === 'blocked') return `waits for #${baseOf(p.stack.id).num}`;
+  if (p.snooze != null) return `snoozed till ${fmtDate(dateOf(p.snooze))}`;
+  if (s < 1) return 'active today';
+  return isMine(p) ? `${fmtDays(s)} quiet` : `waiting ${fmtDays(s)} on you`;
+}
+function faces(p) {
+  const latest = n => [...p.events].reverse().find(e => e.who === n && ['approved', 'changes', 'comment'].includes(e.type))?.type ?? 'requested';
+  const list = [...p.reviewers.filter(n => n !== p.author).map(n => [n, latest(n)]), ...(p.botReviewers ?? []).map(n => [n, 'bot'])];
+  return list.map(([n, k]) => `<span class="mk-av ${k}" title="${esc(who(n))}${k === 'bot' ? ' (bot)' : ` · ${k}`}">${miniAvatar(n)}</span>`).join('');
+}
+function snoozeButton(p) {
+  if (inStack(p)) return '';
+  if (p.snooze != null) return `<button class="ibtn on" data-act="snooze" title="Wake up">${ICON.snooze}</button>`;
+  return `<div class="menu-wrap"><button class="ibtn" data-ui="snooze-menu" title="Snooze">${ICON.snooze}</button>
+    <div class="menu" id="snoozeMenu" hidden><button data-snooze="1">Tomorrow</button><button data-snooze="3">In 3 days</button><button data-snooze="7">Next week</button></div></div>`;
+}
+// Card layout borrowed from the reference: accent bar + title + one quiet facts line, then a row of controls.
+function checksText(p) {
+  const cs = (p.checks ?? []).filter(c => c.state !== 'skip');
+  const fail = cs.filter(c => c.state === 'fail'), pend = cs.filter(c => c.state === 'pending');
+  if (!cs.length) return p.ci === 'fail' ? '<span class="bad">checks failing</span>' : p.ci === 'pending' ? 'checks running' : p.ci === 'pass' ? 'checks passed' : 'no checks';
+  if (fail.length) return `<span class="bad">${fail.length} of ${cs.length} checks failing</span>`;
+  if (pend.length) return `${pend.length} of ${cs.length} checks running`;
+  return `${plural(cs.length, 'check')} passed`;
+}
+function reviewText(p) {
+  const last = t => [...p.events].reverse().find(e => e.type === t && e.who !== p.author);
+  if (p.review === 'approved') { const e = last('approved'); return `approved${e ? ` by ${esc(who(e.who))}` : ''}`; }
+  if (p.review === 'changes') { const e = last('changes'); return `changes requested${e ? ` by ${esc(who(e.who))}` : ''}`; }
+  if (!isMine(p)) return personalReq(p) ? 'your review requested' : 'team review requested';
+  const humans = p.reviewers.filter(n => n !== p.author);
+  return humans.length ? `waiting on ${esc(humans.map(who).join(', '))}` : 'not reviewed';
+}
+const dotJoin = parts => parts.filter(Boolean).join('<span class="sep"> · </span>');
+function card({ c, title, tip, sub, faces = '', tools = '', primary }) {
+  return `
+    <div class="pc">
+      <i class="pc-bar" style="background:${c}"></i>
+      <div class="pc-main">
+        <div class="pc-top"><div class="pc-title" title="${esc(tip)}">${title}</div><div class="pc-faces">${faces}</div></div>
+        <div class="pc-sub">${sub}</div>
+      </div>
+    </div>
+    <div class="pc-controls">${tools}<div class="spacer"></div>${primary}</div>`;
+}
+const toolBtn = (act, icon, title) => `<button class="tbtn" data-act="${act}" title="${title}">${icon}</button>`;
+function snoozeTool(p) {
+  if (inStack(p)) return '';
+  if (p.snooze != null) return `<button class="tbtn on" data-act="snooze" title="Wake up">${ICON.snooze}</button>`;
+  return `<div class="menu-wrap"><button class="tbtn" data-ui="snooze-menu" title="Snooze">${ICON.snooze}</button>
+    <div class="menu" id="snoozeMenu" hidden><button data-snooze="1">Tomorrow</button><button data-snooze="3">In 3 days</button><button data-snooze="7">Next week</button></div></div>`;
+}
+
+function stackCardHTML(sid) {
+  const L = layersOf(sid), b = L.at(-1), a = stackAction(sid), sm = smellOf(b), merged = mergedLayers(L);
+  return card({
+    c: sm.c,
+    title: `${L.length} layers into ${esc(b.stack.base)}`,
+    tip: `Stack #${b.stack.num} in ${b.repo}`,
+    sub: dotJoin([merged.length ? `${merged.length} merged` : '', `base #${b.num} ${esc(shortStatus(b, stallFrom(b), sm))}`, checksText(b)]),
+    faces: L.map(p => `<button class="mk-av" data-pick="${p.id}" title="#${p.num} ${esc(p.clean)}">${miniAvatar(p.author)}</button>`).join(''),
+    tools: toolBtn('open', ICON.open, 'Open on GitHub'),
+    primary: `<button class="btn default" data-act="primary">${esc(a.label)} <kbd>⏎</kbd></button>`,
+  });
+}
+
+// ---------- bottom detail: header + Gates (what blocks merging) or History (this PR's own timeline) ----------
+const ICON_CLOCK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="5.75"/><path d="M8 5v3.2l2 1.3"/></svg>';
+const ICON_COPY = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M10.5 5.5V3.5A1 1 0 0 0 9.5 2.5h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2"/></svg>';
+function loadView() { try { return localStorage.getItem('detailView') || 'gates'; } catch { return 'gates'; } }
+state.detailView = loadView();
+const personBtn = (n, act) => `<button class="dr-face" data-act="${act}" data-who="${esc(n)}" title="${act === 'ask' ? `Ask ${esc(who(n))} to review` : `Nudge ${esc(who(n))}`}"><span class="mk-av">${miniAvatar(n)}</span><span>${esc(who(n))}</span></button>`;
+function metaChecks(p) {
+  const all = p.checks ?? [], cs = all.filter(c => c.state !== 'skip'), fail = cs.filter(c => c.state === 'fail'), pend = cs.filter(c => c.state === 'pending');
+  if (fail.length) return `<span class="dm-fail" title="${esc(fail.map(c => c.name).join('\n'))}">${ICON.fail}<span class="dm-name">${esc(fail[0].name)}${fail.length > 1 ? ` +${fail.length - 1}` : ''}</span><button class="dg-act" data-act="log">Open log ↗</button></span>`;
+  if (pend.length) return `<span class="dm-pend">${ICON.pending}${pend.length} of ${cs.length} running</span>`;
+  if (cs.length) return `<span class="dm-ok">${ICON.pass}${cs.length} checks</span>`;
+  return p.ci === 'fail' ? `<span class="dm-fail">${ICON.fail}checks failing</span>` : '';
+}
+function metaTarget(p) {
+  const below = inStack(p) ? layersOf(p.stack.id).find(q => q.stack.pos === p.stack.pos - 1) : null;
+  const into = below ? `#${below.num}` : p.stack?.base ?? p.base;
+  if (!into) return '';
+  return `<span>→ <span class="dr-mono">${esc(into)}</span>${p.conflict ? ' <span class="dm-fail">conflicts</span>' : ''}</span>`;
+}
+// One combined lane: commits as ticks, people as faces, latest checks at the end, quiet stretch hatched.
+function historyHTML(p) {
+  const span = Math.max(p.created, .5) * 1.04, X = t => Math.max(0, Math.min(100, (1 - t / span) * 100));
+  const evs = p.events.filter(e => !(e.who && isBot(e.who)));
+  const own = e => e.type === 'commit' || (e.type === 'comment' && e.who === p.author);
+  const people = evs.filter(e => !own(e) && ['approved', 'changes', 'comment', 'requested'].includes(e.type));
+  const cs = (p.checks ?? []).filter(c => c.state !== 'skip'), s = stallFrom(p), sm = smellOf(p);
+  return `<div class="dh" style="--c:${sm.c}"><span class="dh-l">${fmtDate(dateOf(p.created))}</span>
+    <div class="dh-lane">${s > .5 ? `<i class="dh-quiet" style="left:${X(s)}%"></i>` : ''}
+      ${evs.filter(own).map(e => `<i class="dh-tick" style="left:${X(e.t)}%" data-tip="${esc(evLabel(e))} · ${fmtDate(dateOf(e.t))}"></i>`).join('')}
+      ${people.map(e => `<span class="dh-pm" style="left:${X(e.t)}%" data-tip="${esc(evLabel(e))} · ${fmtDate(dateOf(e.t))}"><span class="mk-av ${e.type}">${miniAvatar(e.who)}</span></span>`).join('')}
+    </div>
+    <span class="dh-grid">${cs.map(c => `<i class="${c.state}" data-tip="${esc(c.name)}"></i>`).join('')}</span>
+    <span class="dh-l">today · <b style="color:${sm.c}">${fmtDays(s)} quiet</b></span></div>`;
+}
+function renderCard() {
+  if (state.sel?.startsWith(STACK)) { $('card').innerHTML = stackCardHTML(state.sel.slice(STACK.length)); return; }
+  const p = byId(state.sel);
+  if (!p) { $('card').innerHTML = `<p class="c-empty">Select a pull request.</p>`; return; }
+  const s = stallFrom(p), sm = smellOf(p), a = nextAction(p), blocked = sm.k === 'blocked';
+  const primary = blocked
+    ? `<button class="btn default" data-pick="${baseOf(p.stack.id).id}">Go to #${baseOf(p.stack.id).num} <kbd>⏎</kbd></button>`
+    : `<button class="btn default" data-act="primary">${esc(a.label)} <kbd>⏎</kbd></button>`;
+  const view = state.detailView;
+  $('card').innerHTML = `
+    <div class="dr-head">
+      <i class="dr-dot" style="background:${sm.c}"></i>
+      <div class="dr-titles"><div class="dr-title" title="${esc(p.title)}">${esc(p.clean)}</div>
+        <div class="dr-sub"><span>#${p.num}${isMine(p) ? '' : ` · ${esc(who(p.author))}`}</span>
+          ${p.branch ? `<span class="dr-branch">${ICON_BRANCH}<span>${esc(p.branch)}</span><button data-act="copy-branch" title="Copy branch name">${ICON_COPY}</button></span>` : ''}
+          <span>${esc(shortStatus(p, s, sm))}</span>${metaChecks(p)}${metaTarget(p)}</div></div>
+      <div class="dr-tools"><button class="tbtn ${state.detailView === 'history' ? 'on' : ''}" data-view="${state.detailView === 'history' ? 'gates' : 'history'}" title="${state.detailView === 'history' ? 'Show what blocks it' : 'Show its history'}">${ICON_CLOCK}</button>${toolBtn('open', ICON.open, 'Open on GitHub (O)')}${snoozeTool(p)}${isMine(p) ? toolBtn('close', ICON.close, 'Close PR') : ''}${primary}</div>
+    </div>
+    ${view === 'history' ? historyHTML(p) : ''}`;
+}
+
+function render() { renderControls(); renderRows(); renderCard(); }
+
+// ---------- settings window (sidebar layout) ----------
+const ST_SECTIONS = [
+  { id: 'prs', title: 'Pull requests', icon: '⇄', color: '#3d82f6', about: 'Which pull requests show up and how they are ordered.', rows: [
+    { key: 'showReview', label: 'Review requested', hint: 'Pull requests waiting for your review', type: 'toggle' },
+    { key: 'showAssigned', label: 'Assigned to me', type: 'toggle' },
+    { key: 'showMine', label: 'My pull requests', type: 'toggle' },
+    { key: 'hideDrafts', label: 'Hide drafts', type: 'toggle' },
+    { key: 'sort', label: 'Sort inside a repository', type: 'seg', options: ['Updated', 'Created'] },
+    { key: 'ci', label: 'Checks from', type: 'select', options: ['GitHub Actions', 'Status checks', 'Don\'t show'] },
+  ] },
+  { id: 'timeline', title: 'Timeline', icon: '▤', color: '#22b25b', about: 'How the timeline colors and measures quiet time.', rows: [
+    { type: 'freshness', label: 'Freshness', hint: 'How long a pull request can sit quietly before it changes color. Drag the handles.' },
+    { key: 'range', label: 'Default range', type: 'seg', options: ['2W', '1M', '3M', '6M'] },
+    { key: 'ownComments', label: 'My own comments count as activity', hint: 'Off: only commits reset the quiet time on your pull requests', type: 'toggle' },
+  ] },
+  { id: 'stacks', title: 'Stacks', icon: '≡', color: '#8b5cf6', about: 'How stacked pull requests are drawn.', rows: [
+    { key: 'merged', label: 'Merged layers', hint: 'Shown next to the branch at the bottom of a stack', type: 'seg', options: ['Count', 'Numbers', 'Hide'] },
+  ] },
+  { id: 'bots', title: 'Bots', icon: '⚙', color: '#64748b', about: 'Accounts that are treated as automation.', rows: [{ type: 'bots' }] },
+  { id: 'snooze', title: 'Snooze', icon: '☾', color: '#0ea5e9', about: 'Putting pull requests away for a while.', rows: [
+    { type: 'chips', label: 'Quick options', chips: ['Tomorrow', 'In 3 days', 'Next week'] },
+    { key: 'wake', label: 'Wake up when someone comments', type: 'toggle' },
+  ] },
+  { id: 'menubar', title: 'Menu bar', icon: '▭', color: '#111827', about: 'What the menu bar item shows.', rows: [
+    { key: 'counter', label: 'Counter', hint: 'The number next to the icon', type: 'select', options: ['Rotting', 'Waiting on you', 'Review requested', 'Nothing'] },
+    { key: 'refresh', label: 'Refresh every', type: 'select', options: ['1 minute', '5 minutes', '10 minutes', '15 minutes', '30 minutes'] },
+    { key: 'login', label: 'Open at login', type: 'toggle' },
+  ] },
+  { id: 'notify', title: 'Notifications', icon: '◔', color: '#e5484d', about: 'When PR Harbor should tap you on the shoulder.', rows: [
+    { key: 'nReview', label: 'Someone requests your review', type: 'toggle' },
+    { key: 'nAssigned', label: 'You are assigned', type: 'toggle' },
+    { key: 'nRot', label: 'One of yours starts rotting', type: 'toggle' },
+    { key: 'nMorning', label: 'Morning summary', hint: 'What is waiting on you and what went quiet', type: 'time' },
+  ] },
+  { id: 'account', title: 'Account', icon: '◉', color: '#6b7280', about: 'Your GitHub connection.', rows: [
+    { type: 'account' },
+    { key: 'apiUrl', label: 'GitHub Enterprise URL', hint: 'Leave as is for github.com', type: 'text' },
+  ] },
+];
+let stSection = 'timeline';
+const FMAX = 60, fzx = d => Math.log1p(d / 2) / Math.log1p(FMAX / 2) * 100, fzd = p => 2 * Math.expm1(p / 100 * Math.log1p(FMAX / 2));
+const FZ = [['fresh', 'var(--fresh)'], ['aging', 'var(--aging)'], ['stale', 'var(--stale)'], ['rotting', 'var(--rotting)']];
+const fmtT = d => d >= 14 && d % 7 === 0 ? `${d / 7}w` : `${d}d`;
+function stControl(r) {
+  const v = SET[r.key];
+  switch (r.type) {
+    case 'toggle': return `<button class="st-switch ${v ? 'on' : ''}" data-skey="${r.key}" role="switch" aria-checked="${!!v}" aria-label="${esc(r.label)}"></button>`;
+    case 'seg': return `<div class="seg">${r.options.map((o, i) => `<button aria-pressed="${i === v}" data-skey="${r.key}" data-sval="${i}">${o}</button>`).join('')}</div>`;
+    case 'select': return `<select class="st-select" data-skey="${r.key}" aria-label="${esc(r.label)}">${r.options.map((o, i) => `<option value="${i}" ${i === v ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+    case 'text': return `<input class="st-input" data-skey="${r.key}" value="${esc(v)}" aria-label="${esc(r.label)}">`;
+    case 'time': return `<input class="st-input st-time" type="time" data-skey="nMorning" value="${SET.nMorning}" aria-label="${esc(r.label)}"><button class="st-switch ${SET.nMorningOn ? 'on' : ''}" data-skey="nMorningOn" role="switch" aria-label="${esc(r.label)}"></button>`;
+  }
+  return '';
+}
+const stLabel = r => `<div class="st-lbl"><div>${esc(r.label)}</div>${r.hint ? `<div class="st-hint">${esc(r.hint)}</div>` : ''}</div>`;
+function stFreshness() {
+  const [a, b, c] = SET.thresholds, edges = [0, a, b, c, FMAX];
+  const zonesHTML = FZ.map(([, col], i) => `<i class="st-fz-zone" style="left:${fzx(edges[i])}%;width:${fzx(edges[i + 1]) - fzx(edges[i])}%;background:${col}"></i>`).join('');
+  const handles = SET.thresholds.map((t, i) => `<span class="st-fz-h" data-fz="${i}" style="left:${fzx(t)}%" role="slider" aria-valuenow="${t}" aria-label="${FZ[i + 1][0]} after"><span>${fmtT(t)}</span></span>`).join('');
+  const lbls = FZ.map(([n], i) => `<span style="left:${(fzx(edges[i]) + fzx(edges[i + 1])) / 2}%">${n}</span>`).join('');
+  // preview with your own pull requests, spread over the zones
+  const sample = [...PRS].filter(p => p.snooze == null && !isBot(p.author)).sort((x, y) => stallFrom(x) - stallFrom(y));
+  const picks = [0, .25, .5, .75, .98].map(f => sample[Math.floor(f * (sample.length - 1))]).filter((p, i, arr) => p && arr.indexOf(p) === i);
+  const prev = picks.map(p => { const d = stallFrom(p), z = smell(d);
+    return `<div class="st-fz-row"><span class="st-fz-t">${esc(p.clean)}</span><span class="st-fz-tr"><i style="--c:${z.c};width:${Math.max(6, Math.min(100, fzx(d)))}%"></i></span><span class="st-fz-z" style="color:${z.c}">${fmtDays(d)} · ${z.l}</span></div>`; }).join('');
+  return `<div class="st-fz"><div class="st-fz-bar">${zonesHTML}${handles}<div class="st-fz-lbls">${lbls}</div></div><div class="st-fz-prev">${prev}</div></div>`;
+}
+function stBots() {
+  const counts = {};
+  PRS.forEach(p => { if (!isMine(p) && !isBot(p.author)) counts[p.author] = (counts[p.author] || 0) + 1; });
+  PRS.forEach(p => p.allReviewers.forEach(r => { if (!isBot(r) && r !== ME && /bot|-apps$|-ai$/i.test(r)) counts[r] = counts[r] || 0; }));
+  const suggest = Object.entries(counts).filter(([n]) => /bot|-apps$|-ai$|^snyk|^codecov|^sonar/i.test(n)).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const matched = BOTS.map(b => [b, new Set([...PRS.map(p => p.author), ...PRS.flatMap(p => p.allReviewers)].filter(n => botRe(b).test(n))).size]);
+  return `<div class="st-lbl"><div>Bot accounts</div><div class="st-hint">Their pull requests are grouped under Bots, and they don't count as reviewers. Use * as a wildcard.</div></div>
+    <div class="bot-list">${matched.map(([b, n]) => `<span class="bchip">${esc(b)}<span class="bn">${n || ''}</span><button data-rmbot="${esc(b)}" title="Remove">×</button></span>`).join('') || '<span class="st-hint">No bots listed.</span>'}</div>
+    <form class="bot-form" id="botForm"><input id="botIn" placeholder="Add a login, e.g. snyk-bot" autocomplete="off" spellcheck="false"><button class="ghost">Add</button></form>
+    ${suggest.length ? `<div class="st-hint" style="margin-top:10px">Suggestions from your pull requests</div>
+    <div class="bot-list">${suggest.map(([n, c]) => `<button class="bchip add" data-addbot="${esc(n)}">+ ${esc(n)}${c ? `<span class="bn">${c} PRs</span>` : ''}</button>`).join('')}</div>` : ''}
+    <div style="display:flex;justify-content:flex-end"><button class="ghost" data-resetbots>Reset to defaults</button></div>`;
+}
+function stRow(r) {
+  if (r.type === 'account') return `<div class="st-row"><div class="st-acct">${avatar(ME)}<div style="flex:1"><b>@${esc(ME)}</b><div class="st-hint">Signed in with GitHub</div></div><button class="ghost">Sign out</button></div></div>`;
+  if (r.type === 'freshness') return `<div class="st-row block">${stLabel(r)}${stFreshness()}</div>`;
+  if (r.type === 'bots') return `<div class="st-row block">${stBots()}</div>`;
+  if (r.type === 'chips') return `<div class="st-row">${stLabel(r)}<div class="bot-list" style="margin:0">${r.chips.map(c => `<span class="bchip" style="font-family:inherit;padding-right:9px">${c}</span>`).join('')}</div></div>`;
+  return `<div class="st-row">${stLabel(r)}${stControl(r)}</div>`;
+}
+function renderSettingsWin() {
+  const w = $('settingsWin'); if (w.hidden) return;
+  const sec = ST_SECTIONS.find(x => x.id === stSection);
+  const item = x => `<button class="st-item ${x.id === stSection ? 'on' : ''}" data-ssec="${x.id}"><i style="background:${x.color}">${x.icon}</i>${x.title}</button>`;
+  w.innerHTML = `<div class="win" role="dialog" aria-label="Settings">
+    <div class="win-bar"><span class="lights"><button class="light r" data-ui="close-settings" aria-label="Close"></button><i class="light y"></i><i class="light g"></i></span><span class="win-title">Settings</span></div>
+    <div class="st"><nav class="st-side"><div class="st-me">${avatar(ME)}<div><b>@${esc(ME)}</b><div class="st-hint">github.com</div></div></div>
+      ${ST_SECTIONS.filter(x => x.id !== 'account').map(item).join('')}<div style="flex:1"></div>${item(ST_SECTIONS.find(x => x.id === 'account'))}</nav>
+      <div class="st-pane"><h3>${sec.title}</h3><p>${sec.about}</p><div class="st-group">${sec.rows.map(stRow).join('')}</div></div></div></div>`;
+}
+function openSettings(open = true) {
+  const w = $('settingsWin'); w.hidden = !open; $('gear').classList.toggle('on', open);
+  if (open) renderSettingsWin();
+}
+function setSetting(key, value) {
+  SET[key] = value; saveSettings();
+  if (key === 'range') state.range = RANGE_KEYS[value];
+  if (key === 'sort') state.sort = value ? 'created' : 'updated';
+  render(); renderSettingsWin();
+}
+function setBots(next) {
+  BOTS = [...new Set(next.map(b => b.trim()).filter(Boolean))];
+  saveBots(); applyBots(); render(); renderSettingsWin();
+}
+// settings window events
+$('settingsWin').addEventListener('click', e => {
+  if (e.target === e.currentTarget) return openSettings(false);            // click on the backdrop
+  const t = e.target.closest('[data-ssec],[data-skey],[data-ui="close-settings"]');
+  if (!t) return;
+  if (t.dataset.ui === 'close-settings') return openSettings(false);
+  if (t.dataset.ssec) { stSection = t.dataset.ssec; return renderSettingsWin(); }
+  if (t.classList.contains('st-switch')) return setSetting(t.dataset.skey, !SET[t.dataset.skey]);
+  if (t.dataset.sval !== undefined) return setSetting(t.dataset.skey, +t.dataset.sval);
+});
+$('settingsWin').addEventListener('change', e => {
+  const k = e.target.dataset.skey; if (!k) return;
+  setSetting(k, e.target.tagName === 'SELECT' ? +e.target.value : e.target.value);
+});
+// drag the freshness handles; they stay ordered and at least a day apart
+let fzDrag = null;
+$('settingsWin').addEventListener('pointerdown', e => {
+  const h = e.target.closest('.st-fz-h'); if (!h) return;
+  fzDrag = { i: +h.dataset.fz, bar: h.parentElement.getBoundingClientRect() }; e.preventDefault();
+});
+window.addEventListener('pointermove', e => {
+  if (!fzDrag) return;
+  const pct = Math.max(0, Math.min(100, (e.clientX - fzDrag.bar.left) / fzDrag.bar.width * 100));
+  const t = [...SET.thresholds], i = fzDrag.i, lo = i ? t[i - 1] + 1 : 1, hi = i < 2 ? t[i + 1] - 1 : FMAX - 1;
+  t[i] = Math.max(lo, Math.min(hi, Math.round(fzd(pct))));
+  if (t[i] !== SET.thresholds[i]) setSetting('thresholds', t);
+});
+window.addEventListener('pointerup', () => { fzDrag = null; });
+document.addEventListener('submit', e => {
+  if (e.target.id !== 'botForm') return;
+  e.preventDefault();
+  const v = $('botIn').value; if (v.trim()) setBots([...BOTS, v]);
+  $('botIn')?.focus();
+});
+
+// ---------- actions (simulated: nothing is written to GitHub) ----------
+let toastT;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200);
+}
+function leave(ps, then) {
+  ps.forEach(p => document.querySelector(`.row[data-id="${CSS.escape(String(p.id))}"]`)?.classList.add('leaving'));
+  setTimeout(() => { then(); render(); }, 320);
+}
+function removePR(p, msg) {
+  toast(msg);
+  const sid = inStack(p) ? p.stack.id : null;
+  leave([p], () => {
+    PRS = PRS.filter(x => x !== p);
+    state.sel = sid && layersOf(sid).length > 1 ? STACK + sid : null;
+  });
+}
+function mergeBase(sid) {
+  const L = layersOf(sid), b = L.at(-1);
+  toast(`Merged #${b.num} · rebased ${L.length - 1} layer${L.length > 2 ? 's' : ''} onto ${b.stack.base}`);
+  leave([b], () => {
+    PRS = PRS.filter(x => x !== b);
+    const rest = layersOf(sid);
+    state.sel = rest.length > 1 ? STACK + sid : String(rest[0].id);
+  });
+}
+function openURL(p) { if (p.url) window.open(p.url, '_blank', 'noopener'); else toast(`Opening ${p.repo}#${p.num}`); }
+function prPrimary(p) {
+  const a = nextAction(p);
+  if (a.kind === 'win') return inStack(p) ? mergeBase(p.stack.id) : removePR(p, `Merged #${p.num} 🎉`);
+  if (['review', 'team', 'bot'].includes(a.kind)) { openURL(p); return removePR(p, `Reviewed #${p.num}. ${who(p.author)} is unblocked.`); }
+  if (a.kind === 'nudge') { p.events.push({ t: 0, type: 'comment', who: ME }); toast(`Pinged ${p.reviewers.map(who).join(', ')}`); return render(); }
+  if (a.kind === 'ask') { p.allReviewers.push('someone'); p.reviewers.push('someone'); p.events.push({ t: 0, type: 'requested', who: 'someone' }); toast(`Review requested on #${p.num}`); return render(); }
+  if (a.kind === 'wait') { state.sel = String(baseOf(p.stack.id).id); return render(); }
+  if (a.kind === 'decide') return removePR(p, `Closed #${p.num}. Let it go.`);
+  openURL(p);
+}
+function doAction(act) {
+  if (state.sel?.startsWith(STACK)) {
+    const sid = state.sel.slice(STACK.length), L = layersOf(sid), b = L.at(-1);
+    if (act === 'open') return openURL(b);
+    if (act === 'restack') return toast(`Rebased ${L.length} layers onto ${b.stack.base}`);
+    if (act === 'primary') return stackAction(sid).kind === 'win' ? mergeBase(sid) : prPrimary(b);
+    return;
+  }
+  const p = byId(state.sel); if (!p) return;
+  if (act === 'open') return openURL(p);
+  if (act === 'snz-') { state.snoozeDays = Math.max(1, state.snoozeDays - 1); return renderCard(); }
+  if (act === 'snz+') { state.snoozeDays = Math.min(14, state.snoozeDays + 1); return renderCard(); }
+  if (act === 'snooze') {
+    if (inStack(p)) return;
+    if (p.snooze != null) { p.snooze = null; toast(`#${p.num} is back`); }
+    else { p.snooze = -state.snoozeDays; toast(`Snoozed #${p.num} until ${fmtDate(dateOf(p.snooze))}`); }
+    return render();
+  }
+  if (act === 'close') return removePR(p, `Closed #${p.num}. One less smell.`);
+  if (act === 'copy-branch') { navigator.clipboard?.writeText(p.branch).catch(() => {}); return toast(`Copied ${p.branch}`); }
+  if (act === 'log') { const f = (p.checks ?? []).find(c => c.state === 'fail'); return toast(`Opening log: ${f?.name ?? 'checks'}`); }
+  if (act === 'restack') return toast(`Rebased stack #${p.stack.num} onto ${p.stack.base}`);
+  if (act === 'primary') return prPrimary(p);
+}
+function toggle(id, open) {
+  if (open === undefined || open === isCollapsed(id)) { state.toggled.has(id) ? state.toggled.delete(id) : state.toggled.add(id); }
+  saveToggled(); renderRows(); renderCard();
+}
+
+// ---------- brushing: drag across the timeline to filter by when PRs went quiet ----------
+function paintBrush(a, b, range) {
+  const band = $('brush'), pill = $('bpill');
+  if (!band || !pill) return;
+  const on = a != null && b != null;
+  band.style.display = pill.style.display = on ? 'block' : 'none';
+  if (!on) return;
+  band.style.left = a + '%'; band.style.width = (b - a) + '%';
+  pill.style.left = (a + b) / 2 + '%';
+  pill.innerHTML = fmtRange(range) + (drag ? '' : `<button data-clearbrush title="Clear">×</button>`);
+}
+let drag = null, suppressClick = false;
+const SNAPS = [0, 1, 2, 3, 5, 7, 10, 14, 21, 30, 45, 60, 90, 120, 182];
+function snapDays(pct) {
+  const cands = [...SNAPS.filter(d => d < R()), R()];
+  return cands.reduce((best, d) => Math.abs(x(d) - pct) < Math.abs(x(best) - pct) ? d : best, cands[0]);
+}
+function brushRange(a, b) {          // a < b in % → [fewer days, more days], snapped
+  const lo = snapDays(b), hi = snapDays(a);
+  return lo === hi ? null : [lo, hi >= R() ? Infinity : hi];
+}
+$('rows').addEventListener('mousedown', e => {
+  const grid = document.querySelector('.grid');
+  if (!grid || e.button !== 0 || e.target.closest('button')) return;
+  const gr = grid.getBoundingClientRect(), pct = (e.clientX - gr.left) / gr.width * 100;
+  if (pct < 0 || pct > 100) return;
+  drag = { start: pct, now: pct, gr, moved: false };
+  e.preventDefault();
+});
+window.addEventListener('mousemove', e => {
+  if (!drag) return;
+  drag.now = Math.max(0, Math.min(100, (e.clientX - drag.gr.left) / drag.gr.width * 100));
+  if (Math.abs(drag.now - drag.start) < 1.2 && !drag.moved) return;
+  drag.moved = true;
+  const r = brushRange(Math.min(drag.start, drag.now), Math.max(drag.start, drag.now));
+  if (r) paintBrush(clampX(r[1]), clampX(r[0]), r);
+  document.body.classList.add('brushing');
+});
+window.addEventListener('mouseup', () => {
+  if (!drag) return;
+  const { start, now, moved } = drag; drag = null;
+  document.body.classList.remove('brushing');
+  if (!moved) return;                                   // a plain click: let it select the row
+  suppressClick = true; setTimeout(() => { suppressClick = false; }, 0);
+  const r = brushRange(Math.min(start, now), Math.max(start, now));
+  if (r) setIdleRange(r); else renderRows();
+});
+
+document.addEventListener('click', e => {
+  if (suppressClick) { suppressClick = false; e.stopPropagation(); return; }
+  if (e.target.closest('[data-clearbrush]')) { setIdleRange(null); return; }
+  const sz = e.target.closest('[data-snooze]');
+  if (sz) { state.snoozeDays = +sz.dataset.snooze; doAction('snooze'); return; }
+  const zone = e.target.closest('[data-zone]');
+  if (zone) { const z = freshZones().find(z => z.k === zone.dataset.zone); setIdleRange(sameRange(idleRange(), z.range) ? null : z.range); renderSummary(); return; }
+  const ui = e.target.closest('[data-ui],[data-rmbot],[data-addbot],[data-resetbots]');
+  if (ui) {
+    if (ui.dataset.ui === 'settings') openSettings(true);
+    else if (ui.dataset.ui === 'snooze-menu') { const m = $('snoozeMenu'); if (m) m.hidden = !m.hidden; }
+    else if (ui.dataset.rmbot) setBots(BOTS.filter(b => b !== ui.dataset.rmbot));
+    else if (ui.dataset.addbot) setBots([...BOTS, ui.dataset.addbot]);
+    else if ('resetbots' in ui.dataset) setBots(DEFAULT_BOTS);
+    return;
+  }
+  if (e.target.closest('#settingsWin')) return;
+  const v = e.target.closest('[data-view]');
+  if (v) { state.detailView = v.dataset.view; try { localStorage.setItem('detailView', state.detailView); } catch {} return renderCard(); }
+  const t = e.target.closest('[data-toggle],[data-tab],[data-sort],[data-range],[data-pick],[data-act],.row');
+  if (!t) return;
+  if (t.dataset.toggle) { e.stopPropagation(); toggle(t.dataset.toggle); }
+  else if (t.dataset.tab) { state.tab = t.dataset.tab; render(); }
+  else if (t.dataset.sort) { state.sort = t.dataset.sort; render(); }
+  else if (t.dataset.range) { state.range = t.dataset.range === 'log' ? 'log' : +t.dataset.range; render(); }
+  else if (t.dataset.pick) {
+    state.sel = t.dataset.pick;
+    const p = byId(state.sel);
+    if (p?.stack && isCollapsed(STACK + p.stack.id)) state.toggled.delete(STACK + p.stack.id);
+    render(); scrollToSel();
+  }
+  else if (t.dataset.act === 'ask' || t.dataset.act === 'nudge') {
+    const p = byId(state.sel), n = t.dataset.who;
+    if (p && t.dataset.act === 'ask') { p.allReviewers.push(n); p.reviewers.push(n); p.events.push({ t: 0, type: 'requested', who: n }); }
+    toast(t.dataset.act === 'ask' ? `Asked ${who(n)} to review #${p?.num}` : `Nudged ${who(n)}`); render();
+  }
+  else if (t.dataset.act) doAction(t.dataset.act);
+  else if (t.classList.contains('row')) { state.sel = t.dataset.id; renderRows(); renderCard(); }
+});
+function scrollToSel() { document.querySelector('.row.sel')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+
+const q = $('q');
+q.addEventListener('input', () => { state.q = q.value; renderHighlight(); renderRows(); renderCard(); });
+q.addEventListener('scroll', () => { $('hl').scrollLeft = q.scrollLeft; });
+
+document.addEventListener('keydown', e => {
+  if (!$('settingsWin').hidden) { if (e.key === 'Escape') openSettings(false); return; }
+  if (e.key === '/' && document.activeElement !== q) { e.preventDefault(); q.focus(); return; }
+  if (e.key === 'Escape') { q.blur(); if (state.q) { q.value = state.q = ''; renderHighlight(); render(); } return; }
+  const inInput = document.activeElement === q;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || (!inInput && (e.key === 'j' || e.key === 'k'))) {
+    e.preventDefault();
+    const ids = [...document.querySelectorAll('#rows .row')].map(r => r.dataset.id);
+    const i = ids.indexOf(state.sel), d = (e.key === 'ArrowDown' || e.key === 'j') ? 1 : -1;
+    state.sel = ids[Math.max(0, Math.min(ids.length - 1, i + d))];
+    renderRows(); renderCard(); scrollToSel();
+  } else if (!inInput && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+    const p = byId(state.sel);
+    const gid = p ? (isBot(p.author) ? BOTS_GROUP : REPO + p.fullRepo) : null;
+    if (gid) toggle(gid, e.key === 'ArrowRight');
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    const p = byId(state.sel);
+    if (p && smellOf(p).k === 'blocked') { state.sel = String(baseOf(p.stack.id).id); render(); scrollToSel(); }
+    else doAction('primary');
+  }
+  else if (!inInput && (e.key === 's' || e.key === 'S')) doAction('snooze');
+  else if (!inInput && (e.key === 'o' || e.key === 'O')) doAction('open');
+});
+
+// hover scrubber + event tooltips
+const tip = $('tip');
+$('rows').addEventListener('mousemove', e => {
+  const ev = e.target.closest('[data-tip]');
+  if (ev) { tip.textContent = ev.dataset.tip; const r = ev.getBoundingClientRect(); tip.style.left = r.left + r.width / 2 + 'px'; tip.style.top = r.top + 'px'; tip.style.opacity = 1; }
+  else tip.style.opacity = 0;
+  const grid = document.querySelector('.grid'); if (!grid) return;
+  const gr = grid.getBoundingClientRect(), pct = (e.clientX - gr.left) / gr.width * 100;
+  const line = $('cline'), pill = $('cpill');
+  if (pct < 0 || pct > 100) { line.style.opacity = pill.style.opacity = 0; return; }
+  const t = tAt(pct);
+  line.style.left = pill.style.left = pct + '%';
+  pill.style.transform = pct > 88 ? 'translateX(-100%)' : pct < 8 ? 'translateX(0)' : '';
+  pill.textContent = `${fmtDate(dateOf(t))} · ${t < 1 ? 'today' : fmtDays(t) + ' ago'}`;
+  line.style.opacity = pill.style.opacity = 1;
+});
+$('rows').addEventListener('mouseleave', () => { tip.style.opacity = 0; const l = $('cline'), p = $('cpill'); if (l) l.style.opacity = p.style.opacity = 0; });
+
+renderHighlight();
+render();
+</script>
+</body>
+</html>

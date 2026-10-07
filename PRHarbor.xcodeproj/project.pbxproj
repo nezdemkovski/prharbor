@@ -7,14 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A10000000000000000000005 /* PRHarborTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* PRHarborTests.swift */; };
+		AF1000000000000000000001 /* TimelineNativeScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1000000000000000000002 /* TimelineNativeScrollView.swift */; };
+		AF0000000000000000000001 /* PullSnapshotCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000000002 /* PullSnapshotCache.swift */; };
+        AD0000000000000000000001 /* GitHubCLI.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD0000000000000000000002 /* GitHubCLI.swift */; };
+		AC0000000000000000000001 /* GitHubSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC0000000000000000000002 /* GitHubSession.swift */; };
 		761B97072D7CCDA70000378A /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 761B97062D7CCDA70000378A /* LaunchAtLogin */; };
 		769F4E1B2765A2B900594911 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769F4E1A2765A2B900594911 /* AboutView.swift */; };
 		769F4E7B277B97B300594911 /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769F4E7A277B97B300594911 /* Notifications.swift */; };
 		76C6AA5B2C98E809003472DA /* Defaults in Frameworks */ = {isa = PBXBuildFile; productRef = 76C6AA5A2C98E809003472DA /* Defaults */; };
-		76D5F9E628D28A29009EBD80 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76D5F9E528D28A29009EBD80 /* Keychain.swift */; };
-		76F7DAD028A88CAB0086A3B0 /* GithubTokenValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76F7DACF28A88CAB0086A3B0 /* GithubTokenValidator.swift */; };
-		8C55444B274AD7B20079CA42 /* DateExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C55444A274AD7B20079CA42 /* DateExtensions.swift */; };
 		8C55444D274AD9E00079CA42 /* NSImageExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C55444C274AD9E00079CA42 /* NSImageExtensions.swift */; };
 		8CECBBE32742AAF900A2802D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CECBBE22742AAF900A2802D /* AppDelegate.swift */; };
 		8CECBBE72742AAFB00A2802D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8CECBBE62742AAFB00A2802D /* Assets.xcassets */; };
@@ -22,15 +22,48 @@
 		8CECBBF52742AB3F00A2802D /* GitHubModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CECBBF32742AB3F00A2802D /* GitHubModels.swift */; };
 		8CECBBFE2742AC0800A2802D /* DefaultsExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CECBBFD2742AC0800A2802D /* DefaultsExtensions.swift */; };
 		AA000001AAAAAA0000000001 /* PRHarborApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000001AAAAAA0000000002 /* PRHarborApp.swift */; };
-		BB000001BBBBBB0000000001 /* GitHubConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000001BBBBBB0000000002 /* GitHubConstants.swift */; };
-		CC000001CCCCCC0000000001 /* GitHubDeviceFlowAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000001CCCCCC0000000002 /* GitHubDeviceFlowAuth.swift */; };
-		DD000002AAAA000000000001 /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000002AAAA000000000002 /* SharedComponents.swift */; };
-		DD000003AAAA000000000001 /* PRListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD000003AAAA000000000002 /* PRListView.swift */; };
+		AE0000000000000000000001 /* StatusBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE0000000000000000000002 /* StatusBarController.swift */; };
 		EE000002EEEEEE0000000001 /* PanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000002EEEEEE0000000002 /* PanelView.swift */; };
-		EE000003EEEEEE0000000001 /* PRRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000003EEEEEE0000000002 /* PRRowView.swift */; };
 		EE000004EEEEEE0000000001 /* PullRequestStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000004EEEEEE0000000002 /* PullRequestStore.swift */; };
 		EE000005EEEEEE0000000001 /* PanelSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000005EEEEEE0000000002 /* PanelSettingsView.swift */; };
 		FF000001FFFFFF0000000001 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000001FFFFFF0000000002 /* ThemeColors.swift */; };
+		AB2000000000000000000001 /* TimelineDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000001 /* TimelineDetailView.swift */; };
+		AB2000000000000000000002 /* TimelineDrawing.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000002 /* TimelineDrawing.swift */; };
+		AB2000000000000000000003 /* TimelineModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000003 /* TimelineModel.swift */; };
+		AB2000000000000000000004 /* TimelinePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000004 /* TimelinePanel.swift */; };
+		AB2000000000000000000005 /* TimelineRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000005 /* TimelineRows.swift */; };
+		AB2000000000000000000007 /* TimelineSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000007; };
+		AB2000000000000000000008 /* TimelinePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000008; };
+		AB2000000000000000000009 /* TimelineToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000009; };
+		AB200000000000000000000A /* CheckStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB100000000000000000000A; };
+		AB200000000000000000000B /* IntelligenceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB100000000000000000000B; };
+		AB200000000000000000000C /* PRIntelligenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB100000000000000000000C; };
+		AB200000000000000000000D /* TimelineIntelligenceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB100000000000000000000D; };
+		6BCAC93CE9230D3B6201483C /* AppRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37BCA4CFB9CD03CB5DAB0BCC /* AppRuntime.swift */; };
+		2E2FC6389A8A67AC9349EEDC /* TimelineRowGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82BECBD5A89E7F52E695332D /* TimelineRowGeometry.swift */; };
+		BFA8BBDBF479FE39F548FCE2 /* TimelinePolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E629C6B0C0A6030877DD368 /* TimelinePolicies.swift */; };
+		8343228B017B93A0FA9B518E /* TimelineScreenController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96AFB08320E20F7EBD2C58B4 /* TimelineScreenController.swift */; };
+		DCE53682F3DAAE8AFA46D7F4 /* AsyncAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A48A051AA8B0EB7578CEC5F7 /* AsyncAvatarView.swift */; };
+		31ACB35B6FF4CD10CC8A7AAB /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 900DD289E9218651C1D70BE7 /* OnboardingView.swift */; };
+		CEA9588AD9CB178DB974EFFE /* SectionTitle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43A2ED75C4C8059FCBF0682A /* SectionTitle.swift */; };
+		22E56E27C357EAF035D8FBFB /* AppRuntimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85D1A9AF5F751042304D294A /* AppRuntimeTests.swift */; };
+		32E3C014808BF8D43E1D6EC7 /* AvatarDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CF40492DC582C06770ECB81 /* AvatarDecodingTests.swift */; };
+		2E2B9BF8091B2782047E9C91 /* CICheckTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECF0C8A273336579B68FB35 /* CICheckTests.swift */; };
+		978492AC01027416741319C9 /* GitHubCLITransportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 825482153D0C4F55DD39C75F /* GitHubCLITransportTests.swift */; };
+		FAF4F4A9DEA893B8C52E35DD /* GitHubClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D70EEF936C8C44138D017938 /* GitHubClientTests.swift */; };
+		6E64AD76A943FCD670FDBB81 /* GitHubSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42572DFA3E93C5F1B4029ED /* GitHubSessionTests.swift */; };
+		C6319CD28242C2B36DE74597 /* IntelligencePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEB47A0AA3B4E915B75C344A /* IntelligencePolicyTests.swift */; };
+		6CBF6F2A7E8F4637D0CFB89D /* NativeScrollingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A884653FE4885915AFC89908 /* NativeScrollingTests.swift */; };
+		26E4F933B38BBF76D2E00A2A /* ProgressivePullLoadingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8974F288F4DADFA32FADCC6 /* ProgressivePullLoadingTests.swift */; };
+		A919C180E68E490D2E59B254 /* PullRefreshTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A8294BDA22F1A2A49088D86 /* PullRefreshTrackerTests.swift */; };
+		4DA53332BD5BAB5B7401372B /* PullRequestStackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D54797CB7EF4D7B47F2AB8E6 /* PullRequestStackTests.swift */; };
+		7DF372F41558B96CFB42A449 /* PullSnapshotCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8206C7501C7018A8501BE78 /* PullSnapshotCacheTests.swift */; };
+		016CFD924C1D678872D6858B /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FA7D1609526869EF1F7C8CB /* TestSupport.swift */; };
+		889659E8C239E024A6956AEB /* TimelinePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AB25D23E0FFF5E054AA5635 /* TimelinePolicyTests.swift */; };
+		6FE1F927C54A89D569AA0DAA /* TimelinePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 161E7524F5C25BDAD228E4B6 /* TimelinePresentationTests.swift */; };
+		4492D7EDC670D87B7E0865E7 /* TimelineRenderingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB0F81002A0CE65A8659445 /* TimelineRenderingTests.swift */; };
+		9D33AA7003EAC05EFA94B37D /* ServiceCleanupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDFA4D9E93E1EABFD4A40BAE /* ServiceCleanupTests.swift */; };
+		D9E45B1EEA25825B49E852E7 /* TimelineCleanupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 576EFC3808115CC88F0526D7 /* TimelineCleanupTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -44,13 +77,13 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		AF1000000000000000000002 /* TimelineNativeScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineNativeScrollView.swift; sourceTree = "<group>"; };
+		AF0000000000000000000002 /* PullSnapshotCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PullSnapshotCache.swift; sourceTree = "<group>"; };
+        AD0000000000000000000002 /* GitHubCLI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubCLI.swift; sourceTree = "<group>"; };
+		AC0000000000000000000002 /* GitHubSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubSession.swift; sourceTree = "<group>"; };
 		A10000000000000000000002 /* PRHarborTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PRHarborTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A10000000000000000000004 /* PRHarborTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRHarborTests.swift; sourceTree = "<group>"; };
 		769F4E1A2765A2B900594911 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		769F4E7A277B97B300594911 /* Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifications.swift; sourceTree = "<group>"; };
-		76D5F9E528D28A29009EBD80 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
-		76F7DACF28A88CAB0086A3B0 /* GithubTokenValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GithubTokenValidator.swift; sourceTree = "<group>"; };
-		8C55444A274AD7B20079CA42 /* DateExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateExtensions.swift; sourceTree = "<group>"; };
 		8C55444C274AD9E00079CA42 /* NSImageExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NSImageExtensions.swift; sourceTree = "<group>"; };
 		8CECBBDF2742AAF800A2802D /* PRHarbor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PRHarbor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8CECBBE22742AAF900A2802D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -60,15 +93,48 @@
 		8CECBBF32742AB3F00A2802D /* GitHubModels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitHubModels.swift; sourceTree = "<group>"; };
 		8CECBBFD2742AC0800A2802D /* DefaultsExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DefaultsExtensions.swift; sourceTree = "<group>"; };
 		AA000001AAAAAA0000000002 /* PRHarborApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRHarborApp.swift; sourceTree = "<group>"; };
-		BB000001BBBBBB0000000002 /* GitHubConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubConstants.swift; sourceTree = "<group>"; };
-		CC000001CCCCCC0000000002 /* GitHubDeviceFlowAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubDeviceFlowAuth.swift; sourceTree = "<group>"; };
-		DD000002AAAA000000000002 /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
-		DD000003AAAA000000000002 /* PRListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRListView.swift; sourceTree = "<group>"; };
+		AE0000000000000000000002 /* StatusBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarController.swift; sourceTree = "<group>"; };
 		EE000002EEEEEE0000000002 /* PanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelView.swift; sourceTree = "<group>"; };
-		EE000003EEEEEE0000000002 /* PRRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRRowView.swift; sourceTree = "<group>"; };
 		EE000004EEEEEE0000000002 /* PullRequestStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PullRequestStore.swift; sourceTree = "<group>"; };
 		EE000005EEEEEE0000000002 /* PanelSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelSettingsView.swift; sourceTree = "<group>"; };
 		FF000001FFFFFF0000000002 /* ThemeColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColors.swift; sourceTree = "<group>"; };
+		AB1000000000000000000001 /* TimelineDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineDetailView.swift; sourceTree = "<group>"; };
+		AB1000000000000000000002 /* TimelineDrawing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineDrawing.swift; sourceTree = "<group>"; };
+		AB1000000000000000000003 /* TimelineModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineModel.swift; sourceTree = "<group>"; };
+		AB1000000000000000000004 /* TimelinePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelinePanel.swift; sourceTree = "<group>"; };
+		AB1000000000000000000005 /* TimelineRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRows.swift; sourceTree = "<group>"; };
+		AB1000000000000000000007 /* TimelineSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineSettingsPane.swift; sourceTree = "<group>"; };
+		AB1000000000000000000008 /* TimelinePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelinePreview.swift; sourceTree = "<group>"; };
+		AB1000000000000000000009 /* TimelineToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineToolbar.swift; sourceTree = "<group>"; };
+		AB100000000000000000000A /* CheckStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckStatus.swift; sourceTree = "<group>"; };
+		AB100000000000000000000B /* IntelligenceModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntelligenceModels.swift; sourceTree = "<group>"; };
+		AB100000000000000000000C /* PRIntelligenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRIntelligenceService.swift; sourceTree = "<group>"; };
+		AB100000000000000000000D /* TimelineIntelligenceViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineIntelligenceViews.swift; sourceTree = "<group>"; };
+		37BCA4CFB9CD03CB5DAB0BCC /* AppRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntime.swift; sourceTree = "<group>"; };
+		82BECBD5A89E7F52E695332D /* TimelineRowGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRowGeometry.swift; sourceTree = "<group>"; };
+		7E629C6B0C0A6030877DD368 /* TimelinePolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelinePolicies.swift; sourceTree = "<group>"; };
+		96AFB08320E20F7EBD2C58B4 /* TimelineScreenController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineScreenController.swift; sourceTree = "<group>"; };
+		A48A051AA8B0EB7578CEC5F7 /* AsyncAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncAvatarView.swift; sourceTree = "<group>"; };
+		900DD289E9218651C1D70BE7 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		43A2ED75C4C8059FCBF0682A /* SectionTitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionTitle.swift; sourceTree = "<group>"; };
+		85D1A9AF5F751042304D294A /* AppRuntimeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntimeTests.swift; sourceTree = "<group>"; };
+		4CF40492DC582C06770ECB81 /* AvatarDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarDecodingTests.swift; sourceTree = "<group>"; };
+		DECF0C8A273336579B68FB35 /* CICheckTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CICheckTests.swift; sourceTree = "<group>"; };
+		825482153D0C4F55DD39C75F /* GitHubCLITransportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubCLITransportTests.swift; sourceTree = "<group>"; };
+		D70EEF936C8C44138D017938 /* GitHubClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubClientTests.swift; sourceTree = "<group>"; };
+		B42572DFA3E93C5F1B4029ED /* GitHubSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubSessionTests.swift; sourceTree = "<group>"; };
+		DEB47A0AA3B4E915B75C344A /* IntelligencePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntelligencePolicyTests.swift; sourceTree = "<group>"; };
+		A884653FE4885915AFC89908 /* NativeScrollingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeScrollingTests.swift; sourceTree = "<group>"; };
+		E8974F288F4DADFA32FADCC6 /* ProgressivePullLoadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressivePullLoadingTests.swift; sourceTree = "<group>"; };
+		7A8294BDA22F1A2A49088D86 /* PullRefreshTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PullRefreshTrackerTests.swift; sourceTree = "<group>"; };
+		D54797CB7EF4D7B47F2AB8E6 /* PullRequestStackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PullRequestStackTests.swift; sourceTree = "<group>"; };
+		E8206C7501C7018A8501BE78 /* PullSnapshotCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PullSnapshotCacheTests.swift; sourceTree = "<group>"; };
+		8FA7D1609526869EF1F7C8CB /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
+		0AB25D23E0FFF5E054AA5635 /* TimelinePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelinePolicyTests.swift; sourceTree = "<group>"; };
+		161E7524F5C25BDAD228E4B6 /* TimelinePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelinePresentationTests.swift; sourceTree = "<group>"; };
+		6CB0F81002A0CE65A8659445 /* TimelineRenderingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRenderingTests.swift; sourceTree = "<group>"; };
+		EDFA4D9E93E1EABFD4A40BAE /* ServiceCleanupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceCleanupTests.swift; sourceTree = "<group>"; };
+		576EFC3808115CC88F0526D7 /* TimelineCleanupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineCleanupTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -135,11 +201,12 @@
 			isa = PBXGroup;
 			children = (
 				EE000002EEEEEE0000000002 /* PanelView.swift */,
-				DD000003AAAA000000000002 /* PRListView.swift */,
-				DD000002AAAA000000000002 /* SharedComponents.swift */,
-				EE000003EEEEEE0000000002 /* PRRowView.swift */,
+				AB3000000000000000000001 /* Timeline */,
 				EE000005EEEEEE0000000002 /* PanelSettingsView.swift */,
 				769F4E1A2765A2B900594911 /* AboutView.swift */,
+				A48A051AA8B0EB7578CEC5F7 /* AsyncAvatarView.swift */,
+				900DD289E9218651C1D70BE7 /* OnboardingView.swift */,
+				43A2ED75C4C8059FCBF0682A /* SectionTitle.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -149,6 +216,8 @@
 			children = (
 				AA000001AAAAAA0000000002 /* PRHarborApp.swift */,
 				8CECBBE22742AAF900A2802D /* AppDelegate.swift */,
+				AE0000000000000000000002 /* StatusBarController.swift */,
+				37BCA4CFB9CD03CB5DAB0BCC /* AppRuntime.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -157,6 +226,10 @@
 			isa = PBXGroup;
 			children = (
 				8CECBBF32742AB3F00A2802D /* GitHubModels.swift */,
+				AB1000000000000000000003 /* TimelineModel.swift */,
+				AB100000000000000000000B /* IntelligenceModels.swift */,
+				AB100000000000000000000A /* CheckStatus.swift */,
+				82BECBD5A89E7F52E695332D /* TimelineRowGeometry.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -165,11 +238,13 @@
 			isa = PBXGroup;
 			children = (
 				8CECBBF22742AB3F00A2802D /* GitHubClient.swift */,
-				BB000001BBBBBB0000000002 /* GitHubConstants.swift */,
-				CC000001CCCCCC0000000002 /* GitHubDeviceFlowAuth.swift */,
-				76F7DACF28A88CAB0086A3B0 /* GithubTokenValidator.swift */,
-				76D5F9E528D28A29009EBD80 /* Keychain.swift */,
+				AC0000000000000000000002 /* GitHubSession.swift */,
+				AF0000000000000000000002 /* PullSnapshotCache.swift */,
+				AD0000000000000000000002 /* GitHubCLI.swift */,
 				EE000004EEEEEE0000000002 /* PullRequestStore.swift */,
+				AB100000000000000000000C /* PRIntelligenceService.swift */,
+				7E629C6B0C0A6030877DD368 /* TimelinePolicies.swift */,
+				96AFB08320E20F7EBD2C58B4 /* TimelineScreenController.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -179,7 +254,6 @@
 			children = (
 				769F4E7A277B97B300594911 /* Notifications.swift */,
 				8CECBBFD2742AC0800A2802D /* DefaultsExtensions.swift */,
-				8C55444A274AD7B20079CA42 /* DateExtensions.swift */,
 				8C55444C274AD9E00079CA42 /* NSImageExtensions.swift */,
 				FF000001FFFFFF0000000002 /* ThemeColors.swift */,
 			);
@@ -189,9 +263,42 @@
 		A10000000000000000000003 /* PRHarborTests */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000000004 /* PRHarborTests.swift */,
+				85D1A9AF5F751042304D294A /* AppRuntimeTests.swift */,
+				4CF40492DC582C06770ECB81 /* AvatarDecodingTests.swift */,
+				DECF0C8A273336579B68FB35 /* CICheckTests.swift */,
+				825482153D0C4F55DD39C75F /* GitHubCLITransportTests.swift */,
+				D70EEF936C8C44138D017938 /* GitHubClientTests.swift */,
+				B42572DFA3E93C5F1B4029ED /* GitHubSessionTests.swift */,
+				DEB47A0AA3B4E915B75C344A /* IntelligencePolicyTests.swift */,
+				A884653FE4885915AFC89908 /* NativeScrollingTests.swift */,
+				E8974F288F4DADFA32FADCC6 /* ProgressivePullLoadingTests.swift */,
+				7A8294BDA22F1A2A49088D86 /* PullRefreshTrackerTests.swift */,
+				D54797CB7EF4D7B47F2AB8E6 /* PullRequestStackTests.swift */,
+				E8206C7501C7018A8501BE78 /* PullSnapshotCacheTests.swift */,
+				8FA7D1609526869EF1F7C8CB /* TestSupport.swift */,
+				0AB25D23E0FFF5E054AA5635 /* TimelinePolicyTests.swift */,
+				161E7524F5C25BDAD228E4B6 /* TimelinePresentationTests.swift */,
+				6CB0F81002A0CE65A8659445 /* TimelineRenderingTests.swift */,
+				EDFA4D9E93E1EABFD4A40BAE /* ServiceCleanupTests.swift */,
+				576EFC3808115CC88F0526D7 /* TimelineCleanupTests.swift */,
 			);
 			path = PRHarborTests;
+			sourceTree = "<group>";
+		};
+		AB3000000000000000000001 /* Timeline */ = {
+			isa = PBXGroup;
+			children = (
+				AB1000000000000000000001 /* TimelineDetailView.swift */,
+				AB1000000000000000000002 /* TimelineDrawing.swift */,
+				AB1000000000000000000004 /* TimelinePanel.swift */,
+				AF1000000000000000000002 /* TimelineNativeScrollView.swift */,
+				AB1000000000000000000005 /* TimelineRows.swift */,
+				AB1000000000000000000007 /* TimelineSettingsPane.swift */,
+				AB1000000000000000000008 /* TimelinePreview.swift */,
+				AB1000000000000000000009 /* TimelineToolbar.swift */,
+				AB100000000000000000000D /* TimelineIntelligenceViews.swift */,
+			);
+			path = Timeline;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -303,7 +410,24 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A10000000000000000000005 /* PRHarborTests.swift in Sources */,
+				22E56E27C357EAF035D8FBFB /* AppRuntimeTests.swift in Sources */,
+				32E3C014808BF8D43E1D6EC7 /* AvatarDecodingTests.swift in Sources */,
+				2E2B9BF8091B2782047E9C91 /* CICheckTests.swift in Sources */,
+				978492AC01027416741319C9 /* GitHubCLITransportTests.swift in Sources */,
+				FAF4F4A9DEA893B8C52E35DD /* GitHubClientTests.swift in Sources */,
+				6E64AD76A943FCD670FDBB81 /* GitHubSessionTests.swift in Sources */,
+				C6319CD28242C2B36DE74597 /* IntelligencePolicyTests.swift in Sources */,
+				6CBF6F2A7E8F4637D0CFB89D /* NativeScrollingTests.swift in Sources */,
+				26E4F933B38BBF76D2E00A2A /* ProgressivePullLoadingTests.swift in Sources */,
+				A919C180E68E490D2E59B254 /* PullRefreshTrackerTests.swift in Sources */,
+				4DA53332BD5BAB5B7401372B /* PullRequestStackTests.swift in Sources */,
+				7DF372F41558B96CFB42A449 /* PullSnapshotCacheTests.swift in Sources */,
+				016CFD924C1D678872D6858B /* TestSupport.swift in Sources */,
+				889659E8C239E024A6956AEB /* TimelinePolicyTests.swift in Sources */,
+				6FE1F927C54A89D569AA0DAA /* TimelinePresentationTests.swift in Sources */,
+				4492D7EDC670D87B7E0865E7 /* TimelineRenderingTests.swift in Sources */,
+				9D33AA7003EAC05EFA94B37D /* ServiceCleanupTests.swift in Sources */,
+				D9E45B1EEA25825B49E852E7 /* TimelineCleanupTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -311,26 +435,42 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8C55444B274AD7B20079CA42 /* DateExtensions.swift in Sources */,
 				769F4E7B277B97B300594911 /* Notifications.swift in Sources */,
 				AA000001AAAAAA0000000001 /* PRHarborApp.swift in Sources */,
 				8CECBBE32742AAF900A2802D /* AppDelegate.swift in Sources */,
-				76F7DAD028A88CAB0086A3B0 /* GithubTokenValidator.swift in Sources */,
+				AE0000000000000000000001 /* StatusBarController.swift in Sources */,
 				8CECBBF52742AB3F00A2802D /* GitHubModels.swift in Sources */,
+				AB200000000000000000000A /* CheckStatus.swift in Sources */,
+				AB200000000000000000000D /* TimelineIntelligenceViews.swift in Sources */,
+				AB200000000000000000000C /* PRIntelligenceService.swift in Sources */,
+				AB200000000000000000000B /* IntelligenceModels.swift in Sources */,
 				769F4E1B2765A2B900594911 /* AboutView.swift in Sources */,
 				8CECBBF42742AB3F00A2802D /* GitHubClient.swift in Sources */,
-				BB000001BBBBBB0000000001 /* GitHubConstants.swift in Sources */,
-				CC000001CCCCCC0000000001 /* GitHubDeviceFlowAuth.swift in Sources */,
+				AC0000000000000000000001 /* GitHubSession.swift in Sources */,
+				AF0000000000000000000001 /* PullSnapshotCache.swift in Sources */,
+				AD0000000000000000000001 /* GitHubCLI.swift in Sources */,
 				8C55444D274AD9E00079CA42 /* NSImageExtensions.swift in Sources */,
 				8CECBBFE2742AC0800A2802D /* DefaultsExtensions.swift in Sources */,
-				76D5F9E628D28A29009EBD80 /* Keychain.swift in Sources */,
 				FF000001FFFFFF0000000001 /* ThemeColors.swift in Sources */,
 				EE000002EEEEEE0000000001 /* PanelView.swift in Sources */,
-				DD000002AAAA000000000001 /* SharedComponents.swift in Sources */,
-				DD000003AAAA000000000001 /* PRListView.swift in Sources */,
-				EE000003EEEEEE0000000001 /* PRRowView.swift in Sources */,
+				AB2000000000000000000009 /* TimelineToolbar.swift in Sources */,
+				AB2000000000000000000008 /* TimelinePreview.swift in Sources */,
+				AB2000000000000000000007 /* TimelineSettingsPane.swift in Sources */,
+				AB2000000000000000000005 /* TimelineRows.swift in Sources */,
+				AB2000000000000000000004 /* TimelinePanel.swift in Sources */,
+				AF1000000000000000000001 /* TimelineNativeScrollView.swift in Sources */,
+				AB2000000000000000000003 /* TimelineModel.swift in Sources */,
+				AB2000000000000000000002 /* TimelineDrawing.swift in Sources */,
+				AB2000000000000000000001 /* TimelineDetailView.swift in Sources */,
 				EE000004EEEEEE0000000001 /* PullRequestStore.swift in Sources */,
 				EE000005EEEEEE0000000001 /* PanelSettingsView.swift in Sources */,
+				6BCAC93CE9230D3B6201483C /* AppRuntime.swift in Sources */,
+				2E2FC6389A8A67AC9349EEDC /* TimelineRowGeometry.swift in Sources */,
+				BFA8BBDBF479FE39F548FCE2 /* TimelinePolicies.swift in Sources */,
+				8343228B017B93A0FA9B518E /* TimelineScreenController.swift in Sources */,
+				DCE53682F3DAAE8AFA46D7F4 /* AsyncAvatarView.swift in Sources */,
+				31ACB35B6FF4CD10CC8A7AAB /* OnboardingView.swift in Sources */,
+				CEA9588AD9CB178DB974EFFE /* SectionTitle.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -516,14 +656,12 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = DBVKAAM5R6;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "PR Harbor";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
@@ -535,7 +673,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nezdemkovski.prharbor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -557,14 +695,12 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = DBVKAAM5R6;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "PR Harbor";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
@@ -576,7 +712,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.nezdemkovski.prharbor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

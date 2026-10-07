@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings Concepts</title>
+<style>
+:root {
+  --bg: #eceef2; --panel: #ffffff; --line: #eef0f3; --line-strong: #e3e6eb; --text: #16181c; --muted: #858c96; --faint: #b5bbc4;
+  --track: #f8f9fa; --active: #e3e6eb; --hover: #f6f7f9; --accent: #3d82f6; --group: #f6f7f9;
+  --fresh: #22b25b; --aging: #d4a106; --stale: #f07a1a; --rotting: #e5484d;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e0f11; --panel: #1a1b1f; --line: #26282d; --line-strong: #2f3237; --text: #eceef1; --muted: #8b919a; --faint: #5b6068;
+    --track: #1f2125; --active: #33363c; --hover: #222428; --accent: #5b9cff; --group: #202226;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e0f11; --panel: #1a1b1f; --line: #26282d; --line-strong: #2f3237; --text: #eceef1; --muted: #8b919a; --faint: #5b6068;
+  --track: #1f2125; --active: #33363c; --hover: #222428; --accent: #5b9cff; --group: #202226;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+button, input, select { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: pointer; }
+.page { max-width: 820px; margin: 0 auto; padding: 32px 16px 64px; }
+.page > h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: -.01em; }
+.page > p { color: var(--muted); margin: 0 0 28px; max-width: 64ch; }
+.concept { margin-bottom: 44px; }
+.concept > h2 { font-size: 15px; margin: 0 0 2px; }
+.concept > p { color: var(--muted); margin: 0 0 12px; max-width: 64ch; }
+.panel { width: 100%; max-width: 780px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; box-shadow: 0 1px 2px rgba(20,24,30,.04), 0 12px 40px rgba(20,24,30,.08); }
+
+/* shared form pieces */
+.sec-title { font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 18px 0 6px 2px; }
+.group { background: var(--group); border-radius: 12px; box-shadow: inset 0 0 0 1px var(--line); }
+.srow { display: flex; align-items: center; gap: 16px; padding: 10px 14px; min-height: 44px; }
+.srow + .srow { border-top: 1px solid var(--line); }
+.srow .lbl { flex: 1; min-width: 0; }
+.srow .lbl div:first-child { font-size: 13px; }
+.srow .hint { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+.srow.hidden { display: none; }
+.srow.block { display: block; }
+mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; border-radius: 3px; }
+
+.switch { width: 34px; height: 20px; border-radius: 10px; background: var(--active); position: relative; flex: none; transition: background .15s; }
+.switch::after { content: ""; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+.switch.on { background: var(--accent); } .switch.on::after { transform: translateX(14px); }
+.seg { display: flex; background: var(--track); border-radius: 8px; padding: 2px; box-shadow: inset 0 0 0 1px var(--line); flex: none; }
+.seg button { padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 550; color: var(--muted); }
+.seg button.on { background: var(--panel); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 .5px var(--line-strong); }
+select.pop { appearance: none; background: var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='10' viewBox='0 0 8 10'%3E%3Cpath d='M1 4l3-3 3 3M1 6l3 3 3-3' fill='none' stroke='%23858c96' stroke-width='1.2'/%3E%3C/svg%3E") no-repeat right 8px center;
+  border: 0; box-shadow: inset 0 0 0 .5px var(--line-strong), 0 .5px 1px rgba(0,0,0,.1); border-radius: 6px; padding: 3px 24px 3px 9px; font-size: 12.5px; }
+input.txt { background: var(--panel); border: 0; box-shadow: inset 0 0 0 1px var(--line-strong); border-radius: 7px; padding: 5px 9px; width: 220px; font-size: 12.5px; outline: none; }
+input.txt:focus { box-shadow: inset 0 0 0 1.5px var(--accent); }
+input.time { width: 74px; }
+.btn { height: 26px; padding: 0 11px; border-radius: 7px; font-size: 12.5px; font-weight: 500; background: color-mix(in srgb, var(--text) 6%, var(--panel)); box-shadow: inset 0 0 0 .5px var(--line-strong), 0 .5px 1px rgba(0,0,0,.1); white-space: nowrap; }
+.muted { color: var(--muted); }
+.mono { font: 600 11.5px ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* account */
+.acct { display: flex; align-items: center; gap: 12px; }
+.acct img { width: 36px; height: 36px; border-radius: 50%; }
+.acct .who { flex: 1; } .acct .who b { font-size: 13.5px; } .acct .who div { font-size: 11.5px; color: var(--muted); }
+
+/* freshness widget */
+.fz { padding: 4px 0 2px; }
+.fz-bar { position: relative; height: 10px; border-radius: 5px; margin: 26px 10px 30px; }
+.fz-zone { position: absolute; top: 0; bottom: 0; }
+.fz-zone:first-child { border-radius: 5px 0 0 5px; } .fz-zone:last-child { border-radius: 0 5px 5px 0; }
+.fz-h { position: absolute; top: 50%; width: 18px; height: 18px; border-radius: 50%; background: #fff; transform: translate(-50%, -50%); cursor: ew-resize; box-shadow: 0 0 0 .5px rgba(0,0,0,.2), 0 1px 4px rgba(0,0,0,.25); touch-action: none; }
+.fz-h span { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 650; white-space: nowrap; color: var(--text); }
+.fz-lbls { position: absolute; top: 18px; left: 0; right: 0; font-size: 11px; color: var(--muted); }
+.fz-lbls span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.fz-prev { display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 4px; }
+.fz-row { display: grid; grid-template-columns: 150px 1fr 60px; align-items: center; gap: 10px; font-size: 12px; }
+.fz-row .tr { position: relative; height: 18px; background: var(--track); border-radius: 6px; box-shadow: inset 0 0 0 1px var(--line); }
+.fz-row .tr i { position: absolute; top: 3px; bottom: 3px; right: 3px; border-radius: 4px;
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 55%, transparent) 0 2px, color-mix(in srgb, var(--c) 15%, transparent) 2px 6px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent); transition: background .15s; }
+.fz-row .z { font-weight: 650; text-align: right; transition: color .15s; }
+
+/* bots */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 9px; border-radius: 7px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line-strong); font: 560 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.chip button { width: 16px; height: 16px; border-radius: 4px; color: var(--muted); }
+.chip button:hover { color: var(--rotting); background: var(--hover); }
+.chip.add { padding-right: 9px; color: var(--accent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent); }
+.chip.plain { padding-right: 9px; font-family: inherit; font-weight: 550; }
+.bot-add { display: flex; gap: 6px; margin-top: 8px; }
+
+/* A — single page */
+.a-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.a-head .back { color: var(--accent); font-size: 13px; display: flex; align-items: center; gap: 2px; }
+.a-head h3 { margin: 0 auto 0 0; font-size: 15px; font-weight: 650; }
+.a-search { flex: 0 0 220px; }
+.a-body { padding: 4px 18px 20px; max-height: 760px; overflow: auto; }
+
+/* B — sidebar */
+.b { display: grid; grid-template-columns: 190px 1fr; height: 640px; }
+.b-side { background: color-mix(in srgb, var(--group) 70%, var(--panel)); border-right: 1px solid var(--line); padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; }
+.b-side .me { display: flex; align-items: center; gap: 8px; padding: 6px 8px 12px; }
+.b-side .me img { width: 28px; height: 28px; border-radius: 50%; }
+.b-side .me b { font-size: 12.5px; } .b-side .me div { font-size: 11px; color: var(--muted); }
+.b-item { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 7px; font-size: 13px; text-align: left; }
+.b-item i { width: 20px; height: 20px; border-radius: 5px; display: grid; place-items: center; color: #fff; font-style: normal; font-size: 11px; flex: none; }
+.b-item:hover { background: var(--hover); }
+.b-item.on { background: var(--accent); color: #fff; }
+.b-pane { padding: 18px 22px; overflow: auto; }
+.b-pane h3 { margin: 0 0 2px; font-size: 18px; font-weight: 650; letter-spacing: -.01em; }
+.b-pane > p { margin: 0 0 6px; color: var(--muted); font-size: 12.5px; }
+</style>
+</head>
+<body>
+<script>document.write('<script src="data.js?' + Date.now() + '"><\/script>');</script>
+<div class="page">
+  <h1>Settings concepts</h1>
+  <p>Everything the current app lets you change, minus the row toggles the new list no longer needs, plus what the timeline adds: freshness thresholds, bots, stacks, snooze and a couple of new notifications. All controls work; nothing is saved.</p>
+  <section class="concept"><h2>A. One page, inside the popover</h2><p>Replaces the list like the current app does, with a back button. Everything on one scrolling page, grouped, with a search field that filters the rows as you type.</p><div class="panel" id="A"></div></section>
+  <section class="concept"><h2>B. Sidebar, like System Settings</h2><p>Sections on the left, one at a time on the right. Better if settings live in their own window rather than the popover.</p><div class="panel" id="B"></div></section>
+</div>
+<script>
+const L = window.LIVE;
+const me = L?.me ?? 'you', meAvatar = L?.people?.[L.me]?.avatar ? `${L.people[L.me].avatar}&s=80` : '';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// one shared state so both concepts stay in sync
+const S = {
+  thresholds: [2, 7, 21],
+  bots: ['dependabot', 'github-actions', 'renovate', 'greptile-apps', '*[bot]'],
+  values: {},
+};
+const SECTIONS = [
+  { id: 'account', title: 'Account', icon: '◉', color: '#6b7280', rows: [
+    { type: 'account' },
+    { key: 'apiUrl', label: 'GitHub Enterprise URL', hint: 'Leave as is for github.com', type: 'text', value: 'https://api.github.com' },
+  ] },
+  { id: 'prs', title: 'Pull requests', icon: '⇄', color: '#3d82f6', rows: [
+    { key: 'showReview', label: 'Review requested', hint: 'Pull requests waiting for your review', type: 'toggle', value: true },
+    { key: 'showAssigned', label: 'Assigned to me', type: 'toggle', value: false },
+    { key: 'showMine', label: 'My pull requests', type: 'toggle', value: true },
+    { key: 'hideDrafts', label: 'Hide drafts', type: 'toggle', value: false },
+    { key: 'group', label: 'Group by repository', type: 'toggle', value: true },
+    { key: 'sort', label: 'Sort inside a repository', type: 'seg', options: ['Updated', 'Created'], value: 0 },
+    { key: 'ci', label: 'Checks from', type: 'select', options: ['GitHub Actions', 'Status checks', 'Don\'t show'], value: 0 },
+  ] },
+  { id: 'timeline', title: 'Timeline', icon: '▤', color: '#22b25b', rows: [
+    { type: 'freshness', label: 'Freshness', hint: 'How long a pull request can sit quietly before it changes color. Drag the handles.' },
+    { key: 'range', label: 'Default range', type: 'seg', options: ['2W', '1M', '3M', '6M'], value: 3 },
+    { key: 'ownComments', label: 'My own comments count as activity', hint: 'Off: only commits reset the quiet time on your pull requests', type: 'toggle', value: true },
+  ] },
+  { id: 'stacks', title: 'Stacks', icon: '≡', color: '#8b5cf6', rows: [
+    { key: 'merged', label: 'Merged layers', type: 'seg', options: ['Count', 'List', 'Hide'], value: 0 },
+    { key: 'collapse', label: 'Collapse stacks by default', type: 'toggle', value: false },
+  ] },
+  { id: 'bots', title: 'Bots', icon: '⚙', color: '#64748b', rows: [
+    { type: 'bots', label: 'Bot accounts', hint: 'Their pull requests are grouped under Bots, and they don\'t count as reviewers. Use * as a wildcard.' },
+  ] },
+  { id: 'snooze', title: 'Snooze', icon: '☾', color: '#0ea5e9', rows: [
+    { type: 'chips', label: 'Quick options', chips: ['Tomorrow', 'In 3 days', 'Next week'] },
+    { key: 'wake', label: 'Wake up when someone comments', type: 'toggle', value: true },
+  ] },
+  { id: 'menubar', title: 'Menu bar', icon: '▭', color: '#111827', rows: [
+    { key: 'counter', label: 'Counter', hint: 'The number next to the icon', type: 'select', options: ['Rotting', 'Waiting on you', 'Review requested', 'Nothing'], value: 0 },
+    { key: 'refresh', label: 'Refresh every', type: 'select', options: ['1 minute', '5 minutes', '10 minutes', '15 minutes', '30 minutes'], value: 1 },
+    { key: 'login', label: 'Open at login', type: 'toggle', value: true },
+  ] },
+  { id: 'notify', title: 'Notifications', icon: '◔', color: '#e5484d', rows: [
+    { key: 'nReview', label: 'Someone requests your review', type: 'toggle', value: true },
+    { key: 'nAssigned', label: 'You are assigned', type: 'toggle', value: true },
+    { key: 'nRot', label: 'One of yours starts rotting', type: 'toggle', value: true },
+    { key: 'nMorning', label: 'Morning summary', hint: 'What is waiting on you and what went quiet', type: 'time', value: '09:00', on: true },
+  ] },
+];
+SECTIONS.forEach(s => s.rows.forEach(r => { if (r.key) S.values[r.key] = r.value; }));
+if (S.values.nMorningOn === undefined) S.values.nMorningOn = true;
+
+// ---------- controls ----------
+function control(r) {
+  const v = S.values[r.key];
+  switch (r.type) {
+    case 'toggle': return `<button class="switch ${v ? 'on' : ''}" data-key="${r.key}" role="switch" aria-checked="${!!v}" aria-label="${esc(r.label)}"></button>`;
+    case 'seg': return `<div class="seg">${r.options.map((o, i) => `<button class="${i === v ? 'on' : ''}" data-key="${r.key}" data-val="${i}">${o}</button>`).join('')}</div>`;
+    case 'select': return `<select class="pop" data-key="${r.key}" aria-label="${esc(r.label)}">${r.options.map((o, i) => `<option value="${i}" ${i === v ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+    case 'text': return `<input class="txt" data-key="${r.key}" value="${esc(v)}" aria-label="${esc(r.label)}">`;
+    case 'time': return `<input class="txt time" type="time" data-key="${r.key}" value="${v}" aria-label="${esc(r.label)}"><button class="switch ${S.values.nMorningOn ? 'on' : ''}" data-key="nMorningOn" role="switch" aria-label="${esc(r.label)}"></button>`;
+  }
+  return '';
+}
+const label = (r, q) => {
+  const hl = t => q ? esc(t).replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'ig'), '<mark>$1</mark>') : esc(t);
+  return `<div class="lbl"><div>${hl(r.label)}</div>${r.hint ? `<div class="hint">${hl(r.hint)}</div>` : ''}</div>`;
+};
+
+// freshness: soft-log scale 0..60 days, three draggable handles
+const FMAX = 60, fx = d => Math.log1p(d / 2) / Math.log1p(FMAX / 2) * 100, fd = p => 2 * Math.expm1(p / 100 * Math.log1p(FMAX / 2));
+const ZONES = [['fresh', 'var(--fresh)'], ['aging', 'var(--aging)'], ['stale', 'var(--stale)'], ['rotting', 'var(--rotting)']];
+const zoneOf = d => d < S.thresholds[0] ? 0 : d < S.thresholds[1] ? 1 : d < S.thresholds[2] ? 2 : 3;
+const fmtD = d => d < 1 ? `${Math.round(d * 24)}h` : d >= 14 && d % 7 === 0 ? `${d / 7}w` : `${Math.round(d)}d`;
+const SAMPLES = [['Bump cilium to 1.19', .6], ['Settings: notification prefs', 4], ['Migrate calendar to Temporal', 12], ['Booking widget timezones', 26], ['Idempotency keys for payments', 58]];
+function freshness() {
+  const [a, b, c] = S.thresholds, edges = [0, a, b, c, FMAX];
+  const zones = ZONES.map(([, col], i) => `<i class="fz-zone" style="left:${fx(edges[i])}%;width:${fx(edges[i + 1]) - fx(edges[i])}%;background:${col}"></i>`).join('');
+  const handles = S.thresholds.map((t, i) => `<span class="fz-h" data-h="${i}" style="left:${fx(t)}%" role="slider" aria-valuenow="${t}" aria-label="${ZONES[i + 1][0]} after"><span>${fmtD(t)}</span></span>`).join('');
+  const lbls = ZONES.map(([n], i) => `<span style="left:${(fx(edges[i]) + fx(edges[i + 1])) / 2}%">${n}</span>`).join('');
+  const prev = SAMPLES.map(([t, d]) => { const z = zoneOf(d), col = ZONES[z][1];
+    return `<div class="fz-row"><span class="muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t}</span><span class="tr"><i style="--c:${col};width:${Math.max(6, fx(d) * .9)}%"></i></span><span class="z" style="color:${col}">${ZONES[z][0]}</span></div>`; }).join('');
+  return `<div class="fz"><div class="fz-bar">${zones}${handles}<div class="fz-lbls">${lbls}</div></div><div class="fz-prev">${prev}</div></div>`;
+}
+function bots() {
+  return `<div class="chips">${S.bots.map(b => `<span class="chip">${esc(b)}<button data-rmbot="${esc(b)}" aria-label="Remove ${esc(b)}">×</button></span>`).join('')}</div>
+    <div class="bot-add"><input class="txt" placeholder="Add a login, e.g. snyk-bot" data-botin><button class="btn" data-addbot>Add</button><button class="btn" data-addname="noona-ai" style="color:var(--accent)">+ noona-ai</button></div>`;
+}
+function rowHTML(r, q = '') {
+  const match = !q || `${r.label ?? ''} ${r.hint ?? ''}`.toLowerCase().includes(q.toLowerCase());
+  if (r.type === 'account') return `<div class="srow ${q ? 'hidden' : ''}"><div class="acct" style="flex:1">${meAvatar ? `<img src="${meAvatar}" alt="">` : ''}<div class="who"><b>@${esc(me)}</b><div>Signed in with GitHub</div></div><button class="btn">Sign out</button></div></div>`;
+  if (r.type === 'freshness' || r.type === 'bots') return `<div class="srow block ${match ? '' : 'hidden'}">${label(r, q)}${r.type === 'freshness' ? freshness() : `<div style="margin-top:8px">${bots()}</div>`}</div>`;
+  if (r.type === 'chips') return `<div class="srow ${match ? '' : 'hidden'}">${label(r, q)}<div class="chips">${r.chips.map(c => `<span class="chip plain">${c}</span>`).join('')}<button class="chip add">+ Add</button></div></div>`;
+  return `<div class="srow ${match ? '' : 'hidden'}">${label(r, q)}${control(r)}</div>`;
+}
+
+// ---------- A: one page ----------
+let qA = '';
+function renderA() {
+  const body = SECTIONS.map(s => {
+    const rows = s.rows.map(r => rowHTML(r, qA)).join('');
+    const any = !qA || s.rows.some(r => r.label && `${r.label} ${r.hint ?? ''}`.toLowerCase().includes(qA.toLowerCase()));
+    return any ? `<div class="sec-title">${s.title}</div><div class="group">${rows}</div>` : '';
+  }).join('') || `<p class="muted" style="padding:30px 0;text-align:center">No settings match “${esc(qA)}”.</p>`;
+  document.getElementById('A').innerHTML = `<div class="a-head"><button class="back">‹ Pull requests</button><h3>Settings</h3>
+    <input class="txt a-search" placeholder="Search settings" value="${esc(qA)}" data-search></div><div class="a-body">${body}</div>`;
+}
+// ---------- B: sidebar ----------
+let secB = 'timeline';
+function renderB() {
+  const s = SECTIONS.find(x => x.id === secB);
+  document.getElementById('B').innerHTML = `<div class="b"><nav class="b-side">
+      <div class="me">${meAvatar ? `<img src="${meAvatar}" alt="">` : ''}<div><b>@${esc(me)}</b><div>github.com</div></div></div>
+      ${SECTIONS.filter(x => x.id !== 'account').map(x => `<button class="b-item ${x.id === secB ? 'on' : ''}" data-sec="${x.id}"><i style="background:${x.color}">${x.icon}</i>${x.title}</button>`).join('')}
+      <div style="flex:1"></div><button class="b-item ${secB === 'account' ? 'on' : ''}" data-sec="account"><i style="background:#6b7280">◉</i>Account</button>
+    </nav><div class="b-pane"><h3>${s.title}</h3><p>${{ timeline: 'How the timeline colors and measures quiet time.', bots: 'Accounts that are treated as automation.', notify: 'When PR Harbor should tap you on the shoulder.' }[s.id] ?? ''}</p>
+      <div class="group" style="margin-top:12px">${s.rows.map(r => rowHTML(r)).join('')}</div></div></div>`;
+}
+const renderAll = () => { const a = document.activeElement?.matches?.('[data-search]'); renderA(); renderB(); if (a) { const el = document.querySelector('[data-search]'); el.focus(); el.setSelectionRange(el.value.length, el.value.length); } };
+
+// ---------- events ----------
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-key],[data-sec],[data-rmbot],[data-addbot],[data-addname]');
+  if (!t) return;
+  if (t.dataset.sec) { secB = t.dataset.sec; return renderB(); }
+  if (t.dataset.rmbot) { S.bots = S.bots.filter(b => b !== t.dataset.rmbot); return renderAll(); }
+  if ('addbot' in t.dataset) { const v = t.parentElement.querySelector('[data-botin]').value.trim(); if (v) S.bots = [...new Set([...S.bots, v])]; return renderAll(); }
+  if (t.dataset.addname) { S.bots = [...new Set([...S.bots, t.dataset.addname])]; return renderAll(); }
+  if (t.classList.contains('switch')) { S.values[t.dataset.key] = !S.values[t.dataset.key]; return renderAll(); }
+  if (t.dataset.val !== undefined) { S.values[t.dataset.key] = +t.dataset.val; return renderAll(); }
+});
+document.addEventListener('change', e => { const k = e.target.dataset.key; if (k) { S.values[k] = e.target.tagName === 'SELECT' ? +e.target.value : e.target.value; renderAll(); } });
+document.addEventListener('input', e => { if (e.target.matches('[data-search]')) { qA = e.target.value; renderAll(); } });
+// drag the freshness handles; keep them ordered and at least a day apart
+let drag = null;
+document.addEventListener('pointerdown', e => { const h = e.target.closest('.fz-h'); if (!h) return; drag = { i: +h.dataset.h, bar: h.parentElement.getBoundingClientRect() }; e.preventDefault(); });
+window.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const pct = Math.max(0, Math.min(100, (e.clientX - drag.bar.left) / drag.bar.width * 100));
+  let d = Math.round(fd(pct)); const t = S.thresholds, lo = drag.i ? t[drag.i - 1] + 1 : 1, hi = drag.i < 2 ? t[drag.i + 1] - 1 : FMAX - 1;
+  t[drag.i] = Math.max(lo, Math.min(hi, d)); renderAll();
+});
+window.addEventListener('pointerup', () => { drag = null; });
+renderAll();
+</script>
+</body>
+</html>

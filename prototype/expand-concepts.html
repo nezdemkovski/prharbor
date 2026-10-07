@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expand Concepts</title>
+<style>
+:root {
+  --bg: #eceef2; --panel: #ffffff; --line: #eef0f3; --line-strong: #e3e6eb; --text: #16181c; --muted: #858c96; --faint: #b5bbc4;
+  --track: #f8f9fa; --active: #e3e6eb; --hover: #f6f7f9; --accent: #3d82f6; --sel: #eef4fe;
+  --fresh: #22b25b; --aging: #d4a106; --stale: #f07a1a; --rotting: #e5484d;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e0f11; --panel: #1a1b1f; --line: #26282d; --line-strong: #2f3237; --text: #eceef1; --muted: #8b919a; --faint: #5b6068;
+    --track: #1f2125; --active: #33363c; --hover: #222428; --accent: #5b9cff; --sel: #1c2433;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e0f11; --panel: #1a1b1f; --line: #26282d; --line-strong: #2f3237; --text: #eceef1; --muted: #8b919a; --faint: #5b6068;
+  --track: #1f2125; --active: #33363c; --hover: #222428; --accent: #5b9cff; --sel: #1c2433;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+.page { max-width: 840px; margin: 0 auto; padding: 32px 16px 64px; }
+.page > h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: -.01em; }
+.page > p { color: var(--muted); margin: 0 0 28px; max-width: 66ch; }
+.concept { margin-bottom: 40px; }
+.concept h2 { font-size: 15px; margin: 0 0 2px; }
+.concept > p { color: var(--muted); margin: 0 0 12px; max-width: 66ch; }
+.list { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 6px 16px 10px; }
+.muted { color: var(--muted); } .faint { color: var(--faint); } .bad { color: var(--rotting); }
+.mono { font: 600 11.5px ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* list pieces, as in timeline.html */
+.repo-head { height: 30px; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 650; color: var(--muted); }
+.row { display: grid; grid-template-columns: 270px 1fr; height: 50px; align-items: center; position: relative; }
+.who { display: flex; align-items: center; gap: 10px; min-width: 0; padding-right: 14px; }
+.av { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex: none; background: var(--track); }
+.txt { min-width: 0; }
+.title { font-weight: 560; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track { position: relative; height: 34px; background: var(--track); border-radius: 10px; border: 1px solid var(--line); }
+.seg-a, .seg-i { position: absolute; top: 5px; bottom: 5px; }
+.seg-a { background: var(--active); border-radius: 7px 0 0 7px; }
+.seg-i { right: 0; border-radius: 0 7px 7px 0; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 50%, transparent) 0 2px, color-mix(in srgb, var(--c) 14%, transparent) 2px 6px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent); }
+.tick { position: absolute; top: 50%; width: 1.5px; height: 12px; transform: translate(-50%, -50%); border-radius: 1px; background: color-mix(in srgb, var(--text) 38%, transparent); }
+.stall { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); font-size: 10.5px; font-weight: 700; }
+
+.btn { height: 26px; padding: 0 11px; border-radius: 7px; font-size: 12.5px; font-weight: 500; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
+  background: color-mix(in srgb, var(--text) 6%, var(--panel)); box-shadow: inset 0 0 0 .5px var(--line-strong), 0 .5px 1px rgba(0,0,0,.1); }
+.btn.default { background: var(--accent); color: #fff; box-shadow: none; }
+.btn svg { width: 12px; height: 12px; }
+.icon { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; color: var(--muted); }
+.icon:hover { background: var(--hover); color: var(--text); }
+.icon svg { width: 14px; height: 14px; }
+.face { border-radius: 50%; object-fit: cover; background: var(--track); flex: none; }
+kbd { font: 500 10.5px -apple-system, system-ui, sans-serif; color: inherit; opacity: .75; padding: 0 4px; border-radius: 4px; box-shadow: inset 0 0 0 1px currentColor; }
+
+/* the expanded row shares one selected background */
+.open { margin: 4px -8px; padding: 0 8px 12px; border-radius: 14px; background: var(--sel); }
+.open .row .track { background: var(--panel); }
+.open > .row { height: auto; min-height: 50px; padding: 6px 0; }
+.open > .row .title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-weight: 600; }
+
+/* A — unroll */
+.ua { display: grid; grid-template-columns: 270px 1fr; gap: 0; }
+.ua-left { padding: 2px 14px 0 40px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ua-left .full { font-size: 13px; font-weight: 600; line-height: 1.3; }
+.branch { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 3px 4px 3px 8px; border-radius: 7px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line-strong); font: 600 11px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
+.branch span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.branch button { width: 20px; height: 20px; border-radius: 5px; display: grid; place-items: center; color: var(--muted); flex: none; }
+.branch button:hover { background: var(--hover); color: var(--text); }
+.branch svg { width: 12px; height: 12px; }
+.ua-acts { display: flex; align-items: center; gap: 4px; }
+.lanes { position: relative; background: var(--panel); border-radius: 10px; border: 1px solid var(--line); padding: 6px 0 18px; }
+.lane { position: relative; height: 26px; margin: 0 10px; }
+.lane + .lane { border-top: 1px dashed var(--line); }
+.lane-name { position: absolute; left: 0; top: 50%; transform: translateY(-50%); font-size: 10.5px; color: var(--faint); width: 52px; }
+.lane-body { position: absolute; left: 56px; right: 0; top: 0; bottom: 0; }
+.quiet { position: absolute; top: 6px; bottom: 18px; right: 10px; border-radius: 0 8px 8px 0; pointer-events: none;
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 18%, transparent) 0 2px, transparent 2px 7px); border-left: 1.5px dashed color-mix(in srgb, var(--c) 60%, transparent); }
+.quiet span { position: absolute; top: -2px; left: 6px; white-space: nowrap; font-size: 10.5px; font-weight: 700; color: var(--c); background: var(--panel); padding: 0 4px; border-radius: 4px; transform: translateY(-50%); }
+.ctick { position: absolute; top: 50%; width: 2px; height: 14px; border-radius: 1px; transform: translate(-50%, -50%); background: var(--text); opacity: .55; }
+.pmark { position: absolute; top: 50%; transform: translate(-50%, -50%); display: flex; }
+.pmark .face { width: 18px; height: 18px; box-shadow: 0 0 0 1.5px var(--ring, var(--faint)), 0 0 0 3px var(--panel); }
+.pmark.requested .face { opacity: .6; --ring: var(--accent); } .pmark.approved .face { --ring: var(--fresh); } .pmark.changes .face { --ring: var(--stale); }
+.checks-now { position: absolute; right: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 6px; }
+.cgrid { display: grid; grid-template-columns: repeat(12, 6px); gap: 2px; }
+.cgrid i { width: 6px; height: 6px; border-radius: 2px; background: color-mix(in srgb, var(--fresh) 70%, transparent); }
+.cgrid i.fail { background: var(--rotting); } .cgrid i.pending { background: var(--aging); }
+.fail-link { font-size: 11px; color: var(--rotting); text-decoration: none; white-space: nowrap; }
+.fail-link:hover { text-decoration: underline; }
+.fail-list { position: absolute; right: 0; top: 100%; margin-top: 2px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; z-index: 2; }
+.fail-list a { font-size: 11px; color: var(--rotting); text-decoration: none; display: inline-flex; gap: 4px; align-items: center; }
+.fail-list a:hover { text-decoration: underline; }
+.axis { position: absolute; left: 66px; right: 10px; bottom: 3px; display: flex; justify-content: space-between; font-size: 10px; color: var(--faint); }
+
+/* B — gates */
+.gates { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-left: 40px; }
+.gate { background: var(--panel); border-radius: 10px; box-shadow: inset 0 0 0 1px var(--line); padding: 9px 11px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.gate.now { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.gate.done { opacity: .75; }
+.g-head { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 650; }
+.g-ic { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; flex: none; box-shadow: inset 0 0 0 1.5px var(--line-strong); color: var(--muted); }
+.g-ic svg { width: 9px; height: 9px; }
+.gate.done .g-ic { background: var(--fresh); color: #fff; box-shadow: none; }
+.gate.fail .g-ic { background: var(--rotting); color: #fff; box-shadow: none; }
+.gate.now .g-ic { box-shadow: inset 0 0 0 1.5px var(--accent); color: var(--accent); }
+.g-body { font-size: 12px; color: var(--muted); min-width: 0; }
+.g-body .line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.g-body .line span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.g-faces { display: flex; gap: 4px; flex-wrap: wrap; }
+.g-face { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px 2px 2px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--line-strong); font-size: 11.5px; color: var(--text); }
+.g-face:hover { box-shadow: inset 0 0 0 1px var(--accent); color: var(--accent); }
+.g-face .face { width: 18px; height: 18px; }
+.b-foot { display: flex; align-items: center; gap: 8px; padding: 10px 0 0 40px; }
+</style>
+</head>
+<body>
+<script>document.write('<script src="data.js?' + Date.now() + '"><\/script>');</script>
+<div class="page">
+  <h1>Expanded pull request, from first principles</h1>
+  <p>Why expand a pull request in a menu bar app: to decide if you can move it now, to do the quick thing without the browser, and to remember what happened. So the expansion shows only what's off, puts each fact next to its action, and happens in place in the list.</p>
+  <div id="out"></div>
+</div>
+<script>
+const L = window.LIVE, NOW = new Date(L.fetchedAt);
+const ago = iso => (NOW - new Date(iso)) / 864e5;
+const days = d => d < 1 ? `${Math.max(1, Math.round(d * 24))}h` : d < 60 ? `${Math.round(d)}d` : `${Math.round(d / 30.4)}mo`;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const clean = t => t.replace(/^(\s*\[?[A-Z]{2,}-\d+\]?\s*[:,\-–]?\s*)+/, '').replace(/(\s*\[[^\]]*\]?)+\s*$/, '').replace(/^\s*[-–:]\s*/, '').trim();
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmtD = t => { const d = new Date(NOW - t * 864e5); return `${MONTHS[d.getMonth()]} ${d.getDate()}`; };
+const smellC = d => d < 2 ? 'var(--fresh)' : d < 7 ? 'var(--aging)' : d < 21 ? 'var(--stale)' : 'var(--rotting)';
+const BOT = /(\[bot\]$|^dependabot|^github-actions|^renovate|-apps$)/i;
+const I = {
+  copy: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M10.5 5.5V3.5A1 1 0 0 0 9.5 2.5h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2"/></svg>',
+  open: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h-3v9h9v-3M9.5 3h3.5v3.5M13 3 7.5 8.5"/></svg>',
+  moon: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 9.5A5.5 5.5 0 1 1 6.5 2.5a4.5 4.5 0 0 0 7 7Z"/></svg>',
+  check: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 8.5 3 3 6-7"/></svg>',
+  x: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>',
+  dot: '<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="3"/></svg>',
+  branch: '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M9.5 3.25a2.25 2.25 0 1 1 3 2.122V6A2.5 2.5 0 0 1 10 8.5H6a1 1 0 0 0-1 1v1.128a2.251 2.251 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.5 0v1.836A2.493 2.493 0 0 1 6 7h4a1 1 0 0 0 1-1v-.628A2.25 2.25 0 0 1 9.5 3.25Zm-6 0a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Zm8.25-.75a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5ZM4.25 12a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z"/></svg>',
+};
+const avatarUrl = n => L.people[n]?.avatar ? `${L.people[n].avatar}&s=60` : '';
+const face = (n, s) => `<img class="face" src="${avatarUrl(n)}" style="width:${s}px;height:${s}px" alt="" title="${esc(n)}">`;
+// same 6M soft-log scale as the list
+const x = t => t <= 0 ? 100 : Math.max(0, (1 - Math.log1p(t / 4) / Math.log1p(182 / 4)) * 100);
+
+function pr(num) {
+  const p = L.prs.find(p => p.num === num);
+  const evs = p.events.filter(e => !(e.who && BOT.test(e.who))).map(e => ({ ...e, t: ago(e.at) }));
+  const idle = Math.min(...evs.map(e => e.t)), age = ago(p.created);
+  const cs = (p.checks || []).filter(c => c.state !== 'skip');
+  const fail = cs.filter(c => c.state === 'fail');
+  const humans = p.reviewers.filter(r => r !== p.author && !BOT.test(r));
+  const bots = p.reviewers.filter(r => BOT.test(r));
+  const peers = {};
+  L.prs.filter(q => q.repo === p.repo).forEach(q => [q.author, ...q.reviewers].forEach(n => { if (n !== L.me && !BOT.test(n) && !humans.includes(n)) peers[n] = (peers[n] || 0) + 1; }));
+  const suggest = Object.entries(peers).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n]) => n);
+  const below = p.stack && L.prs.find(q => q.stack?.id === p.stack.id && q.stack.pos === p.stack.pos - 1);
+  const action = fail.length ? 'Open failing check' : !humans.length ? 'Request review' : p.reviewDecision === 'APPROVED' ? 'Merge' : 'Nudge';
+  return { p, evs, idle, age, cs, fail, humans, bots, suggest, below, action, c: smellC(idle), title: clean(p.title), ticket: (p.title.match(/[A-Z]{2,}-\d+/) || [''])[0] };
+}
+function track(m) {
+  const a0 = x(m.age), a1 = x(m.idle);
+  return `<div class="track"><i class="seg-a" style="left:${a0}%;width:${a1 - a0}%"></i><i class="seg-i" style="--c:${m.c};left:${a1}%"></i>
+    ${m.evs.filter(e => e.type === 'commit').map(e => `<i class="tick" style="left:${x(e.t)}%"></i>`).join('')}${m.idle >= 2 ? `<span class="stall" style="color:${m.c}">${days(m.idle)}</span>` : ''}</div>`;
+}
+const row = m => `<div class="row"><div class="who"><img class="av" src="${avatarUrl(m.p.author)}" alt=""><div class="txt"><div class="title">${esc(m.title)}</div><div class="meta">#${m.p.num}${m.ticket ? ` · ${m.ticket}` : ''}</div></div></div>${track(m)}</div>`;
+const branchChip = m => `<span class="branch">${I.branch}<span title="${esc(m.p.branch)}">${esc(m.p.branch)}</span><button title="Copy branch name">${I.copy}</button></span>`;
+const primary = m => `<button class="btn default">${m.action} <kbd>⏎</kbd></button>`;
+
+// A — the row unrolls into a zoomed, multi-lane timeline of just this pull request
+function unroll(m) {
+  const span = Math.max(m.age, .5) * 1.04, X = t => (1 - t / span) * 100;
+  const commits = m.evs.filter(e => e.type === 'commit' || (e.type === 'comment' && e.who === m.p.author));
+  const people = m.evs.filter(e => ['approved', 'changes', 'comment', 'requested'].includes(e.type) && e.who && e.who !== m.p.author);
+  const cs = m.p.checks || [];
+  return `<div class="open">${row(m)}
+    <div class="ua">
+      <div class="ua-left">
+        ${branchChip(m)}
+        <div class="ua-acts">${primary(m)}<button class="icon" title="Open on GitHub">${I.open}</button><button class="icon" title="Snooze">${I.moon}</button></div>
+      </div>
+      <div class="lanes">
+        <div class="lane"><span class="lane-name">commits</span><div class="lane-body">${commits.map(e => `<i class="ctick" style="left:${X(e.t)}%" title="${fmtD(e.t)}"></i>`).join('')}</div></div>
+        <div class="lane"><span class="lane-name">people</span><div class="lane-body">${people.map(e => `<span class="pmark ${e.type}" style="left:${X(e.t)}%" title="${esc(e.who)} · ${e.type} · ${fmtD(e.t)}">${face(e.who, 18)}</span>`).join('') || `<span class="faint" style="position:absolute;top:50%;transform:translateY(-50%);font-size:11px">${m.bots.length ? `only ${esc(m.bots.join(', '))}` : 'nobody yet'}</span>`}</div></div>
+        <div class="lane"><span class="lane-name">checks</span><div class="lane-body">
+          <span class="checks-now">${m.fail.length ? `<a class="fail-link" href="#" title="${esc(m.fail.map(c => c.name).join('\n'))}">${esc(m.fail[0].name)}${m.fail.length > 1 ? ` +${m.fail.length - 1}` : ''} ↗</a>` : ''}<span class="cgrid">${cs.filter(c => c.state !== 'skip').map(c => `<i class="${c.state}" title="${esc(c.name)}"></i>`).join('')}</span>
+            <span class="${m.fail.length ? 'bad' : 'muted'}" style="font-size:11px;white-space:nowrap">${m.fail.length ? `${m.fail.length} failing` : `${m.cs.length} passed`}</span></span>
+        </div></div>
+        ${m.idle > .5 ? `<div class="quiet" style="--c:${m.c};left:calc(66px + (100% - 76px) * ${X(m.idle) / 100})"><span style="${X(m.idle) > 80 ? 'left:auto;right:calc(100% + 4px)' : ''}">${days(m.idle)} quiet</span></div>` : ''}
+        <div class="axis"><span>opened ${fmtD(m.age)}</span><span>today</span></div>
+      </div>
+    </div></div>`;
+}
+
+// B — three gates to merge, each with its fact and the action that unblocks it
+function gates(m) {
+  const ckState = m.fail.length ? 'fail' : 'done';
+  const rvState = m.fail.length ? '' : m.p.reviewDecision === 'APPROVED' ? 'done' : 'now';
+  const mgState = ckState === 'done' && rvState === 'done' ? 'now' : '';
+  const checks = m.fail.length
+    ? `<div class="line bad">${I.x.replace('stroke-width="2.4"', 'stroke-width="2" width="10" height="10"')}<span>${esc(m.fail[0].name)}</span></div>
+       <div class="line"><span>${m.fail.length > 1 ? `+${m.fail.length - 1} more failing, ` : ''}${m.cs.length - m.fail.length} passed</span></div>
+       <div><button class="btn">Open log ${I.open}</button></div>`
+    : `<div class="line"><span>${m.cs.length} passed${(m.p.checks || []).length - m.cs.length ? `, ${(m.p.checks || []).length - m.cs.length} skipped` : ''}</span></div>`;
+  const review = m.humans.length
+    ? `<div class="g-faces">${m.humans.map(n => `<span class="g-face">${face(n, 18)}${esc(n)}</span>`).join('')}</div><div><button class="btn">Nudge</button></div>`
+    : `<div class="line"><span>${m.bots.length ? `Only ${esc(m.bots.join(', '))}` : 'Nobody asked yet'}</span></div>
+       <div class="g-faces">${m.suggest.map(n => `<button class="g-face" title="Ask ${esc(n)} to review">${face(n, 18)}${esc(n)}</button>`).join('')}</div>`;
+  const into = m.below ? `#${m.below.num}` : m.p.stack ? m.p.stack.base : 'dev';
+  const merge = `<div class="line"><span>into <span class="mono">${esc(into)}</span>${m.p.stack ? `, layer ${m.p.stack.pos}` : ''}</span></div>
+    <div class="line"><span>${m.p.mergeable === 'CONFLICTING' ? '<span class="bad">has conflicts</span>' : 'no conflicts'}</span></div>
+    ${m.p.stack ? '<div><button class="btn">Rebase stack</button></div>' : ''}`;
+  const gate = (name, st, body, ic) => `<div class="gate ${st}"><div class="g-head"><span class="g-ic">${ic}</span>${name}</div><div class="g-body">${body}</div></div>`;
+  return `<div class="open">${row(m)}
+    <div class="gates">
+      ${gate('Checks', ckState, checks, ckState === 'fail' ? I.x : I.check)}
+      ${gate('Review', rvState, review, rvState === 'done' ? I.check : I.dot)}
+      ${gate('Merge', mgState, merge, I.dot)}
+    </div>
+    <div class="b-foot">${branchChip(m)}<span style="flex:1"></span><button class="icon" title="Open on GitHub">${I.open}</button><button class="icon" title="Snooze">${I.moon}</button>${primary(m)}</div>
+  </div>`;
+}
+
+const neighbors = [pr(4230), pr(4120)];
+const wrap = inner => `<div class="list"><div class="repo-head">▾ noona-api <span class="faint" style="font-weight:500">20</span></div>${row(neighbors[0])}${inner}${row(neighbors[1])}</div>`;
+document.getElementById('out').innerHTML = [
+  ['A. Unroll', 'Click a row and it grows in place. Its track becomes a zoomed timeline of just this pull request, from the day it opened to today: commits, people and the latest checks as lanes, with the quiet stretch hatched over all of them. The left column holds the full title, the branch to copy, and the one action that moves it.', unroll],
+  ['B. Gates', 'Under the row, the three things between this pull request and merged: checks, review, merge. Each gate shows only what matters and the action that opens it, right there: the failing check\'s log, the faces to ask for review, the branch it lands in and the stack rebase.', gates],
+].map(([h, d, f]) => `<section class="concept"><h2>${h}</h2><p>${d}</p>${wrap(f(pr(4323)))}<div style="height:12px"></div>${wrap(f(pr(4315)))}</section>`).join('');
+</script>
+</body>
+</html>

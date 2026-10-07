@@ -44,6 +44,9 @@ nonisolated struct Pull: Codable, Sendable, Equatable {
     var mergeable: String?
     var stack: PullRequestStack? = nil
     var stackEntry: PullRequestStackPosition? = nil
+    var baseRefName: String? = nil
+    var timelineItems: PullTimelineConnection? = nil
+    var reviewRequests: PullReviewRequests? = nil
 }
 
 nonisolated struct PullRequestStack: Codable, Sendable, Equatable {
@@ -226,42 +229,12 @@ nonisolated struct Label: Codable, Hashable, Sendable {
 
 nonisolated struct StatusCheckRollup: Codable, Hashable, Sendable {
     var state: String
-    var contexts: ContextNodes
+    // Actions mode fetches aggregate state without the commit-status detail list.
+    var contexts: ContextNodes? = nil
 }
 
 nonisolated struct ContextNodes: Codable, Hashable, Sendable {
     var nodes: [ContextNode]
-}
-nonisolated struct DeviceCodeResponse: Codable, Sendable {
-    let deviceCode: String
-    let userCode: String
-    let verificationUri: String
-    let expiresIn: Int
-    let interval: Int
-
-    enum CodingKeys: String, CodingKey {
-        case deviceCode = "device_code"
-        case userCode = "user_code"
-        case verificationUri = "verification_uri"
-        case expiresIn = "expires_in"
-        case interval
-    }
-}
-
-nonisolated struct DeviceTokenResponse: Codable, Sendable {
-    let accessToken: String?
-    let tokenType: String?
-    let scope: String?
-    let error: String?
-    let errorDescription: String?
-
-    enum CodingKeys: String, CodingKey {
-        case accessToken = "access_token"
-        case tokenType = "token_type"
-        case scope
-        case error
-        case errorDescription = "error_description"
-    }
 }
 nonisolated struct ContextNode: Codable, Hashable, Sendable, Identifiable {
     var name: String?
@@ -274,4 +247,37 @@ nonisolated struct ContextNode: Codable, Hashable, Sendable, Identifiable {
     var targetUrl: String?
 
     var id: String { name ?? context ?? title ?? "\(state ?? "unknown")-\(targetUrl ?? "")-\(description ?? "")" }
+}
+
+// GitHub's timeline is decoded as a small union; absent fields stay compatible with older payloads.
+nonisolated struct PullTimelineConnection: Codable, Sendable, Equatable {
+    var nodes: [PullTimelineNode?]
+    var pageInfo: PullTimelinePageInfo?
+}
+nonisolated struct PullTimelinePageInfo: Codable, Sendable, Equatable {
+    var hasPreviousPage: Bool
+}
+nonisolated struct PullTimelineNode: Codable, Sendable, Equatable {
+    var __typename: String
+    var createdAt: Date?
+    var submittedAt: Date?
+    var state: String?
+    var author: User?
+    var commit: TimelineCommit?
+    var requestedReviewer: TimelineReviewer?
+}
+nonisolated struct TimelineCommit: Codable, Sendable, Equatable {
+    var committedDate: Date
+}
+nonisolated struct TimelineReviewer: Codable, Sendable, Equatable {
+    var login: String?
+    var avatarUrl: URL?
+    var name: String?
+    var __typename: String? = nil
+}
+nonisolated struct PullReviewRequests: Codable, Sendable, Equatable {
+    var nodes: [PullReviewRequest]
+}
+nonisolated struct PullReviewRequest: Codable, Sendable, Equatable {
+    var requestedReviewer: TimelineReviewer?
 }

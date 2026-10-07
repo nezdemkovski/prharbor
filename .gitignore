@@ -19,3 +19,10 @@ build/
 
 # Archives
 *.xcarchive
+
+# prototype: real PR data pulled locally
+prototype/data.js
+
+# Python development helpers
+__pycache__/
+*.pyc

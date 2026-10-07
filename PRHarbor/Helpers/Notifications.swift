@@ -14,7 +14,7 @@ func requestNotificationAuthorization() {
     )
 
     let categories: Set<UNNotificationCategory> = Set(
-        ["review", "assigned", "created"].map { categoryId in
+        ["review", "assigned", "created", "rotting"].map { categoryId in
             UNNotificationCategory(
                 identifier: categoryId,
                 actions: [openAction],
@@ -61,7 +61,7 @@ func sendPRNotifications(
     }
 }
 
-private func sendPRNotification(title: String, pr: Pull, category: String) {
+func sendPRNotification(title: String, pr: Pull, category: String) {
     let content = UNMutableNotificationContent()
     content.title = title
     content.subtitle = "\(pr.repository.nameWithOwner) #\(pr.number)"
@@ -77,4 +77,12 @@ private func sendPRNotification(title: String, pr: Pull, category: String) {
     )
 
     UNUserNotificationCenter.current().add(request)
+}
+
+func sendTimelineNotification(title: String, body: String) {
+    let content = UNMutableNotificationContent()
+    content.title = title
+    content.body = body
+    content.sound = .default
+    UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "timeline-morning", content: content, trigger: nil))
 }

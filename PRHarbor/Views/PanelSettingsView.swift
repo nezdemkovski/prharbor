@@ -3,320 +3,168 @@ import SwiftUI
 import Defaults
 import LaunchAtLogin
 
+enum SettingsDestination: String, CaseIterable, Identifiable {
+    case pulls = "Pull requests", timeline = "Timeline", stacks = "Stacks", bots = "Bots", snooze = "Snooze", menubar = "Menu bar", notifications = "Notifications", intelligence = "Apple Intelligence", account = "Account"
+    var id: Self { self }
+    var symbol: String {
+        switch self {
+        case .pulls: "arrow.triangle.pull"
+        case .timeline: "chart.bar.xaxis"
+        case .stacks: "square.3.layers.3d"
+        case .bots: "gearshape.2"
+        case .snooze: "moon.zzz"
+        case .menubar: "menubar.rectangle"
+        case .notifications: "bell.badge"
+        case .intelligence: "sparkles"
+        case .account: "person.crop.circle"
+        }
+    }
+    var color: Color {
+        switch self {
+        case .pulls: TimelineStyle.color(0x3d82f6)
+        case .timeline: Freshness.fresh.color
+        case .stacks: TimelineStyle.color(0x8b5cf6)
+        case .bots: TimelineStyle.color(0x64748b)
+        case .snooze: TimelineStyle.color(0x0ea5e9)
+        case .menubar: .secondary
+        case .notifications: Freshness.rotting.color
+        case .intelligence: TimelineStyle.accent
+        case .account: .gray
+        }
+    }
+}
+
+extension SettingsDestination {
+    var about: String {
+        switch self {
+        case .pulls: "Which pull requests show up and how they are ordered."
+        case .timeline: "How the timeline colors and measures quiet time."
+        case .stacks: "How stacked pull requests are drawn."
+        case .bots: "Accounts that are treated as automation."
+        case .snooze: "Putting pull requests away for a while."
+        case .menubar: "What appears in your menu bar."
+        case .notifications: "When PR Harbor gets your attention."
+        case .intelligence: "Optional help with search and your morning overview."
+        case .account: "Your connection to GitHub."
+        }
+    }
+}
+
 struct PanelSettingsView: View {
     @ObservedObject var store: PullRequestStore
-
-    @StateObject private var deviceFlowAuth = GitHubDeviceFlowAuth()
-    @StateObject private var githubTokenValidator = GitHubTokenValidator()
+    var usernameOverride: String? = nil
+    @State private var destination: SettingsDestination? = GitHubSession.shared.isConfigured ? .timeline : .account
+    @Default(.githubUsername) private var username
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 10) {
-                AccountCard(
-                    store: store,
-                    deviceFlowAuth: deviceFlowAuth,
-                    githubTokenValidator: githubTokenValidator
-                )
-                VisibilityCard()
-                AppearanceCard()
-                MenubarCard()
-                NotificationsCard()
-            }
-            .padding(.horizontal, Theme.settingsPaddingH)
-            .padding(.vertical, Theme.settingsPaddingV)
-        }
-        .onChange(of: deviceFlowAuth.state) { _, newState in
-            if case .success = newState {
-                store.refresh()
-            }
-        }
-        .onChange(of: githubTokenValidator.iconName) { _, newName in
-            if newName == "checkmark.circle.fill" {
-                store.refresh()
-            }
-        }
+        HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    TimelineAvatar(person: User(login: usernameOverride ?? username), size: 28)
+                    Text((usernameOverride ?? username).isEmpty ? "Not connected" : "@" + (usernameOverride ?? username)).font(.system(size: 12.5, weight: .semibold)).lineLimit(1)
+                }.padding(.horizontal, 8).padding(.top, 4).padding(.bottom, 12)
+                ForEach(SettingsDestination.allCases) { section in
+                    Button { destination = section } label: {
+                        HStack(spacing: 9) {
+                            Image(systemName: section.symbol).font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.white).frame(width: 20, height: 20)
+                                .background(section.color, in: RoundedRectangle(cornerRadius: 5))
+                            Text(section.rawValue).font(.system(size: 13))
+                            Spacer(minLength: 0)
+                        }.padding(.horizontal, 8).padding(.vertical, 6)
+                            .foregroundStyle(destination == section ? .white : TimelineStyle.text)
+                            .background(destination == section ? TimelineStyle.accent : .clear, in: RoundedRectangle(cornerRadius: 7))
+                            .contentShape(Rectangle())
+                    }.buttonStyle(.plain).accessibilityAddTraits(destination == section ? [.isSelected] : [])
+                }
+                Spacer(minLength: 0)
+            }.padding(.horizontal, 10).padding(.vertical, 12).frame(width: 196)
+                .background(TimelineStyle.track)
+                .overlay(alignment: .trailing) { Rectangle().fill(TimelineStyle.line).frame(width: 1) }
+            VStack(alignment: .leading, spacing: 0) {
+                Text((destination ?? .timeline).rawValue).font(.system(size: 18, weight: .semibold)).tracking(-0.18)
+                Text((destination ?? .timeline).about).font(.system(size: 12.5)).foregroundStyle(TimelineStyle.muted).padding(.top, 2).padding(.bottom, 14)
+                if destination == .account {
+                    ScrollView {
+                        AccountCard(store: store)
+                        EnterpriseSettings()
+                    }
+                } else {
+                    TimelineSettingsPane(destination: destination ?? .timeline, store: store, usernameOverride: usernameOverride)
+                }
+                Spacer(minLength: 0)
+            }.padding(.horizontal, 22).padding(.top, 18).padding(.bottom, 22)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }.background(TimelineStyle.panel).foregroundStyle(TimelineStyle.text).tint(TimelineStyle.accent)
+        .navigationTitle("Settings")
     }
 }
+
+private struct EnterpriseSettings: View {
+    @Default(.githubApiBaseUrl) private var apiURL
+    var body: some View {
+        Form {
+            TextField("GitHub API URL", text: $apiURL)
+                .textFieldStyle(.roundedBorder)
+            Text("Use https://api.github.com for GitHub, or your Enterprise API URL.").font(.caption).foregroundStyle(.secondary)
+        }.formStyle(.grouped)
+    }
+}
+
 private struct AccountCard: View {
     @ObservedObject var store: PullRequestStore
-    @ObservedObject var deviceFlowAuth: GitHubDeviceFlowAuth
-    @ObservedObject var githubTokenValidator: GitHubTokenValidator
-
-    @Default(.githubApiBaseUrl) var githubApiBaseUrl
-    @Default(.githubUsername) var githubUsername
-    @FromKeychain(.githubToken) var githubToken
-
-    private var isLoggedIn: Bool {
-        !githubToken.isEmpty && !githubUsername.isEmpty
-    }
+    @ObservedObject private var session = GitHubSession.shared
+    @StateObject private var connector = GitHubCLIConnector()
 
     var body: some View {
-        SettingsSection("ACCOUNT") {
-            if isLoggedIn {
+        SettingsSection("GITHUB CLI") {
+            if session.isConfigured, let connection = session.cliConnection {
                 HStack(spacing: 8) {
-                    Circle()
-                        .fill(Theme.success)
-                        .frame(width: 8, height: 8)
-                    Text("@\(githubUsername)")
-                        .font(.system(size: 12, weight: .medium))
+                    Image(systemName: "terminal").foregroundStyle(Theme.success)
+                    Text("@" + connection.username).font(.system(size: 12, weight: .medium))
                     Spacer()
-                    Button {
-                        githubToken = ""
-                        githubUsername = ""
-                        deviceFlowAuth.cancel()
-                        store.clear()
-                    } label: {
-                        Text("Sign out")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
+                    Button("Reconnect", action: connector.connect)
+                        .controlSize(.small).disabled(connector.isConnecting)
+                    Button("Disconnect") {
+                        connector.cancel()
+                        session.disconnect()
+                    }.controlSize(.small)
                 }
+                SettingsHint("Connected through GitHub CLI. Disconnecting PR Harbor keeps gh signed in.")
             } else {
-                DeviceFlowSection(auth: deviceFlowAuth)
-
-                SectionDivider()
-
-                TokenSection(
-                    githubApiBaseUrl: $githubApiBaseUrl,
-                    githubToken: $githubToken,
-                    validator: githubTokenValidator
-                )
+                Text("Use the GitHub account already signed in with gh on this Mac.")
+                    .font(.system(size: 12))
+                Button(action: connector.connect) {
+                    SwiftUI.Label("Connect GitHub CLI", systemImage: "terminal")
+                }.buttonStyle(.borderedProminent).controlSize(.small)
+                    .disabled(connector.isConnecting)
+                SettingsHint("First time? Install GitHub CLI and sign in from Terminal:")
+                Text("brew install gh\ngh auth login")
+                    .font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                SettingsHint("PR Harbor uses the access your CLI account already has.")
             }
-        }
-    }
-}
-
-private struct DeviceFlowSection: View {
-    @ObservedObject var auth: GitHubDeviceFlowAuth
-
-    var body: some View {
-        switch auth.state {
-        case .idle:
-            VStack(alignment: .leading, spacing: 6) {
-                Button {
-                    auth.startLogin()
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "person.badge.key")
-                        Text("Sign in with GitHub")
-                    }
-                    .font(.system(size: 11, weight: .medium))
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-
-                SettingsHint("Quick OAuth login — some orgs may require admin approval")
-            }
-
-        case .waitingForUser(let userCode, _):
-            VStack(alignment: .leading, spacing: 6) {
+            if connector.isConnecting {
                 HStack(spacing: 8) {
-                    Text(userCode)
-                        .font(.system(size: 14, weight: .bold, design: .monospaced))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Theme.groupedBackground, in: RoundedRectangle(cornerRadius: 6))
-                    Text("Copied")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(Theme.success)
-                }
-                HStack(spacing: 6) {
-                    ProgressView().controlSize(.mini)
-                    Text("Waiting for authorization...")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                    ProgressView().controlSize(.small)
+                    Text("Checking GitHub CLI…").font(.system(size: 12))
                     Spacer()
-                    Button("Cancel") { auth.cancel() }
-                        .font(.system(size: 11))
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
+                    Button("Cancel", action: connector.cancel).controlSize(.small)
                 }
             }
-
-        case .success:
-            HStack(spacing: 6) {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(Theme.success)
-                Text("Connected")
-                    .font(.system(size: 12, weight: .medium))
+            if let error = connector.error {
+                Text(error).font(.system(size: 11)).foregroundStyle(Theme.failure)
             }
-
-        case .error(let message):
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(Theme.failure)
-                    Text(message)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-                Button("Try again") { auth.startLogin() }
-                    .font(.system(size: 11, weight: .medium))
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+            if let error = session.cleanupError {
+                Text(error).font(.system(size: 11)).foregroundStyle(Theme.failure)
+                Button("Retry cleanup", action: session.cleanupLegacyCredentials).controlSize(.small)
             }
         }
+        .onDisappear { connector.cancel() }
+        .onChange(of: connector.successfulConnections) { _, _ in store.refresh() }
     }
 }
 
-private struct TokenSection: View {
-    @Binding var githubApiBaseUrl: String
-    @Binding var githubToken: String
-    @ObservedObject var validator: GitHubTokenValidator
-
-    var body: some View {
-        SettingsHint("Or use a Personal Access Token")
-
-        VStack(alignment: .leading, spacing: 8) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("API URL")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.tertiary)
-                TextField("https://api.github.com", text: $githubApiBaseUrl)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 11))
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Token")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.tertiary)
-                SecureField("ghp_...", text: $githubToken)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 11))
-                    .onSubmit { validator.validate() }
-            }
-
-            HStack(spacing: 8) {
-                Button {
-                    validator.validate()
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: validator.iconName)
-                            .foregroundStyle(validator.iconColor)
-                        Text("Login")
-                    }
-                    .font(.system(size: 11, weight: .medium))
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-
-                Text("[Get a token](https://github.com/settings/tokens/new?scopes=repo)")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-}
-private struct VisibilityCard: View {
-    @Default(.showAssigned) var showAssigned
-    @Default(.showCreated) var showCreated
-    @Default(.showRequested) var showRequested
-    @Default(.hideDrafts) var hideDrafts
-
-    var body: some View {
-        SettingsSection("FILTERS") {
-            SettingsHint("Which PR categories to show as tabs")
-            SettingsToggle("Review requested", isOn: $showRequested)
-            SettingsToggle("Assigned to me", isOn: $showAssigned)
-            SettingsToggle("My PRs", isOn: $showCreated)
-            SectionDivider()
-            SettingsToggle("Hide drafts", isOn: $hideDrafts)
-            SettingsHint("Filter out PRs marked as draft")
-        }
-    }
-}
-private struct AppearanceCard: View {
-    @Default(.showAvatar) var showAvatar
-    @Default(.showLabels) var showLabels
-    @Default(.showUnreadDot) var showUnreadDot
-    @Default(.showLinesChanged) var showLinesChanged
-    @Default(.showApprovals) var showApprovals
-    @Default(.clickOpensLink) var clickOpensLink
-    @Default(.buildType) var buildType
-    @Default(.staleDays) var staleDays
-    @Default(.sortOrder) var sortOrder
-    @Default(.groupByRepo) var groupByRepo
-
-    var body: some View {
-        SettingsSection("DISPLAY") {
-            SettingsToggle("Avatars", isOn: $showAvatar)
-            SettingsToggle("Labels", isOn: $showLabels)
-            SettingsToggle("Lines changed", isOn: $showLinesChanged)
-            SettingsHint("Show +/- line counts on each PR")
-            SettingsToggle("Approvals", isOn: $showApprovals)
-            SettingsHint("Show review count with checkmark icon")
-            SettingsToggle("Unread dot", isOn: $showUnreadDot)
-            SettingsHint("Blue dot on PRs you haven't viewed yet")
-            SettingsToggle("Click opens browser", isOn: $clickOpensLink)
-            SettingsHint("Open PR in browser instead of expanding details")
-
-            SectionDivider()
-
-            SettingsPicker("Sort by", selection: $sortOrder, width: 160) {
-                ForEach(SortOrder.allCases) { Text($0.description) }
-            }
-            SettingsToggle("Group by repo", isOn: $groupByRepo)
-            SettingsHint("Group PRs under repository headers")
-
-            SectionDivider()
-
-            SettingsPicker("CI source", selection: $buildType, width: 140) {
-                ForEach(BuildType.allCases) { Text($0.description) }
-            }
-            SettingsHint("GitHub Actions, status checks, or hidden")
-            SettingsPicker("Stale after", selection: $staleDays, width: 100) {
-                Text("Off").tag(0)
-                Text("3 days").tag(3)
-                Text("7 days").tag(7)
-                Text("14 days").tag(14)
-                Text("30 days").tag(30)
-            }
-            SettingsHint("Mark PRs with no activity as stale")
-        }
-    }
-}
-private struct MenubarCard: View {
-    @Default(.counterType) var counterType
-    @Default(.refreshRate) var refreshRate
-
-    var body: some View {
-        SettingsSection("MENUBAR") {
-            SettingsPicker("Counter", selection: $counterType, width: 150) {
-                ForEach(CounterType.allCases) { Text($0.description) }
-            }
-            SettingsHint("Which PR count to show next to the icon")
-            SettingsPicker("Refresh", selection: $refreshRate, width: 100) {
-                Text("1 min").tag(1)
-                Text("5 min").tag(5)
-                Text("10 min").tag(10)
-                Text("15 min").tag(15)
-                Text("30 min").tag(30)
-            }
-            SettingsHint("How often to fetch new data from GitHub")
-            LaunchAtLogin.Toggle {
-                Text("Launch at login")
-                    .font(.system(size: 11.5))
-            }
-        }
-    }
-}
-private struct NotificationsCard: View {
-    @Default(.notifyReviewRequested) var notifyReviewRequested
-    @Default(.notifyAssigned) var notifyAssigned
-    @Default(.notifyCreated) var notifyCreated
-
-    var body: some View {
-        SettingsSection("NOTIFICATIONS") {
-            SettingsHint("Alert when new PRs appear")
-            SettingsToggle("Review requested", isOn: $notifyReviewRequested)
-            SettingsToggle("Assigned to me", isOn: $notifyAssigned)
-            SettingsToggle("My PRs", isOn: $notifyCreated)
-        }
-    }
-}
-private struct SettingsSection<Content: View>: View {
+struct SettingsSection<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
 

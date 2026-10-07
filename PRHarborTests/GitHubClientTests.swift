@@ -1,9 +1,86 @@
 import Foundation
+import Defaults
+import SwiftUI
+import Security
+import ImageIO
 import Testing
 @testable import PRHarbor
 
 @Suite(.serialized)
 struct GitHubClientTests {
+    @Test func repeatedPaginationCursorFailsInsteadOfLooping() async throws {
+        let recorder = RequestRecorder()
+        MockURLProtocol.requestHandler = { request in
+            let number = recorder.record(body: requestBody(from: request))
+            let cursor = number == 2 ? "second" : "first"
+            let body = Data(#"{"data":{"search":{"edges":[],"issueCount":0,"pageInfo":{"hasNextPage":true,"endCursor":"\#(cursor)"}}}}"#.utf8)
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, body)
+        }
+        defer { MockURLProtocol.requestHandler = nil }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let client = try TestGitHubTransport.client(baseURL: "https://cursor-cycle.example/api/v3", buildType: .none,
+                                     session: URLSession(configuration: configuration))
+        await #expect(throws: URLError.self) { try await client.fetchPulls(filter: "author:octocat") }
+        #expect(recorder.bodies.count == 3)
+    }
+
+    @Test func avatarDownloadsAreSharedAndHTTPFailuresAreNotCached() async throws {
+        let recorder = RequestRecorder()
+        let png = try #require(Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGMwTjvzHwAEmgJlc/kGHwAAAABJRU5ErkJggg=="))
+        MockURLProtocol.requestHandler = { request in
+            let number = recorder.record(body: nil)
+            Thread.sleep(forTimeInterval: 0.03)
+            return (HTTPURLResponse(url: request.url!, statusCode: number == 1 ? 404 : 200,
+                                    httpVersion: nil, headerFields: ["Content-Type": "image/png"])!, png)
+        }
+        defer { MockURLProtocol.requestHandler = nil }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let cache = AvatarImageCache(session: URLSession(configuration: configuration))
+        let url = try #require(URL(string: "https://avatars.example/avatar.png"))
+        #expect(await cache.image(for: url) == nil)
+        async let a = cache.image(for: url)
+        async let b = cache.image(for: url)
+        async let c = cache.image(for: url)
+        let images = await [a, b, c]
+        #expect(images.allSatisfy { $0 != nil })
+        #expect(await cache.image(for: url) != nil)
+        #expect(recorder.bodies.count == 2)
+    }
+
+    @Test func resourceLimitRetriesTheSamePageWithFewerResults() async throws {
+        let recorder = RequestRecorder()
+        MockURLProtocol.requestHandler = { request in
+            let number = recorder.record(body: requestBody(from: request))
+            let data: Data
+            if number == 2 {
+                data = Data(#"{"errors":[{"message":"Resource limits for this query exceeded."}]}"#.utf8)
+            } else {
+                let pageInfo = number == 1 ? #"{"hasNextPage":true,"endCursor":"next-page"}"# : #"{"hasNextPage":false,"endCursor":null}"#
+                data = Data(#"{"data":{"search":{"edges":[],"issueCount":0,"pageInfo":\#(pageInfo)}}}"#.utf8)
+            }
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, data)
+        }
+        defer { MockURLProtocol.requestHandler = nil }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+        let client = try TestGitHubTransport.client(baseURL: "https://resource-limit.example.com/api/v3",
+                                     buildType: .none, session: URLSession(configuration: configuration))
+        #expect(try await client.fetchPulls(filter: "author:octocat").isEmpty)
+        #expect(recorder.bodies.count == 3)
+        let secondBody = try #require(recorder.bodies[1])
+        let retryBody = try #require(recorder.bodies[2])
+        let second = try #require(JSONSerialization.jsonObject(with: secondBody) as? [String: Any])
+        let retry = try #require(JSONSerialization.jsonObject(with: retryBody) as? [String: Any])
+        let secondVariables = try #require(second["variables"] as? [String: Any])
+        let retryVariables = try #require(retry["variables"] as? [String: Any])
+        #expect(secondVariables["cursor"] as? String == "next-page")
+        #expect(retryVariables["cursor"] as? String == "next-page")
+        #expect(secondVariables["pageSize"] as? Int == 20)
+        #expect(retryVariables["pageSize"] as? Int == 10)
+    }
+
     @Test
     func paginatesUntilGitHubReportsTheLastPage() async throws {
         let recorder = RequestRecorder()
@@ -33,8 +110,7 @@ struct GitHubClientTests {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
         let session = URLSession(configuration: configuration)
-        let client = try GitHubClient(
-            token: "test-token",
+        let client = try TestGitHubTransport.client(
             baseURL: "https://api.github.com",
             buildType: .none,
             session: session
@@ -53,7 +129,8 @@ struct GitHubClientTests {
         let secondVariables = try #require(secondJSON["variables"] as? [String: Any])
         let query = try #require(firstJSON["query"] as? String)
 
-        #expect(query.contains("first: 100"))
+        #expect(query.contains("first: $pageSize"))
+        #expect(firstVariables["pageSize"] as? Int == 20)
         #expect(query.contains("pageInfo"))
         #expect(query.contains("stack {"))
         #expect(query.contains("stackEntry {"))
@@ -66,8 +143,7 @@ struct GitHubClientTests {
     @Test
     func rejectsInsecureAPIURLs() {
         #expect(throws: URLError.self) {
-            _ = try GitHubClient(
-                token: "test-token",
+            _ = try TestGitHubTransport.client(
                 baseURL: "http://github.example.com/api/v3",
                 buildType: .none
             )
@@ -102,8 +178,7 @@ struct GitHubClientTests {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
         let session = URLSession(configuration: configuration)
-        let client = try GitHubClient(
-            token: "test-token",
+        let client = try TestGitHubTransport.client(
             baseURL: "https://fallback.example.com/api/v3",
             buildType: .none,
             session: session
@@ -147,8 +222,7 @@ struct GitHubClientTests {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
         let session = URLSession(configuration: configuration)
-        let client = try GitHubClient(
-            token: "test-token",
+        let client = try TestGitHubTransport.client(
             baseURL: "https://stacks.example.com/api/v3",
             buildType: .none,
             session: session
@@ -254,8 +328,7 @@ struct GitHubClientTests {
     private func testClient() throws -> GitHubClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
-        return try GitHubClient(
-            token: "test-token",
+        return try TestGitHubTransport.client(
             baseURL: "https://rebase.example.com/api/v3",
             buildType: .none,
             session: URLSession(configuration: configuration)
@@ -288,276 +361,4 @@ struct GitHubClientTests {
             entries: PullRequestStackEntries(nodes: entries)
         )
     }
-}
-
-struct PullRequestStackTests {
-    @Test
-    func decodesLayerOrderAndTrunk() throws {
-        let data = Data(#"""
-        {
-            "id":"PRS_example",
-            "number":42,
-            "baseRefName":"main",
-            "size":2,
-            "entries":{"nodes":[
-                {"position":1,"pullRequest":{"id":"PR_101","number":101,"title":"Foundation","url":"https://github.com/example/repo/pull/101","state":"OPEN","isDraft":false,"headRefName":"stack/foundation","headRefOid":"oid-101","reviewDecision":"APPROVED","mergeable":"MERGEABLE"}},
-                {"position":2,"pullRequest":{"id":"PR_102","number":102,"title":"UI","url":"https://github.com/example/repo/pull/102","state":"OPEN","isDraft":true,"headRefName":"stack/ui","headRefOid":"oid-102","reviewDecision":null,"mergeable":"UNKNOWN"}}
-            ]}
-        }
-        """#.utf8)
-
-        let stack = try JSONDecoder().decode(PullRequestStack.self, from: data)
-
-        #expect(stack.number == 42)
-        #expect(stack.baseRefName == "main")
-        #expect(stack.size == 2)
-        let entries = try #require(stack.entries?.nodes)
-        #expect(entries.map(\.position) == [1, 2])
-        #expect(entries[1].pullRequest?.isDraft == true)
-    }
-
-    @Test
-    func groupsAStackAtItsFirstSortedOccurrenceAndOrdersItsLayers() throws {
-        let stack = PullRequestStack(
-            id: "PRS_example",
-            number: 42,
-            baseRefName: "main",
-            size: 5
-        )
-        let shuffledPositions = [5, 2, 4, 1, 3]
-        let stackEdges = try shuffledPositions.map { position in
-            try edge(number: 100 + position, stack: stack, position: position)
-        }
-        let standalone = try edge(number: 200)
-
-        let groups = groupPullsForDisplay([stackEdges[0], standalone] + stackEdges.dropFirst())
-
-        #expect(groups.count == 2)
-        #expect(groups[0].id == stack.id)
-        #expect(groups[0].edges.compactMap(\.node.stackEntry?.position) == [5, 4, 3, 2, 1])
-        #expect(groups[1].edges.first?.node.number == 200)
-    }
-
-    private func edge(
-        number: Int,
-        stack: PullRequestStack? = nil,
-        position: Int? = nil
-    ) throws -> Edge {
-        var pull = Pull(
-            url: try #require(URL(string: "https://github.com/example/repo/pull/\(number)")),
-            updatedAt: .now,
-            createdAt: .now,
-            title: "PR \(number)",
-            number: number,
-            deletions: nil,
-            additions: nil,
-            reviews: Review(totalCount: 0, edges: []),
-            author: nil,
-            repository: Repository(name: "repo", nameWithOwner: "example/repo"),
-            commits: nil,
-            labels: Nodes(nodes: []),
-            headRefName: "feature/\(number)",
-            isDraft: false,
-            isReadByViewer: false,
-            reviewDecision: nil,
-            mergeable: nil
-        )
-        pull.stack = stack
-        pull.stackEntry = position.map { PullRequestStackPosition(position: $0) }
-        return Edge(node: pull)
-    }
-}
-
-struct GitHubConstantsTests {
-    @Test
-    func buildsGitHubDotComDeviceURLs() throws {
-        #expect(
-            try GitHubConstants.deviceCodeUrl(baseUrl: "https://api.github.com").absoluteString
-                == "https://github.com/login/device/code"
-        )
-    }
-
-    @Test
-    func buildsEnterpriseDeviceURLs() throws {
-        #expect(
-            try GitHubConstants.tokenUrl(baseUrl: "https://github.example.com/api/v3").absoluteString
-                == "https://github.example.com/login/oauth/access_token"
-        )
-    }
-
-    @Test
-    func rejectsEnterpriseURLsWithoutTheAPISuffix() {
-        #expect(throws: URLError.self) {
-            _ = try GitHubConstants.tokenUrl(baseUrl: "https://github.example.com")
-        }
-    }
-}
-
-struct CICheckTests {
-    @Test
-    func doesNotReuseChecksFromAnotherPullRequest() throws {
-        let firstURL = try #require(URL(string: "https://github.com/checks/first"))
-        let secondURL = try #require(URL(string: "https://github.com/checks/second"))
-        let first = commits(checkName: "build", conclusion: "SUCCESS", url: firstURL)
-        let second = commits(checkName: "build", conclusion: "FAILURE", url: secondURL)
-
-        #expect(CICheck.from(commits: first) == [
-            CICheck(name: "build", status: "SUCCESS", url: firstURL, index: 0)
-        ])
-        #expect(CICheck.from(commits: second) == [
-            CICheck(name: "build", status: "FAILURE", url: secondURL, index: 0)
-        ])
-    }
-
-    @Test(arguments: ["FAILURE", "ERROR", "CANCELLED", "STALE", "STARTUP_FAILURE", "TIMED_OUT"])
-    func recognizesFailureStates(_ status: String) {
-        #expect(ciStatusKind(status) == .failure)
-    }
-
-    @Test
-    func summarizesChecksWithoutRenderingEveryCheckInline() {
-        let success = CICheck(name: "build", status: "SUCCESS", url: nil, index: 0)
-        let skipped = CICheck(name: "optional", status: "SKIPPED", url: nil, index: 1)
-        let pending = CICheck(name: "test", status: "IN_PROGRESS", url: nil, index: 2)
-        let failure = CICheck(name: "lint", status: "FAILURE", url: nil, index: 3)
-
-        #expect(ciSummaryStatus([]) == nil)
-        #expect(ciSummaryStatus([success, skipped]) == .success)
-        #expect(ciSummaryStatus([success, pending]) == .pending)
-        #expect(ciSummaryStatus([success, pending, failure]) == .failure)
-    }
-
-    private func commits(checkName: String, conclusion: String, url: URL) -> CommitsNodes {
-        CommitsNodes(nodes: [
-            Commit(commit: CheckSuites(
-                checkSuites: CheckSuitsNodes(nodes: [
-                    CheckSuit(
-                        app: nil,
-                        checkRuns: CheckRun(
-                            totalCount: 1,
-                            nodes: [Check(name: checkName, conclusion: conclusion, detailsUrl: url)]
-                        )
-                    )
-                ]),
-                statusCheckRollup: nil
-            ))
-        ])
-    }
-}
-
-struct PullRefreshTrackerTests {
-    @Test
-    func reenabledCategoryEstablishesABaselineBeforeNotifying() throws {
-        var tracker = PullRefreshTracker()
-        let first = Edge(node: try pull(number: 1))
-        let second = Edge(node: try pull(number: 2))
-        let third = Edge(node: try pull(number: 3))
-
-        #expect(tracker.update(edges: [first], fetched: true, canNotify: false).isEmpty)
-        #expect(tracker.update(edges: [], fetched: false, canNotify: true).isEmpty)
-        #expect(tracker.update(edges: [first, second], fetched: true, canNotify: true).isEmpty)
-        #expect(tracker.update(edges: [first, second, third], fetched: true, canNotify: true) == [third.node])
-    }
-
-    private func pull(number: Int) throws -> Pull {
-        Pull(
-            url: try #require(URL(string: "https://github.com/example/repo/pull/\(number)")),
-            updatedAt: .now,
-            createdAt: .now,
-            title: "PR \(number)",
-            number: number,
-            deletions: nil,
-            additions: nil,
-            reviews: Review(totalCount: 0, edges: []),
-            author: nil,
-            repository: Repository(name: "repo", nameWithOwner: "example/repo"),
-            commits: nil,
-            labels: Nodes(nodes: []),
-            headRefName: "feature/\(number)",
-            isDraft: false,
-            isReadByViewer: false,
-            reviewDecision: nil,
-            mergeable: nil
-        )
-    }
-}
-
-private nonisolated final class RequestRecorder: @unchecked Sendable {
-    private let lock = NSLock()
-    private(set) var bodies: [Data?] = []
-
-    func record(body: Data?) -> Int {
-        lock.lock()
-        defer { lock.unlock() }
-        bodies.append(body)
-        return bodies.count
-    }
-}
-
-private nonisolated func requestBody(from request: URLRequest) -> Data? {
-    if let body = request.httpBody { return body }
-    guard let stream = request.httpBodyStream else { return nil }
-
-    stream.open()
-    defer { stream.close() }
-    var data = Data()
-    var buffer = [UInt8](repeating: 0, count: 4_096)
-
-    while stream.hasBytesAvailable {
-        let count = stream.read(&buffer, maxLength: buffer.count)
-        guard count >= 0 else { return nil }
-        if count == 0 { break }
-        data.append(buffer, count: count)
-    }
-    return data
-}
-
-private nonisolated func query(from body: Data) throws -> String {
-    let object = try JSONSerialization.jsonObject(with: body)
-    guard let dictionary = object as? [String: Any],
-          let query = dictionary["query"] as? String else {
-        throw URLError(.cannotParseResponse)
-    }
-    return query
-}
-
-private nonisolated func rebasePullRequestID(from body: Data) throws -> String {
-    try rebaseInputValue("pullRequestId", from: body)
-}
-
-private nonisolated func rebaseInputValue(_ key: String, from body: Data) throws -> String {
-    let object = try JSONSerialization.jsonObject(with: body)
-    guard let dictionary = object as? [String: Any],
-          let variables = dictionary["variables"] as? [String: Any],
-          let input = variables["input"] as? [String: Any],
-          let value = input[key] as? String else {
-        throw URLError(.cannotParseResponse)
-    }
-    return value
-}
-
-private nonisolated final class MockURLProtocol: URLProtocol, @unchecked Sendable {
-    nonisolated(unsafe) static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
-
-    override class func canInit(with request: URLRequest) -> Bool { true }
-
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-
-    override func startLoading() {
-        guard let handler = Self.requestHandler else {
-            client?.urlProtocol(self, didFailWithError: URLError(.unknown))
-            return
-        }
-
-        do {
-            let (response, data) = try handler(request)
-            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: data)
-            client?.urlProtocolDidFinishLoading(self)
-        } catch {
-            client?.urlProtocol(self, didFailWithError: error)
-        }
-    }
-
-    override func stopLoading() {}
 }

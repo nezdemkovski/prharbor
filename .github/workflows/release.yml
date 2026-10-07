@@ -25,12 +25,15 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           else
-            echo "version=0.0.0-dev" >> $GITHUB_OUTPUT
+            VERSION=$(awk '/MARKETING_VERSION =/ { gsub(/;/, "", $3); print $3; exit }' PRHarbor.xcodeproj/project.pbxproj)
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
           fi
 
       - name: Set version in project
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Expected a numeric release version" >&2; exit 1; }
           sed -i '' "s/MARKETING_VERSION = .*/MARKETING_VERSION = $VERSION;/" PRHarbor.xcodeproj/project.pbxproj
 
       - name: Resolve packages
@@ -56,21 +59,21 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Create DMG
+      - name: Sign and package DMG
         run: |
           APP_PATH="build/Build/Products/Release/$APP_NAME.app"
-          hdiutil create -volname "PR Harbor" \
-            -srcfolder "$APP_PATH" \
-            -ov -format UDZO \
-            "$APP_NAME.dmg"
+          bash Scripts/package-release.sh "$APP_PATH" "$GITHUB_WORKSPACE"
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v3
         with:
           name: PR Harbor v${{ steps.version.outputs.version }}
-          files: ${{ env.APP_NAME }}.dmg
-          generate_release_notes: true
+          files: |
+            ${{ env.APP_NAME }}.dmg
+            SHA256SUMS
+          body_path: docs/release-notes.md
+          fail_on_unmatched_files: true
 
       - name: Get SHA256
         if: startsWith(github.ref, 'refs/tags/')
@@ -100,6 +103,9 @@ jobs:
             homepage "https://github.com/nezdemkovski/prharbor"
 
             app "PRHarbor.app"
+            depends_on macos: :golden_gate
+            depends_on arch: :arm64
+            depends_on formula: "gh"
 
             zap trash: [
               "~/Library/Preferences/com.nezdemkovski.prharbor.plist",

@@ -37,13 +37,13 @@ struct SettingsView: View {
             List(SettingsTab.allCases, selection: $tab) { tab in
                 Label(tab.rawValue, systemImage: tab.symbol)
             }
-            .navigationSplitViewColumnWidth(min: 170, ideal: 190, max: 240)
+            .navigationSplitViewColumnWidth(min: 210, ideal: 220, max: 280)
             .toolbar(removing: .sidebarToggle)
         } detail: {
             let tab = tab ?? .general
             pane(tab).navigationTitle(tab.rawValue)
         }
-        .frame(minWidth: 680, minHeight: 460)
+        .frame(minWidth: 720, minHeight: 460)
     }
 
     @ViewBuilder func pane(_ tab: SettingsTab) -> some View {

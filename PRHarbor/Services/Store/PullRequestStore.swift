@@ -1,14 +1,7 @@
-
-import Foundation
 import Defaults
+import Foundation
 import Observation
 import os
-
-private nonisolated enum PullCategory: CaseIterable, Sendable { case assigned, created, requested }
-private nonisolated struct PullCategoryResult: Sendable {
-    let category: PullCategory
-    let result: Result<[Edge], Error>
-}
 
 /// The identity a refresh started with. Any newer refresh, account or query scope supersedes it.
 private nonisolated struct RefreshToken: Sendable {
@@ -34,25 +27,19 @@ final class PullRequestStore {
     private(set) var now = Date.now
     private(set) var totalCount = 0
 
-    /// Re-projects items each minute, so ages and quiet periods advance between refreshes.
-    private var minuteTimer: Timer?
-    private var refreshTimer: Timer?
-    private var refreshTask: Task<Void, Never>?
-    private var settingsRefreshTask: Task<Void, Never>?
-    private var refreshRateObservation: Defaults.Observation?
-    private var counterTypeObservation: Defaults.Observation?
-    private var settingsObservations: [Defaults.Observation] = []
-    private var sessionObservation: Task<Void, Never>?
-    private let notifications = PullNotificationCoordinator()
-    private var refreshGeneration = 0
     let session: GitHubSession
-    private let cache: PullSnapshotCache
     private let clientProvider: (String, BuildType) async throws -> GitHubClient
     private let settings: () -> PullRequestSettings
-    private var cacheWriteTask: Task<Void, Never>?
-    private var cacheRemovalTask: Task<Void, Never>?
-    private var startupTask: Task<Void, Never>?
+    private let storage: SnapshotStorage
+    private let schedule = RefreshSchedule()
+    private let preferences = PreferenceObserver()
+    private let notifications = PullNotificationCoordinator()
     private var currentSnapshot: PullSnapshot?
+    private var refreshGeneration = 0
+    private var refreshTask: Task<Void, Never>?
+    private var settingsRefreshTask: Task<Void, Never>?
+    private var startupTask: Task<Void, Never>?
+    private var sessionObservation: Task<Void, Never>?
 
     init(startAutomatically: Bool = true, session: GitHubSession? = nil,
          cache: PullSnapshotCache = .temporary(),
@@ -60,14 +47,12 @@ final class PullRequestStore {
          settings: @escaping () -> PullRequestSettings = { .saved }) {
         let session = session ?? GitHubSession()
         self.session = session
-        self.cache = cache
+        self.storage = SnapshotStorage(cache: cache)
         self.settings = settings
         self.clientProvider = clientProvider ?? { try await session.client(baseURL: $0, buildType: $1) }
         guard startAutomatically else { return }
         startWithCache()
-        observeRefreshRate()
-        observeCounterType()
-        observeDataSettings()
+        observePreferences()
         sessionObservation = Task { [weak self, session] in
             var previous = session.connection
             // Work already started for the old account is rejected by the session generation,
@@ -81,25 +66,11 @@ final class PullRequestStore {
     }
 
     isolated deinit {
-        refreshTimer?.invalidate()
-        minuteTimer?.invalidate()
+        schedule.invalidate()
         refreshTask?.cancel()
         startupTask?.cancel()
         settingsRefreshTask?.cancel()
         sessionObservation?.cancel()
-    }
-
-    private var currentCount: Int {
-        switch settings().counterType {
-        case .rotting:
-            timelineItems.filter { $0.hasKnownQuietPeriod && $0.freshness == .rotting && $0.snoozedUntil == nil }.count
-        case .waitingOnYou:
-            TimelineNotificationPolicy.waitingForReview(timelineItems).count
-        case .assigned: assignedPulls.count
-        case .created: createdPulls.count
-        case .reviewRequested: reviewRequestedPulls.count
-        case .none: 0
-        }
     }
 
     var isEmpty: Bool {
@@ -113,16 +84,7 @@ final class PullRequestStore {
     func clear() {
         startupTask?.cancel()
         startupTask = nil
-        cacheWriteTask?.cancel()
-        let scope = currentSnapshot?.scope ?? snapshotScope
-        let cache = cache
-        let previousWrite = cacheWriteTask
-        let previousRemoval = cacheRemovalTask
-        cacheRemovalTask = Task {
-            await previousWrite?.value
-            await previousRemoval?.value
-            await cache.remove(scope: scope)
-        }
+        storage.remove(scope: currentSnapshot?.scope ?? snapshotScope)
         currentSnapshot = nil
         refreshTask?.cancel()
         refreshTask = nil
@@ -137,63 +99,33 @@ final class PullRequestStore {
         hasIncompleteData = false
         notifications.reset()
         rebuildTimelineItems()
-        minuteTimer?.invalidate()
-        minuteTimer = nil
+        schedule.stopTicking()
     }
+
     private func startAutoRefresh() {
-        refreshTimer?.invalidate()
-        let interval = settings().refreshInterval
-        let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.refresh(respectFreshness: true)
-            }
-        }
-        refreshTimer = timer
-        RunLoop.main.add(timer, forMode: .common)
-        if let snapshot = currentSnapshot, snapshot.scope == snapshotScope {
-            timer.fireDate = max(.now, snapshot.syncedAt.addingTimeInterval(interval))
+        let lastSync = currentSnapshot.flatMap { $0.scope == snapshotScope ? $0.syncedAt : nil }
+        schedule.refresh(every: settings().refreshInterval, lastSync: lastSync) { [weak self] in
+            self?.refresh(respectFreshness: true)
         }
         refresh(respectFreshness: true)
     }
 
-    private func observeRefreshRate() {
-        onChange(of: .refreshRate) { $0.startAutoRefresh() }
-    }
-
-    private func observeCounterType() {
-        onChange(of: .counterType) {
-            $0.rebuildTimelineItems()
-            $0.scheduleSettingsRefresh()
-        }
-    }
-
-    private func observeDataSettings() {
-        for key in [Defaults.Key<Bool>.showAssigned, .showCreated, .showRequested, .hideDrafts, .notifyReviewRequested,
-                    .notifyAssigned, .notifyCreated, .notifyRotting, .morningSummary] {
-            onChange(of: key) { $0.scheduleSettingsRefresh() }
-        }
-        onChange(of: .buildType) { $0.scheduleSettingsRefresh() }
-        onChange(of: .githubApiBaseUrl) { $0.scheduleSettingsRefresh() }
+    private func observePreferences() {
+        let refetch: @MainActor () -> Void = { [weak self] in self?.scheduleSettingsRefresh() }
+        let reproject: @MainActor () -> Void = { [weak self] in self?.rebuildTimelineItems() }
+        preferences.onChange(of: .refreshRate) { [weak self] in self?.startAutoRefresh() }
+        preferences.onChange(of: .counterType) { reproject(); refetch() }
+        // These change what is fetched or notified.
+        preferences.onChange(of: [.showAssigned, .showCreated, .showRequested, .hideDrafts, .notifyReviewRequested,
+                                  .notifyAssigned, .notifyCreated, .notifyRotting, .morningSummary], refetch)
+        preferences.onChange(of: .buildType, refetch)
+        preferences.onChange(of: .githubApiBaseUrl, refetch)
         // These change presentation and counters, never the GitHub query.
-        onChange(of: .morningSummaryMinutes) { $0.rebuildTimelineItems() }
-        onChange(of: .freshnessThresholds) { $0.rebuildTimelineItems() }
-        onChange(of: .ownCommentsCount) { $0.rebuildTimelineItems() }
-        onChange(of: .botAccounts) { $0.rebuildTimelineItems() }
-        onChange(of: .snoozedPulls) { $0.rebuildTimelineItems() }
-    }
-
-    /// Preference changes made in the UI arrive on the main thread and are handled in the same
-    /// turn, so the panel never draws a frame with the previous projection.
-    private func onChange<T: Defaults.Serializable & Equatable>(of key: Defaults.Key<T>,
-                                                               _ action: @escaping @MainActor (PullRequestStore) -> Void) {
-        settingsObservations.append(Defaults.observe(key) { [weak self] change in
-            guard change.oldValue != change.newValue else { return }
-            if Thread.isMainThread {
-                MainActor.assumeIsolated { self.map(action) }
-            } else {
-                Task { @MainActor in self.map(action) }
-            }
-        })
+        preferences.onChange(of: .morningSummaryMinutes, reproject)
+        preferences.onChange(of: .freshnessThresholds, reproject)
+        preferences.onChange(of: .ownCommentsCount, reproject)
+        preferences.onChange(of: .botAccounts, reproject)
+        preferences.onChange(of: .snoozedPulls, reproject)
     }
 
     private func scheduleSettingsRefresh() {
@@ -234,8 +166,7 @@ final class PullRequestStore {
     func loadCachedSnapshot() async {
         guard isConfigured else { return }
         let token = currentToken()
-        await cacheRemovalTask?.value
-        let snapshot = await cache.load(scope: token.scope)
+        let snapshot = await storage.load(scope: token.scope)
         guard !Task.isCancelled, isCurrent(token), isConfigured, lastSyncedAt == nil, let snapshot else { return }
         currentSnapshot = snapshot
         assignedPulls = snapshot.assigned
@@ -245,7 +176,7 @@ final class PullRequestStore {
         isShowingCache = true
         hasIncompleteData = !snapshot.isComplete
         rebuildTimelineItems()
-        startMinuteTimer()
+        startMinuteTicks()
         // Restoration never sends notifications or wakes snoozed PRs from old history.
     }
 
@@ -257,8 +188,7 @@ final class PullRequestStore {
         guard isConfigured else {
             refreshTask?.cancel()
             refreshTask = nil
-            minuteTimer?.invalidate()
-            minuteTimer = nil
+            schedule.stopTicking()
             isLoading = false
             error = nil
             return
@@ -271,13 +201,6 @@ final class PullRequestStore {
         isLoading = true
         error = nil
         let scope = token.scope
-        let username = scope.username
-        let fetchAssigned = scope.assigned
-        let fetchCreated = scope.created
-        let fetchRequested = scope.requested
-        let hideDrafts = scope.hideDrafts
-        let baseURL = scope.baseURL
-        let buildType = scope.buildType
         // Pull requests already on screen for the same account, host and check mode keep
         // their details unless the search reports a change; only the rest are fetched in full.
         let reusable = currentSnapshot.map {
@@ -290,53 +213,24 @@ final class PullRequestStore {
             guard let self else { return }
             defer { syncLog.notice("Sync finished in \(started.duration(to: .now), privacy: .public)") }
             do {
-                let client = try await clientProvider(baseURL, buildType)
+                let client = try await clientProvider(scope.baseURL, scope.buildType)
                 try Task.checkCancellation()
                 guard isCurrent(token) else { return finishCancelledRefresh(generation: generation) }
                 let showProgressively = lastSyncedAt == nil && isEmpty
                 var a = assignedPulls, c = createdPulls, r = reviewRequestedPulls
                 var firstError: Error?
-                await withTaskGroup(of: PullCategoryResult.self) { group in
-                    for category in PullCategory.allCases {
-                        group.addTask {
-                            let enabled: Bool
-                            let filter: String
-                            switch category {
-                            case .assigned: enabled = fetchAssigned; filter = "assignee:\(username)"
-                            case .created: enabled = fetchCreated; filter = "author:\(username)"
-                            case .requested: enabled = fetchRequested; filter = "review-requested:\(username)"
-                            }
-                            do {
-                                let edges = enabled ? try await client.fetchPulls(filter: filter, known: known) : []
-                                return PullCategoryResult(category: category, result: .success(edges))
-                            } catch { return PullCategoryResult(category: category, result: .failure(error)) }
+                for await result in PullSearch.run(client: client, scope: scope, known: known) {
+                    guard isCurrent(token), !Task.isCancelled else { continue }
+                    switch result.edges {
+                    case .success(let edges):
+                        switch result.search {
+                        case .assigned: a = edges
+                        case .created: c = edges
+                        case .requested: r = edges
                         }
-                    }
-                    for await result in group {
-                        guard isCurrent(token), !Task.isCancelled else { continue }
-                        switch result.result {
-                        case .success(let edges):
-                            let edges = hideDrafts ? edges.filter { !$0.node.isDraft } : edges
-                            switch result.category {
-                            case .assigned: a = edges
-                            case .created: c = edges
-                            case .requested: r = edges
-                            }
-                            if showProgressively {
-                                publishPulls(assigned: a, created: c, requested: r)
-                                if !isEmpty {
-                                    // Even quitting before the slowest category finishes
-                                    // leaves useful data for the next launch.
-                                    var partial = PullSnapshot(scope: scope, syncedAt: .now, assigned: a, created: c, requested: r)
-                                    partial.isComplete = false
-                                    currentSnapshot = partial
-                                    hasIncompleteData = true
-                                    _ = persist(partial)
-                                }
-                            }
-                        case .failure(let error):
-                            if firstError == nil { firstError = error }
-                        }
+                        if showProgressively { publishPartial(scope: scope, assigned: a, created: c, requested: r) }
+                    case .failure(let error):
+                        if firstError == nil { firstError = error }
                     }
                 }
                 try Task.checkCancellation()
@@ -345,19 +239,28 @@ final class PullRequestStore {
                 let snapshot = PullSnapshot(scope: scope, syncedAt: .now, assigned: a, created: c, requested: r)
                 guard isCurrent(token) else { return finishCancelledRefresh(generation: generation) }
                 currentSnapshot = snapshot
-                var fetched: PullSources = []
-                if fetchAssigned { fetched.insert(.assigned) }
-                if fetchCreated { fetched.insert(.created) }
-                if fetchRequested { fetched.insert(.requested) }
-                self.finishRefresh(generation: generation, assigned: a, created: c, requested: r, fetched: fetched)
-                await persist(snapshot).value
+                let fetched = PullSources(PullSearch.allCases.filter { $0.isEnabled(in: scope) }.map(\.source))
+                finishRefresh(generation: generation, assigned: a, created: c, requested: r, fetched: fetched)
+                await storage.save(snapshot).value
             } catch is CancellationError {
-                self.finishCancelledRefresh(generation: generation)
+                finishCancelledRefresh(generation: generation)
             } catch {
                 guard isCurrent(token) else { return finishCancelledRefresh(generation: generation) }
-                self.finishFailedRefresh(error, generation: generation)
+                finishFailedRefresh(error, generation: generation)
             }
         }
+    }
+
+    /// Shows each search as it arrives on the first load, and saves the partial result, so even
+    /// quitting before the slowest search finishes leaves useful data for the next launch.
+    private func publishPartial(scope: PullSnapshotScope, assigned: [Edge], created: [Edge], requested: [Edge]) {
+        publishPulls(assigned: assigned, created: created, requested: requested)
+        guard !isEmpty else { return }
+        var partial = PullSnapshot(scope: scope, syncedAt: .now, assigned: assigned, created: created, requested: requested)
+        partial.isComplete = false
+        currentSnapshot = partial
+        hasIncompleteData = true
+        storage.save(partial)
     }
 
     func rebaseStack(_ stack: PullRequestStack) async throws -> StackRebaseResult {
@@ -390,11 +293,9 @@ final class PullRequestStore {
         }
     }
 
-    private func startMinuteTimer() {
-        minuteTimer?.invalidate()
-        minuteTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.rebuildTimelineItems() }
-        }
+    /// Re-projects items each minute, so ages and quiet periods advance between refreshes.
+    private func startMinuteTicks() {
+        schedule.tickEveryMinute { [weak self] in self?.rebuildTimelineItems() }
     }
 
     private func finishRefresh(generation: Int, assigned: [Edge], created: [Edge], requested: [Edge], fetched: PullSources) {
@@ -408,26 +309,10 @@ final class PullRequestStore {
                                              fetched: fetched, items: timelineItems, settings: settings()) {
             Defaults[.lastMorningSummary] = day
         }
-        startMinuteTimer()
-        // Schedule from completion, so a slow request cannot make the next tick
-        // fall just before freshness expires and accidentally skip a whole interval.
-        refreshTimer?.fireDate = (lastSyncedAt ?? .now).addingTimeInterval(settings().refreshInterval)
+        startMinuteTicks()
+        schedule.nextRefresh(at: (lastSyncedAt ?? .now).addingTimeInterval(settings().refreshInterval))
         isLoading = false
         refreshTask = nil
-    }
-
-    private func persist(_ snapshot: PullSnapshot) -> Task<Void, Never> {
-        let cache = cache
-        let previousWrite = cacheWriteTask
-        let previousRemoval = cacheRemovalTask
-        let task = Task {
-            await previousWrite?.value
-            await previousRemoval?.value
-            guard !Task.isCancelled else { return }
-            await cache.save(snapshot)
-        }
-        cacheWriteTask = task
-        return task
     }
 
     private func publishPulls(assigned: [Edge], created: [Edge], requested: [Edge]) {
@@ -441,7 +326,8 @@ final class PullRequestStore {
     private func rebuildTimelineItems() {
         now = .now
         timelineItems = timelineInput(now: now).makeItems()
-        let count = currentCount
+        let count = settings().counterType.count(items: timelineItems, assigned: assignedPulls.count,
+                                                 created: createdPulls.count, requested: reviewRequestedPulls.count)
         if totalCount != count { totalCount = count }
     }
 

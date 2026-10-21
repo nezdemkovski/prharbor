@@ -49,3 +49,17 @@ nonisolated enum TimelineSnoozePolicy {
         return (snoozed, activity)
     }
 }
+
+extension CounterType {
+    /// The number the menu bar shows next to the icon.
+    nonisolated func count(items: [TimelineItem], assigned: Int, created: Int, requested: Int) -> Int {
+        switch self {
+        case .rotting: items.filter { $0.hasKnownQuietPeriod && $0.freshness == .rotting && $0.snoozedUntil == nil }.count
+        case .waitingOnYou: TimelineNotificationPolicy.waitingForReview(items).count
+        case .assigned: assigned
+        case .created: created
+        case .reviewRequested: requested
+        case .none: 0
+        }
+    }
+}

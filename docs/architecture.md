@@ -8,7 +8,8 @@ The Xcode project uses synchronized folders: a file joins its target by being in
 - `Models/GitHub/`: GraphQL payload types, one file per area (pull request, stack, checks, history, responses), and `GitHubEnums` for schema enums that decode unknown values as `unknown`.
 - `Models/Timeline/`: what the panel derives from a pull request: `TimelineItem`, `NextAction`, freshness, scale, history events, search matching and `TimelinePresentation`.
 - `Services/GitHub/`: transport, token storage and connection, the client, and `GitHubQueries`, every GraphQL document it sends.
-- `Services/`: the store, snapshot cache, screen controller and intelligence.
+- `Services/Store/`: `PullRequestStore` and the pieces it coordinates: `PullSearch` (the three GitHub searches), `SnapshotStorage` (ordered cache writes and removals over `PullSnapshotCache`), `RefreshSchedule` (refresh and minute timers) and `PreferenceObserver`.
+- `Services/`: the screen controller, timeline policies and intelligence.
 - `Views/Timeline/`: the panel, with `Drawing/` for the axis, grid, track and avatars and `Rows/` for row types.
 - `Views/Settings/`: the settings window, one file per pane.
 - `Views/Components/`: the panel's controls as SwiftUI styles over system buttons and toggles: `SegmentedControl`, `ChipToggleStyle`, `PrimaryButtonStyle`, `IconButtonStyle` and `TintedButtonStyle`. Screens use these instead of styling a plain button in place, so hover, press, disabled and accessibility behave the same everywhere.

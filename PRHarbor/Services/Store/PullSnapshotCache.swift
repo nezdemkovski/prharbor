@@ -1,6 +1,6 @@
 import Foundation
 
-/// Everything affecting the fetched snapshot, including its selected CLI identity.
+/// Everything affecting the fetched snapshot, including the connected account.
 nonisolated struct PullSnapshotScope: Codable, Equatable, Sendable {
     let username: String
     let baseURL: String

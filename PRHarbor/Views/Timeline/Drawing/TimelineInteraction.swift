@@ -24,8 +24,8 @@ final class TimelineInteraction {
         brushing = true
         let first = scale.age(at: start / width)
         let second = scale.age(at: (endX - trackOrigin) / width)
-        let lower = scale.snappedAge(min(first, second))
-        let upper = scale.snappedAge(max(first, second))
+        let lower = scale.wholeDay(min(first, second))
+        let upper = scale.wholeDay(max(first, second))
         let value: ClosedRange<Double>? = lower == upper ? nil : lower...(upper >= Double(scale.days) ? .infinity : upper)
         if dragging != value { dragging = value }
     }

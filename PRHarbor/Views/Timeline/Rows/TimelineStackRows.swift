@@ -14,25 +14,27 @@ struct TimelineStackRows: View {
     var body: some View {
         VStack(spacing: 0) {
             if isCollapsed {
-                Button(action: toggle) {
-                    HStack(spacing: 0) {
+                // Only the label column expands the stack; its bars stay part of the timeline.
+                HStack(spacing: 0) {
+                    Button(action: toggle) {
                         SwiftUI.Label("Stack · \(items.count) layers", systemImage: "square.3.layers.3d")
                             .font(.ui(Typography.callout, .medium)).frame(width: TimelineMetrics.labelWidth, alignment: .leading)
-                        VStack(spacing: TimelineRowGeometry.collapsedBarSpacing) {
-                            ForEach(items) { item in
-                                GeometryReader { geometry in
-                                    let start = scale.position(age: item.age) * geometry.size.width
-                                    Capsule().fill(
-                                        (item.hasKnownQuietPeriod ? item.freshness.fill : Palette.textTertiary).opacity(Opacity.quietBar)
-                                    ).frame(width: max(2, geometry.size.width - start)).offset(x: start)
-                                }.frame(height: TimelineRowGeometry.collapsedBarHeight)
-                            }
+                            .frame(maxHeight: .infinity).contentShape(Rectangle())
+                    }.buttonStyle(.plain)
+                    VStack(spacing: TimelineRowGeometry.collapsedBarSpacing) {
+                        ForEach(items) { item in
+                            GeometryReader { geometry in
+                                let start = scale.position(age: item.age) * geometry.size.width
+                                Capsule().fill(
+                                    (item.hasKnownQuietPeriod ? item.freshness.fill : Palette.textTertiary).opacity(Opacity.quietBar)
+                                ).frame(width: max(2, geometry.size.width - start)).offset(x: start)
+                            }.frame(height: TimelineRowGeometry.collapsedBarHeight)
                         }
                     }
-                    .frame(height: TimelineRowGeometry.collapsedBodyHeight(layers: items.count))
-                    .padding(TimelineRowGeometry.collapsedContentPadding)
-                    .contentShape(Rectangle())
-                }.buttonStyle(.plain)
+                    .allowsHitTesting(false)
+                }
+                .frame(height: TimelineRowGeometry.collapsedBodyHeight(layers: items.count))
+                .padding(TimelineRowGeometry.collapsedContentPadding)
             } else {
                 ForEach(items) { item in
                     TimelineRow(item: item, scale: scale, now: now, selected: selection == item.id, layer: true) { select(item.id) }.id(
@@ -59,10 +61,12 @@ struct TimelineStackRows: View {
                             }
                         }
                     }
-                    Spacer()
+                    Spacer(minLength: 0)
                 }.foregroundStyle(Palette.textSecondary).frame(height: Layout.stackFooterHeight)
-                    .frame(height: TimelineRowGeometry.stackFooterHeight, alignment: .top).contentShape(Rectangle())
+                    .frame(width: TimelineMetrics.labelWidth, height: TimelineRowGeometry.stackFooterHeight, alignment: .topLeading)
+                    .contentShape(Rectangle())
             }.buttonStyle(.plain).help(isCollapsed ? "Expand stack" : "Collapse stack")
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(alignment: .topLeading) {
             if !isCollapsed {

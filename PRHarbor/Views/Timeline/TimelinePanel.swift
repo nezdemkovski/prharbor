@@ -147,6 +147,8 @@ struct TimelinePanel: View {
             .onKeyPress(phases: [.down, .repeat], action: handleNavigation)
             .padding(.horizontal, Spacing.panel)
             .foregroundStyle(Palette.textPrimary).tint(Palette.accent).monospacedDigit()
+            // The whole row follows the pointer and range drags, including empty timeline beside a header.
+            .contentShape(Rectangle())
             .onContinuousHover { phase in
                 guard !interaction.isScrolling else { return }
                 switch phase {

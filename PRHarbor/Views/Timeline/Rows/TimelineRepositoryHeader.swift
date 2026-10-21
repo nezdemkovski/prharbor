@@ -8,8 +8,9 @@ struct TimelineRepositoryHeader: View {
     var showOwner = false
     let toggle: () -> Void
     var body: some View {
-        Button(action: toggle) {
-            HStack(spacing: 0) {
+        // Only the label column toggles; the timeline beside it belongs to hover and range selection.
+        HStack(spacing: 0) {
+            Button(action: toggle) {
                 HStack(spacing: Spacing.xs) {
                     Image(systemName: collapsed ? "chevron.right" : "chevron.down").font(.ui(Typography.micro, .semibold)).frame(
                         width: Size.disclosure)
@@ -24,24 +25,26 @@ struct TimelineRepositoryHeader: View {
                     Spacer(minLength: 0)
                 }
                 .font(.ui(Typography.callout, .semibold)).foregroundStyle(Palette.textSecondary)
-                .frame(width: TimelineMetrics.labelWidth, alignment: .leading)
-                GeometryReader { geometry in
-                    if collapsed {
-                        ForEach(items.filter(\.hasKnownQuietPeriod)) { item in
-                            Circle().fill(item.freshness.fill).frame(width: Size.dot, height: Size.dot)
-                                .position(
-                                    x: max(
-                                        Layout.collapsedDotInset,
-                                        min(
-                                            geometry.size.width - Layout.collapsedDotInset,
-                                            scale.position(age: item.quietDays) * geometry.size.width)), y: Layout.trackHeight / 2)
-                        }
+                .frame(width: TimelineMetrics.labelWidth, alignment: .leading).frame(maxHeight: .infinity)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(name), \(items.count) pull requests, \(collapsed ? "collapsed" : "expanded")")
+            GeometryReader { geometry in
+                if collapsed {
+                    ForEach(items.filter(\.hasKnownQuietPeriod)) { item in
+                        Circle().fill(item.freshness.fill).frame(width: Size.dot, height: Size.dot)
+                            .position(
+                                x: max(
+                                    Layout.collapsedDotInset,
+                                    min(
+                                        geometry.size.width - Layout.collapsedDotInset,
+                                        scale.position(age: item.quietDays) * geometry.size.width)), y: Layout.trackHeight / 2)
                     }
                 }
             }
-            .frame(height: TimelineRowGeometry.repositoryHeight - 6).padding(.top, Spacing.s).contentShape(Rectangle())
+            .allowsHitTesting(false)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(name), \(items.count) pull requests, \(collapsed ? "collapsed" : "expanded")")
+        .frame(height: TimelineRowGeometry.repositoryHeight - 6).padding(.top, Spacing.s)
     }
 }

@@ -10,9 +10,8 @@ struct TimelineCleanupTests {
                       stack: PullRequestStack? = nil, position: Int? = nil) -> TimelineItem {
         let pull = Pull(url: URL(string: "https://github.com/example/repo/pull/\(number)")!,
             updatedAt: now.addingTimeInterval(-days * 86_400), createdAt: now.addingTimeInterval(-days * 86_400),
-            title: "Change \(number)", number: number, reviews: Review(totalCount: 0, edges: []), author: User(login: author),
-            repository: Repository(name: "repo", nameWithOwner: "example/repo"), labels: Nodes(nodes: []),
-            headRefName: "feature/\(number)", isDraft: false, isReadByViewer: true,
+            title: "Change \(number)", number: number, author: User(login: author),
+            repository: Repository(name: "repo", nameWithOwner: "example/repo"), headRefName: "feature/\(number)", isDraft: false,
             stack: stack, stackEntry: position.map { PullRequestStackPosition(position: $0) })
         return TimelineItem(pull: pull, username: "yuri", now: now, thresholds: [2, 7, 21], bots: [],
             ownComments: true, snoozedUntil: nil, reviewRequested: author != "yuri")

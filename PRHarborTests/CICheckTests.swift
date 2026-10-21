@@ -43,7 +43,6 @@ struct CICheckTests {
                     CheckSuit(
                         app: nil,
                         checkRuns: CheckRun(
-                            totalCount: 1,
                             nodes: [Check(name: checkName, conclusion: conclusion, detailsUrl: url)]
                         )
                     )

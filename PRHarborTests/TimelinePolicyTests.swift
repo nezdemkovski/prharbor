@@ -12,9 +12,8 @@ struct TimelinePolicyTests {
     private func pull() -> Pull {
         Pull(url: URL(string: "https://github.com/example/repo/pull/42")!,
              updatedAt: now.addingTimeInterval(-86_400), createdAt: now.addingTimeInterval(-30 * 86_400),
-             title: "HQ-1234: A useful change", number: 42, reviews: Review(totalCount: 0, edges: []),
-             author: User(login: "octocat"), repository: Repository(name: "repo", nameWithOwner: "example/repo"),
-             labels: Nodes(nodes: []), headRefName: "feature/useful", isDraft: false, isReadByViewer: true)
+             title: "HQ-1234: A useful change", number: 42, author: User(login: "octocat"), repository: Repository(name: "repo", nameWithOwner: "example/repo"),
+             headRefName: "feature/useful", isDraft: false)
     }
     private func item(_ pull: Pull, ownComments: Bool = true, snooze: Date? = nil) -> TimelineItem {
         TimelineItem(pull: pull, username: "octocat", now: now, thresholds: [2, 7, 21], bots: ["*[bot]"], ownComments: ownComments, snoozedUntil: snooze)

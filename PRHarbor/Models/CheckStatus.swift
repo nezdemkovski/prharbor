@@ -12,7 +12,7 @@ nonisolated struct CICheck: Identifiable, Equatable, Sendable {
         var result: [CICheck] = []
         if let suites = commits.nodes.first?.commit.checkSuites {
             for suite in suites.nodes {
-                for check in suite.checkRuns.nodes {
+                for check in suite.checkRuns?.nodes ?? [] {
                     result.append(CICheck(name: check.name, status: check.conclusion ?? "PENDING", url: check.detailsUrl, index: result.count))
                 }
             }

@@ -10,9 +10,8 @@ struct ServiceCleanupTests {
     private func pull(owner: String = "octocat") -> Pull {
         Pull(url: URL(string: "https://github.com/example/repo/pull/42")!,
              updatedAt: now.addingTimeInterval(-70 * 86_400), createdAt: now.addingTimeInterval(-90 * 86_400),
-             title: "Change", number: 42, reviews: Review(totalCount: 0, edges: []),
-             author: User(login: owner), repository: Repository(name: "repo", nameWithOwner: "example/repo"),
-             labels: Nodes(nodes: []), headRefName: "feature", isDraft: false, isReadByViewer: true)
+             title: "Change", number: 42, author: User(login: owner), repository: Repository(name: "repo", nameWithOwner: "example/repo"),
+             headRefName: "feature", isDraft: false)
     }
 
     private func item(_ pull: Pull, ownComments: Bool = true) -> TimelineItem {
@@ -26,7 +25,7 @@ struct ServiceCleanupTests {
         p.reviewDecision = "APPROVED"; p.mergeable = "MERGEABLE"
         p.updatedAt = now
         p.commits = CommitsNodes(nodes: [Commit(commit: CheckSuites(
-            checkSuites: CheckSuitsNodes(nodes: [CheckSuit(checkRuns: CheckRun(totalCount: 30,
+            checkSuites: CheckSuitsNodes(nodes: [CheckSuit(checkRuns: CheckRun(
                 nodes: [Check(name: "one loaded check", conclusion: "SUCCESS", detailsUrl: p.url)]))]),
             statusCheckRollup: StatusCheckRollup(state: overall)))])
         let value = item(p)
@@ -268,7 +267,7 @@ private actor CleanupMutationTransport {
         }
         var fetched = edge
         fetched.node.title = revision == 1 ? "Before rebase" : "After rebase"
-        let response = GraphQLSearchResponse(data: ResponseData(search: Search(edges: [fetched], issueCount: 1,
+        let response = GraphQLSearchResponse(data: ResponseData(search: Search(edges: [fetched],
             pageInfo: PageInfo(hasNextPage: false, endCursor: nil))))
         let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
         return try encoder.encode(response)

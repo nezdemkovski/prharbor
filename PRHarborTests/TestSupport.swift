@@ -123,7 +123,7 @@ nonisolated struct ProgressivePullTransport: GitHubAPITransport {
             if failRequested { throw URLError(.notConnectedToInternet) }
         }
         let edges = filter.contains("assignee:") ? [edge] : []
-        let response = GraphQLSearchResponse(data: ResponseData(search: Search(edges: edges, issueCount: edges.count,
+        let response = GraphQLSearchResponse(data: ResponseData(search: Search(edges: edges,
             pageInfo: PageInfo(hasNextPage: false, endCursor: nil))))
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601

@@ -49,9 +49,8 @@ struct TimelinePresentationTests {
                       position: Int? = nil, days: Double = 10) -> TimelineItem {
         let pull = Pull(url: URL(string: "https://github.com/\(repo)/pull/\(number)")!,
                         updatedAt: now.addingTimeInterval(-days * 86_400), createdAt: now.addingTimeInterval(-days * 86_400),
-                        title: "HQ-\(number): Change \(number)", number: number, reviews: Review(totalCount: 0, edges: []),
-                        author: User(login: author), repository: Repository(name: "repo", nameWithOwner: repo),
-                        labels: Nodes(nodes: []), headRefName: "feature/\(number)", isDraft: false, isReadByViewer: true,
+                        title: "HQ-\(number): Change \(number)", number: number, author: User(login: author), repository: Repository(name: "repo", nameWithOwner: repo),
+                        headRefName: "feature/\(number)", isDraft: false,
                         stack: stack, stackEntry: position.map { PullRequestStackPosition(position: $0) })
         return TimelineItem(pull: pull, username: "octocat", now: now, thresholds: [2, 7, 21], bots: ["*[bot]"],
                             ownComments: true, snoozedUntil: nil)

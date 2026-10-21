@@ -243,7 +243,6 @@ nonisolated struct GitHubClient: Sendable {
                                 name
                             }
                             checkRuns(first: 10) {
-                                totalCount
                                 nodes {
                                     name
                                     conclusion
@@ -292,7 +291,6 @@ nonisolated struct GitHubClient: Sendable {
         query PullRequests($query: String!, $cursor: String, $pageSize: Int!) {
             viewer { login }
             search(query: $query, type: ISSUE, first: $pageSize, after: $cursor) {
-                issueCount
                 pageInfo {
                     hasNextPage
                     endCursor
@@ -331,10 +329,7 @@ nonisolated struct GitHubClient: Sendable {
                                 }
                             }
                             url
-                            deletions
-                            additions
                             isDraft
-                            isReadByViewer
                             reviewDecision
                             mergeable
                             \(stackFields)
@@ -345,22 +340,6 @@ nonisolated struct GitHubClient: Sendable {
                             repository {
                                 name
                                 nameWithOwner
-                            }
-                            labels(first: 5) {
-                                nodes {
-                                    name
-                                    color
-                                }
-                            }
-                            reviews(states: APPROVED, first: 10) {
-                                totalCount
-                                edges {
-                                    node {
-                                        author {
-                                            login
-                                        }
-                                    }
-                                }
                             }
                             \(buildFields)
                         }

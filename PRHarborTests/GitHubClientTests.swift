@@ -8,6 +8,32 @@ import Testing
 
 @Suite(.serialized)
 struct GitHubClientTests {
+    @Test func pagesDecodeWithEveryNullTheSchemaAllows() throws {
+        // Null lists, null list elements and null objects are all legal in GitHub's schema
+        // for the fields we select; none of them may fail the whole page.
+        let json = #"""
+        {"data":{"viewer":{"login":"octocat"},"search":{"pageInfo":{"hasNextPage":false,"endCursor":null},"edges":[null,{"node":null},{"node":{
+          "number":7,"createdAt":"2026-09-16T00:00:00Z","updatedAt":"2026-09-16T00:00:00Z","title":"T","headRefName":"h","baseRefName":"main",
+          "url":"https://github.com/o/r/pull/7","isDraft":false,"reviewDecision":null,"mergeable":"MERGEABLE","stack":null,"stackEntry":null,
+          "author":null,"repository":{"name":"r","nameWithOwner":"o/r"},
+          "timelineItems":{"pageInfo":{"hasPreviousPage":false},"nodes":null},
+          "reviewRequests":{"nodes":[null,{"requestedReviewer":null}]},
+          "commits":{"nodes":[null,{"commit":{"statusCheckRollup":null,"checkSuites":{"nodes":[null,{"app":null,"checkRuns":null},
+            {"app":{"name":"CI"},"checkRuns":{"nodes":[null,{"name":"build","conclusion":null,"detailsUrl":null}]}}]}}}]}
+        }}]}}}
+        """#
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let edges = try decoder.decode(GraphQLSearchResponse.self, from: Data(json.utf8)).data.search.edges
+        #expect(edges.map(\.node.number) == [7])
+        let pull = try #require(edges.first?.node)
+        #expect(pull.timelineItems?.nodes.isEmpty == true)
+        #expect(pull.reviewRequests?.nodes.count == 1)
+        let checks = pull.commits.map(CICheck.from) ?? []
+        #expect(checks.map(\.name) == ["build"])
+        #expect(checks.first?.url == nil)
+    }
+
     @Test func schemaFallbackAndPagingDependOnStructuredErrorsOnly() throws {
         func error(_ json: String) throws -> GraphQLAPIError {
             GraphQLAPIError(errors: try JSONDecoder().decode([GraphQLError].self, from: Data(json.utf8)))

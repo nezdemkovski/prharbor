@@ -65,16 +65,11 @@ struct PullRequestStackTests {
             createdAt: .now,
             title: "PR \(number)",
             number: number,
-            deletions: nil,
-            additions: nil,
-            reviews: Review(totalCount: 0, edges: []),
             author: nil,
             repository: Repository(name: "repo", nameWithOwner: "example/repo"),
             commits: nil,
-            labels: Nodes(nodes: []),
             headRefName: "feature/\(number)",
             isDraft: false,
-            isReadByViewer: false,
             reviewDecision: nil,
             mergeable: nil
         )

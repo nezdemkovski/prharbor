@@ -13,7 +13,6 @@ nonisolated struct ResponseData: Codable, Sendable {
 
 nonisolated struct Search: Codable, Sendable {
     var edges: [Edge]
-    var issueCount: Int
     var pageInfo: PageInfo
 }
 
@@ -32,16 +31,11 @@ nonisolated struct Pull: Codable, Sendable, Equatable {
     var createdAt: Date
     var title: String
     var number: Int
-    var deletions: Int?
-    var additions: Int?
-    var reviews: Review
     var author: User?
     var repository: Repository
     var commits: CommitsNodes?
-    var labels: Nodes<Label>
     var headRefName: String
     var isDraft: Bool
-    var isReadByViewer: Bool
     var reviewDecision: String?
     var mergeable: String?
     var stack: PullRequestStack? = nil
@@ -157,23 +151,6 @@ nonisolated struct StackResponseData: Codable, Sendable {
     var nodes: [PullRequestStack?]
 }
 
-nonisolated struct Nodes<T: Codable & Hashable & Sendable>: Codable, Hashable, Sendable {
-    var nodes: [T]
-}
-
-nonisolated struct Review: Codable, Sendable, Equatable {
-    var totalCount: Int
-    var edges: [UserEdge]
-}
-
-nonisolated struct UserEdge: Codable, Sendable, Equatable {
-    var node: UserNode
-}
-
-nonisolated struct UserNode: Codable, Sendable, Equatable {
-    var author: User?
-}
-
 nonisolated struct User: Codable, Sendable, Equatable {
     var login: String
     var avatarUrl: URL?
@@ -208,25 +185,19 @@ nonisolated struct CheckSuiteApp: Codable, Hashable, Sendable {
 
 nonisolated struct CheckSuit: Codable, Hashable, Sendable {
     var app: CheckSuiteApp?
-    var checkRuns: CheckRun
+    var checkRuns: CheckRun?
 }
 
 nonisolated struct CheckRun: Codable, Hashable, Sendable {
-    var totalCount: Int
     var nodes: [Check]
 }
 
 nonisolated struct Check: Codable, Hashable, Sendable, Identifiable {
     var name: String
     var conclusion: String?
-    var detailsUrl: URL
+    var detailsUrl: URL?
 
-    var id: String { "\(name)-\(detailsUrl.absoluteString)" }
-}
-
-nonisolated struct Label: Codable, Hashable, Sendable {
-    var name: String
-    var color: String
+    var id: String { "\(name)-\(detailsUrl?.absoluteString ?? "")" }
 }
 
 nonisolated struct StatusCheckRollup: Codable, Hashable, Sendable {
@@ -283,3 +254,66 @@ nonisolated struct PullReviewRequests: Codable, Sendable, Equatable {
 nonisolated struct PullReviewRequest: Codable, Sendable, Equatable {
     var requestedReviewer: TimelineReviewer?
 }
+
+// GraphQL lists and their elements are nullable throughout GitHub's schema, for example
+// when an item is hidden from the token. A null list or element is skipped rather than
+// failing the whole page; the request's own errors are reported separately.
+nonisolated extension KeyedDecodingContainer {
+    func decodeCompact<T: Decodable>(_ type: [T].Type, forKey key: Key) throws -> [T] {
+        try decodeIfPresent([T?].self, forKey: key)?.compactMap { $0 } ?? []
+    }
+}
+
+nonisolated extension Search {
+    private struct NullableEdge: Decodable, Sendable { var node: Pull? }
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        edges = try container.decodeCompact([NullableEdge].self, forKey: .edges).compactMap { $0.node.map(Edge.init) }
+        pageInfo = try container.decode(PageInfo.self, forKey: .pageInfo)
+    }
+}
+
+nonisolated extension CommitsNodes {
+    init(from decoder: Decoder) throws {
+        nodes = try decoder.container(keyedBy: CodingKeys.self).decodeCompact([Commit].self, forKey: .nodes)
+    }
+}
+
+nonisolated extension CheckSuitsNodes {
+    init(from decoder: Decoder) throws {
+        nodes = try decoder.container(keyedBy: CodingKeys.self).decodeCompact([CheckSuit].self, forKey: .nodes)
+    }
+}
+
+nonisolated extension CheckRun {
+    init(from decoder: Decoder) throws {
+        nodes = try decoder.container(keyedBy: CodingKeys.self).decodeCompact([Check].self, forKey: .nodes)
+    }
+}
+
+nonisolated extension ContextNodes {
+    init(from decoder: Decoder) throws {
+        nodes = try decoder.container(keyedBy: CodingKeys.self).decodeCompact([ContextNode].self, forKey: .nodes)
+    }
+}
+
+nonisolated extension PullTimelineConnection {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        nodes = try container.decodeIfPresent([PullTimelineNode?].self, forKey: .nodes) ?? []
+        pageInfo = try container.decodeIfPresent(PullTimelinePageInfo.self, forKey: .pageInfo)
+    }
+}
+
+nonisolated extension PullReviewRequests {
+    init(from decoder: Decoder) throws {
+        nodes = try decoder.container(keyedBy: CodingKeys.self).decodeCompact([PullReviewRequest].self, forKey: .nodes)
+    }
+}
+
+nonisolated extension PullRequestStackEntries {
+    init(from decoder: Decoder) throws {
+        nodes = try decoder.container(keyedBy: CodingKeys.self).decodeCompact([PullRequestStackEntry].self, forKey: .nodes)
+    }
+}
+

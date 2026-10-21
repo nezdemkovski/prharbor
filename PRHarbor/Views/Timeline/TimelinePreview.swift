@@ -26,9 +26,9 @@ enum TimelinePreviewData {
                 }
             }
             return Pull(url: URL(string: "https://github.com/acme/\(sample.repo)/pull/\(sample.num)")!, updatedAt: ago(sample.events.map(\.t).min() ?? sample.created), createdAt: ago(sample.created), title: sample.title, number: sample.num,
-                        deletions: sample.del, additions: sample.add, reviews: Review(totalCount: review == "APPROVED" ? 1 : 0, edges: []), author: User(login: sample.author), repository: Repository(name: sample.repo, nameWithOwner: "acme/\(sample.repo)"),
+                        author: User(login: sample.author), repository: Repository(name: sample.repo, nameWithOwner: "acme/\(sample.repo)"),
                         commits: CommitsNodes(nodes: [Commit(commit: CheckSuites(statusCheckRollup: StatusCheckRollup(state: ci, contexts: ContextNodes(nodes: [ContextNode(context: "build", state: ci)]))))]),
-                        labels: Nodes(nodes: []), headRefName: "", isDraft: sample.draft ?? false, isReadByViewer: true, reviewDecision: review,
+                        headRefName: "", isDraft: sample.draft ?? false, reviewDecision: review,
                         mergeable: sample.conflict == true ? "CONFLICTING" : "MERGEABLE", baseRefName: "main", timelineItems: PullTimelineConnection(nodes: events),
                         reviewRequests: PullReviewRequests(nodes: sample.reviewers.map { PullReviewRequest(requestedReviewer: TimelineReviewer(login: $0)) }))
         }

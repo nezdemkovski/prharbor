@@ -9,6 +9,33 @@ import Testing
 
 @Suite("Native scrolling", .serialized)
 struct NativeScrollingTests {
+    private static let hostLimit = TimelineViewportLimits.retainedRows + TimelineViewportLimits.pooledHosts
+
+    @Test @MainActor func scrollingBackShowsRetainedRowsWithoutRebuildingThem() async throws {
+        let ids = (0..<200).map { "row:\($0)" }
+        let ranges = Dictionary(
+            uniqueKeysWithValues: ids.enumerated().map { index, id in (id, CGFloat(index * 50)..<CGFloat((index + 1) * 50)) })
+        let document = TimelineVirtualDocumentView { id in Text(id).frame(height: 50) }
+        defer { document.removeRows() }
+        document.configure(height: 10_004, rowIDs: ids, ranges: ranges, content: { id in Text(id).frame(height: 50) }, appearance: nil)
+        let top = NSRect(x: 0, y: 0, width: 780, height: 456)
+        document.refreshViewport(top)
+        for _ in 0..<50 where document.preparedRowIDs != document.mountedRowIDs { try await Task.sleep(for: .milliseconds(20)) }
+        document.updateViewport(NSRect(x: 0, y: 1_200, width: 780, height: 456))
+        for _ in 0..<50 where document.preparedRowIDs != document.mountedRowIDs { try await Task.sleep(for: .milliseconds(20)) }
+        let built = document.totalPreparedRowCount
+        // Back at the top in the middle of a fling: no placeholders and no rebuilding.
+        document.updateViewport(top)
+        #expect(document.preparedRowIDs == document.mountedRowIDs)
+        #expect(document.totalPreparedRowCount == built)
+        // A content change marks retained rows stale; the visible ones are rebuilt before drawing.
+        document.configure(
+            height: 10_004, rowIDs: ids, ranges: ranges, content: { id in Text(id + "!").frame(height: 50) }, appearance: nil)
+        document.refreshViewport(top)
+        #expect(document.preparedRowIDs.isSuperset(of: (0..<10).map { "row:\($0)" }))
+        #expect(document.retainedHostingViewCount <= Self.hostLimit)
+    }
+
     @Test @MainActor func tabReplacementMountsTheNewViewportInTheSameLayout() async throws {
         let interaction = TimelineInteraction()
         func content(tab: String) -> some View {
@@ -63,7 +90,7 @@ struct NativeScrollingTests {
             document.refreshViewport(NSRect(x: 0, y: 0, width: 780, height: 456))
             #expect(Set(ids.prefix(10)).isSubset(of: document.preparedRowIDs))
             #expect(document.preparedRowIDs.isSubset(of: document.mountedRowIDs))
-            #expect(document.retainedHostingViewCount <= 42)
+            #expect(document.retainedHostingViewCount <= Self.hostLimit)
             if count == 68 { #expect(document.preparedRowIDs.count < document.mountedRowIDs.count) }
         }
     }
@@ -114,7 +141,7 @@ struct NativeScrollingTests {
             maximumObservedOffset = max(maximumObservedOffset, scroll.contentView.bounds.origin.y)
             if let virtual = document as? any TimelineViewportInspection {
                 #expect(virtual.preparedRowIDs.isSubset(of: virtual.mountedRowIDs))
-                #expect(virtual.retainedHostingViewCount <= 42)
+                #expect(virtual.retainedHostingViewCount <= Self.hostLimit)
             }
             let duration = start.duration(to: .now).components
             durations.append(Double(duration.seconds) * 1_000 + Double(duration.attoseconds) / 1e15)
@@ -198,7 +225,7 @@ struct NativeScrollingTests {
             }.map(\.id)
             unpreparedVisible.append(visible.filter { !virtual.preparedRowIDs.contains($0) }.count)
             #expect(virtual.preparedRowIDs.isSubset(of: virtual.mountedRowIDs))
-            #expect(virtual.retainedHostingViewCount <= 42)
+            #expect(virtual.retainedHostingViewCount <= Self.hostLimit)
             // Include work queued between updates, unlike the synchronous layout
             // benchmark. This is a CPU/run-loop replay, not display-frame FPS.
             try await Task.sleep(for: .nanoseconds(8_333_333))
@@ -279,7 +306,7 @@ struct NativeScrollingTests {
         #expect(document.preparedRowIDs.contains("row:999"))
         #expect(!document.preparedRowIDs.contains("row:0"))
         #expect(document.preparedRowIDs.isSubset(of: document.mountedRowIDs))
-        #expect(document.retainedHostingViewCount <= 42)
+        #expect(document.retainedHostingViewCount <= Self.hostLimit)
         document.removeRows()
         try await Task.sleep(for: .milliseconds(40))
         #expect(document.preparedRowIDs.isEmpty)

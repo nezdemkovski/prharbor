@@ -11,18 +11,31 @@ import SwiftUI
     @MainActor protocol TimelineViewportInspection: TimelineViewportDocument {
         var mountedRowIDs: Set<String> { get }
         var preparedRowIDs: Set<String> { get }
+        var retainedRowIDs: Set<String> { get }
         var retainedHostingViewCount: Int { get }
         var configurationCount: Int { get }
         var totalPreparedRowCount: Int { get }
     }
 #endif
 
-/// The document is lightweight AppKit geometry. Heavy SwiftUI row trees are
-/// prepared ahead of the viewport, one per interval; scrolling only moves the
-/// clip bounds and recycles offscreen hosts. It never publishes SwiftUI state.
-@MainActor final class TimelineVirtualDocumentView<Content: View>: NSView, TimelineViewportDocument {
+/// How much the virtual document keeps and how fast it builds rows.
+nonisolated enum TimelineViewportLimits {
     /// Rows within this distance of the viewport are mounted ahead of scrolling.
-    private static var prefetchMargin: CGFloat { 240 }
+    static let prefetchMargin: CGFloat = 240
+    /// Built rows stay attached to their pull request up to this many, so scrolling back
+    /// over them shows them at once instead of building them again.
+    static let retainedRows = 60
+    /// Hosts kept for reuse after their rows are evicted.
+    static let pooledHosts = 6
+    /// Time spent building rows before yielding a frame back to scrolling.
+    static let preparationBudget = Duration.milliseconds(6)
+}
+
+/// The document is lightweight AppKit geometry. Heavy SwiftUI row trees are
+/// prepared ahead of the viewport within a per-frame budget; scrolling only moves the
+/// clip bounds. Built rows stay with their pull request until the farthest are evicted.
+/// It never publishes SwiftUI state.
+@MainActor final class TimelineVirtualDocumentView<Content: View>: NSView, TimelineViewportDocument {
     override var isFlipped: Bool { true }
     private var rowIDs: [String] = []
     private var ranges: [String: Range<CGFloat>] = [:]
@@ -30,7 +43,10 @@ import SwiftUI
     private var content: (String) -> Content
     private var placeholder: (String) -> TimelineRowPlaceholder = { _ in TimelineRowPlaceholder(title: "", subtitle: "") }
     private var activate: (String) -> Void = { _ in }
+    /// Every attached row host, near the viewport or retained from earlier scrolling.
     private var hosts: [String: NSHostingView<Content>] = [:]
+    /// Hosts whose row content changed since they were built.
+    private var stale: Set<String> = []
     private var pool: [NSHostingView<Content>] = []
     private var isConfiguring = false
     private var preparationTask: Task<Void, Never>?
@@ -40,7 +56,8 @@ import SwiftUI
         private(set) var configurationCount = 0
         private(set) var totalPreparedRowCount = 0
         var mountedRowIDs: Set<String> { Set(needed) }
-        var preparedRowIDs: Set<String> { Set(hosts.keys) }
+        var preparedRowIDs: Set<String> { Set(needed.filter { hosts[$0] != nil && !stale.contains($0) }) }
+        var retainedRowIDs: Set<String> { Set(hosts.keys) }
         var retainedHostingViewCount: Int { hosts.count + pool.count }
     #endif
 
@@ -70,10 +87,9 @@ import SwiftUI
         self.appearance = appearance
         frame.size = NSSize(width: TimelineMetrics.panelWidth, height: max(1, height))
         for id in Array(hosts.keys) where ranges[id] == nil { recycle(id) }
-        for (id, host) in hosts {
-            host.rootView = content(id)
-            position(host, id: id)
-        }
+        for (id, host) in hosts { position(host, id: id) }
+        // Rows near the viewport are rebuilt when the viewport is refreshed; the rest when they come back into view.
+        stale = Set(hosts.keys)
         needsViewportRefresh = true
         needsDisplay = true
     }
@@ -82,8 +98,8 @@ import SwiftUI
     func updateViewport(_ bounds: NSRect) { updateViewport(bounds, prepareVisibleImmediately: false) }
     private func updateViewport(_ bounds: NSRect, prepareVisibleImmediately: Bool) {
         guard !isConfiguring else { return }
-        let lower = max(0, bounds.minY - Self.prefetchMargin)
-        let upper = min(frame.height, bounds.maxY + Self.prefetchMargin)
+        let lower = max(0, bounds.minY - TimelineViewportLimits.prefetchMargin)
+        let upper = min(frame.height, bounds.maxY + TimelineViewportLimits.prefetchMargin)
         var first = 0
         var end = rowIDs.count
         while first < end {
@@ -99,46 +115,58 @@ import SwiftUI
         }
         let next = bounds.height > 0 ? Array(rowIDs[first..<last]) : []
         let prepareVisible = prepareVisibleImmediately || needsViewportRefresh
-        let visible = next.filter { id in
-            ranges[id].map { $0.upperBound > bounds.minY && $0.lowerBound < bounds.maxY } ?? false
-        }
-        guard next != needed || needsViewportRefresh || (prepareVisible && visible.contains { hosts[$0] == nil }) else { return }
+        let ranges = ranges
+        let isVisible = { (id: String) in ranges[id].map { $0.upperBound > bounds.minY && $0.lowerBound < bounds.maxY } ?? false }
+        let visible = next.filter(isVisible)
+        let visibleStale = visible.filter { stale.contains($0) && hosts[$0] != nil }
+        guard
+            next != needed || needsViewportRefresh || !visibleStale.isEmpty
+                || (prepareVisible && visible.contains { hosts[$0] == nil })
+        else { return }
         needsViewportRefresh = bounds.height == 0
         needed = next
-        let ids = Set(next)
-        for id in Array(hosts.keys) where !ids.contains(id) { recycle(id) }
-        if pool.count > 6 { pool.removeLast(pool.count - 6) }
+        evictFarthest(from: bounds, keeping: Set(next))
         needsDisplay = true
         stopLoading()
+        // A retained row whose content changed is rebuilt before it is drawn again.
+        for id in visibleStale { prepare(id) }
         // Tab/filter/data updates are discrete changes. Their visible rows must
         // appear together; only scrolling and offscreen prefetch use the queue.
         if prepareVisible {
             for id in visible where hosts[id] == nil { prepare(id) }
             for id in visible { hosts[id]?.layoutSubtreeIfNeeded() }
         }
-        let pending = next.filter { hosts[$0] == nil }.sorted { a, b in
-            let aVisible = ranges[a].map { $0.upperBound > bounds.minY && $0.lowerBound < bounds.maxY } ?? false
-            let bVisible = ranges[b].map { $0.upperBound > bounds.minY && $0.lowerBound < bounds.maxY } ?? false
-            if aVisible != bVisible { return aVisible }
+        let pending = next.filter { hosts[$0] == nil || stale.contains($0) }.sorted { a, b in
+            if isVisible(a) != isVisible(b) { return isVisible(a) }
             return (ranges[a]?.lowerBound ?? 0) < (ranges[b]?.lowerBound ?? 0)
         }
         guard !pending.isEmpty else { return }
         let generation = preparationGeneration
         preparationTask = Task { @MainActor [weak self] in
             await Task.yield()
+            var frameStart = ContinuousClock.now
             for id in pending {
                 guard !Task.isCancelled, let self, self.preparationGeneration == generation else { return }
                 self.prepare(id)
-                do { try await Task.sleep(for: .milliseconds(16)) } catch { return }
+                if frameStart.duration(to: .now) >= TimelineViewportLimits.preparationBudget {
+                    do { try await Task.sleep(for: .milliseconds(16)) } catch { return }
+                    frameStart = .now
+                }
             }
         }
     }
 
+    /// Builds the row for `id`, or rebuilds it in place when its host is stale.
     private func prepare(_ id: String) {
         guard let range = ranges[id] else { return }
         #if DEBUG || PRHARBOR_TEST_FIXTURES
             totalPreparedRowCount += 1
         #endif
+        if let host = hosts[id] {
+            host.rootView = content(id)
+            stale.remove(id)
+            return
+        }
         let host: NSHostingView<Content>
         if let recycled = pool.popLast() {
             host = recycled
@@ -153,6 +181,18 @@ import SwiftUI
         setNeedsDisplay(NSRect(x: 0, y: range.lowerBound, width: frame.width, height: range.upperBound - range.lowerBound))
     }
 
+    /// Keeps at most `retainedRows` hosts, dropping those farthest from the viewport first.
+    private func evictFarthest(from bounds: NSRect, keeping needed: Set<String>) {
+        let excess = hosts.count - TimelineViewportLimits.retainedRows
+        guard excess > 0 else { return }
+        let distance = { (id: String) -> CGFloat in
+            guard let range = self.ranges[id] else { return .infinity }
+            return max(bounds.minY - range.upperBound, range.lowerBound - bounds.maxY, 0)
+        }
+        let candidates = hosts.keys.filter { !needed.contains($0) }.sorted { distance($0) > distance($1) }
+        for id in candidates.prefix(excess) { recycle(id) }
+    }
+
     private func position(_ host: NSHostingView<Content>, id: String) {
         guard let range = ranges[id] else { return }
         host.frame = NSRect(
@@ -160,9 +200,10 @@ import SwiftUI
             height: range.upperBound - range.lowerBound)
     }
     private func recycle(_ id: String) {
+        stale.remove(id)
         guard let host = hosts.removeValue(forKey: id) else { return }
         host.removeFromSuperview()
-        pool.append(host)
+        if pool.count < TimelineViewportLimits.pooledHosts { pool.append(host) }
     }
     func stopLoading() {
         preparationGeneration += 1
@@ -173,6 +214,7 @@ import SwiftUI
         stopLoading()
         for host in hosts.values { host.removeFromSuperview() }
         hosts.removeAll()
+        stale.removeAll()
         pool.removeAll()
         needed.removeAll()
         needsDisplay = true

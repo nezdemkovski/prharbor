@@ -13,7 +13,6 @@ struct TimelinePanel: View {
         scrollRendering == .automatic ? .native : scrollRendering
     }
     @Default(.timelineRange) private var range
-    @Default(.detailHistory) private var history
     @Default(.freshnessThresholds) private var thresholds
     @Default(.showRequested) private var showRequested
     @Default(.showAssigned) private var showAssigned
@@ -24,6 +23,7 @@ struct TimelinePanel: View {
     @Default(.intelligentSearch) private var intelligentSearch
     @Default(.intelligentMorningBrief) private var intelligentMorningBrief
     @State private var briefExpanded = false
+    @State private var briefHeight: CGFloat = 0
     @State private var screen = TimelineScreenController()
     @State private var interaction = TimelineInteraction()
     @FocusState private var searching: Bool
@@ -49,16 +49,11 @@ struct TimelinePanel: View {
     private var queryBinding: Binding<String> { Binding(get: { snapshot.query }, set: screen.setQuery) }
     private var tabBinding: Binding<TimelineTab> { Binding(get: { snapshot.tab }, set: screen.setTab) }
     private var zoneBinding: Binding<Freshness?> { Binding(get: { snapshot.zone }, set: screen.setZone) }
+    /// The scroll region is the only part without an intrinsic height. It shrinks with
+    /// filtered content and shares its maximum with the morning brief; the rest of the
+    /// panel takes its natural size.
     private var rowAreaHeight: CGFloat {
-        presentation.visibleIDs.isEmpty ? 80 : min(max(100, 456 - briefHeight), presentation.contentHeight)
-    }
-    private var panelHeight: CGFloat {
-        // Fixed chrome from timeline.html; the scroll region shrinks with filtered content.
-        194 + rowAreaHeight + (selected == nil ? 0 : (history ? 127 : 96)) + (store.error == nil ? 0 : 36) + briefHeight
-    }
-    private var briefHeight: CGFloat {
-        guard intelligentMorningBrief else { return 0 }
-        return 44 + (briefExpanded ? (briefSnapshot.entries.isEmpty ? 52 : CGFloat(briefSnapshot.entries.count * 74 + 44)) : 0)
+        presentation.visibleIDs.isEmpty ? 80 : min(max(100, TimelineMetrics.maxRowAreaHeight - briefHeight), presentation.contentHeight)
     }
     var body: some View {
         let request = snapshot.searchRequest
@@ -74,6 +69,7 @@ struct TimelinePanel: View {
                 TimelineMorningBrief(snapshot: briefSnapshot, expanded: $briefExpanded, select: select,
                                      emptyMessage: store.isLoading && items.isEmpty ? "Waiting for pull requests…" : store.error != nil && items.isEmpty ? "Refresh pull requests to prepare an overview." : "All clear. No pull requests need attention right now.")
                     .padding(.horizontal, 18).padding(.bottom, 8)
+                    .onGeometryChange(for: CGFloat.self, of: \.size.height) { briefHeight = $0 }
             }
             if let error = store.error {
                 HStack {
@@ -89,7 +85,7 @@ struct TimelinePanel: View {
                     .padding(.horizontal, 18).padding(.top, 12).padding(.bottom, 18)
             }
         }
-        .frame(width: TimelineMetrics.panelWidth, height: panelHeight, alignment: .top)
+        .frame(width: TimelineMetrics.panelWidth, alignment: .top)
         .background(TimelineStyle.panel)
         .clipShape(RoundedRectangle(cornerRadius: 22))
         .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(TimelineStyle.line))
@@ -99,7 +95,7 @@ struct TimelinePanel: View {
         .focusable().focused($navigating).focusEffectDisabled()
         .onKeyPress(phases: [.down, .repeat], action: handleNavigation)
         .onChange(of: screenInput, initial: true) { _, value in screen.update(value) }
-        .onChange(of: intelligentMorningBrief) { _, enabled in if !enabled { briefExpanded = false } }
+        .onChange(of: intelligentMorningBrief) { _, enabled in if !enabled { briefExpanded = false; briefHeight = 0 } }
         .task(id: request) { await screen.resolveSearch(request) }
     }
     private var rows: some View {

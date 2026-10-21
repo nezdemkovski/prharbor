@@ -24,6 +24,7 @@ enum TimelineMetrics {
     static let labelWidth: CGFloat = 270
     static let inset: CGFloat = 18
     static let trackWidth = panelWidth - 2 * inset - labelWidth
+    static let maxRowAreaHeight: CGFloat = 456
 }
 
 /// Axis labels and grid lines follow the prototype's log and Monday-aligned scales.

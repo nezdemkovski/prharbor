@@ -1,25 +1,11 @@
 
 import SwiftUI
-private func adaptive(dark: NSColor, light: NSColor) -> Color {
-    Color(nsColor: NSColor(name: nil) { appearance in
-        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
-    })
-}
-
 enum Theme {
-    static let cardBackground = adaptive(
-        dark: .white.withAlphaComponent(0.05),
-        light: .black.withAlphaComponent(0.03)
-    )
     static let unread = Color(nsColor: NSColor(red: 0.35, green: 0.55, blue: 1.0, alpha: 1.0))
     static let success = Color(nsColor: NSColor(red: 0.30, green: 0.78, blue: 0.45, alpha: 1.0))
     static let failure = Color(nsColor: NSColor(red: 0.95, green: 0.35, blue: 0.35, alpha: 1.0))
-    static let neutral = Color(nsColor: NSColor(red: 0.55, green: 0.55, blue: 0.58, alpha: 1.0))
     static let stale = Color(nsColor: NSColor(red: 0.95, green: 0.60, blue: 0.20, alpha: 1.0))
     static let panelWidth = TimelineMetrics.panelWidth
-    static let panelHeight: CGFloat = 750
-    static let cardCornerRadius: CGFloat = 10
-    static let contentPadding: CGFloat = 12
 }
 
 /// The prototype's shared colors, resolved for the native view's appearance.

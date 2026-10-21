@@ -73,23 +73,3 @@ struct TimelineMorningBrief: View {
             }
     }
 }
-
-struct IntelligenceSettings: View {
-    @Default(.intelligentSearch) private var search
-    @Default(.intelligentMorningBrief) private var morning
-    var body: some View {
-        VStack(spacing: 0) {
-            TimelineSettingsRow("Natural language search", hint: "Type a phrase in the existing search field. Results update automatically; regular searches stay instant.") {
-                Toggle("Natural language search", isOn: $search).labelsHidden().toggleStyle(TimelineSwitchStyle())
-            }
-            TimelineSettingsRow("Morning brief", hint: "An optional overview of up to three PRs. Expand it to generate short explanations.") {
-                Toggle("Morning brief", isOn: $morning).labelsHidden().toggleStyle(TimelineSwitchStyle())
-            }
-            VStack(alignment: .leading, spacing: 6) {
-                SwiftUI.Label("Runs on this Mac", systemImage: "desktopcomputer").font(.system(size: 12, weight: .medium))
-                Text("Uses Apple's on-device model. Both features are off by default and do not change regular search or morning notifications.")
-                if let message = PRIntelligenceService.unavailableMessage { Text(message) }
-            }.font(.system(size: 11.5)).foregroundStyle(TimelineStyle.muted).padding(14).frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-}

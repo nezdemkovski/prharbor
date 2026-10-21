@@ -27,7 +27,7 @@ struct MenuBarPanelTests {
         anchor.isReleasedWhenClosed = false
         defer { anchor.close() }
         anchor.orderFront(nil)
-        let bar = StatusBarController(store: store, onSettings: {})
+        let bar = StatusBarController(store: store)
         defer { bar.invalidate() }
         bar.showPanel(relativeTo: try #require(anchor.contentView))
         try await Task.sleep(for: .milliseconds(500))

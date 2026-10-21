@@ -40,11 +40,9 @@ struct TimelineRenderingTests {
     }
     @Test @MainActor func rendersSettingsAndEmptyStates() async throws {
         let store = PullRequestStore(startAutomatically: false)
-        let settings = NSHostingView(rootView: PanelSettingsView(store: store).frame(width: 780, height: 600).environment(\.colorScheme, .light).background(Color(nsColor: .windowBackgroundColor)))
-        try await snapshot(settings, name: "settings", size: CGSize(width: 780, height: 600))
-        for destination in SettingsDestination.allCases where destination != .account {
-            let pane = NSHostingView(rootView: TimelineSettingsPane(destination: destination, store: store).frame(width: 550, height: 550).environment(\.colorScheme, .light).background(Color(nsColor: .windowBackgroundColor)))
-            try await snapshot(pane, name: "settings-" + destination.rawValue.replacingOccurrences(of: " ", with: "-"), size: CGSize(width: 550, height: 550))
+        for tab in SettingsTab.allCases {
+            let pane = NSHostingView(rootView: SettingsView(store: store).pane(tab).frame(width: 560, height: 620).environment(\.colorScheme, .light).background(Color(nsColor: .windowBackgroundColor)))
+            try await snapshot(pane, name: "settings-" + tab.rawValue, size: CGSize(width: 560, height: 620))
         }
         let empty = NSHostingView(rootView: TimelinePanel(store: store, now: .now, onSettings: {}, onAbout: {}, onQuit: {}, previewItems: []).frame(width: 780, height: 750).environment(\.colorScheme, .light).background(Color(nsColor: .windowBackgroundColor)))
         try await snapshot(empty, name: "empty", size: CGSize(width: 780, height: 750))

@@ -23,7 +23,6 @@
 		6E64AD76A943FCD670FDBB81 /* GitHubSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42572DFA3E93C5F1B4029ED /* GitHubSessionTests.swift */; };
 		6FE1F927C54A89D569AA0DAA /* TimelinePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 161E7524F5C25BDAD228E4B6 /* TimelinePresentationTests.swift */; };
 		761B97072D7CCDA70000378A /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 761B97062D7CCDA70000378A /* LaunchAtLogin */; };
-		769F4E1B2765A2B900594911 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769F4E1A2765A2B900594911 /* AboutView.swift */; };
 		769F4E7B277B97B300594911 /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769F4E7A277B97B300594911 /* Notifications.swift */; };
 		76C6AA5B2C98E809003472DA /* Defaults in Frameworks */ = {isa = PBXBuildFile; productRef = 76C6AA5A2C98E809003472DA /* Defaults */; };
 		7DF372F41558B96CFB42A449 /* PullSnapshotCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8206C7501C7018A8501BE78 /* PullSnapshotCacheTests.swift */; };
@@ -44,7 +43,7 @@
 		AB2000000000000000000003 /* TimelineModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000003 /* TimelineModel.swift */; };
 		AB2000000000000000000004 /* TimelinePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000004 /* TimelinePanel.swift */; };
 		AB2000000000000000000005 /* TimelineRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000005 /* TimelineRows.swift */; };
-		AB2000000000000000000007 /* TimelineSettingsPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000007 /* TimelineSettingsPane.swift */; };
+		AB2000000000000000000007 /* FreshnessSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000007 /* FreshnessSettings.swift */; };
 		AB2000000000000000000008 /* TimelinePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000008 /* TimelinePreview.swift */; };
 		AB2000000000000000000009 /* TimelineToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000009 /* TimelineToolbar.swift */; };
 		AB200000000000000000000A /* CheckStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB100000000000000000000A /* CheckStatus.swift */; };
@@ -58,12 +57,11 @@
 		AF1000000000000000000001 /* TimelineNativeScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1000000000000000000002 /* TimelineNativeScrollView.swift */; };
 		BFA8BBDBF479FE39F548FCE2 /* TimelinePolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E629C6B0C0A6030877DD368 /* TimelinePolicies.swift */; };
 		C6319CD28242C2B36DE74597 /* IntelligencePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEB47A0AA3B4E915B75C344A /* IntelligencePolicyTests.swift */; };
-		CEA9588AD9CB178DB974EFFE /* SectionTitle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43A2ED75C4C8059FCBF0682A /* SectionTitle.swift */; };
 		D9E45B1EEA25825B49E852E7 /* TimelineCleanupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 576EFC3808115CC88F0526D7 /* TimelineCleanupTests.swift */; };
 		DCE53682F3DAAE8AFA46D7F4 /* AsyncAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A48A051AA8B0EB7578CEC5F7 /* AsyncAvatarView.swift */; };
 		EE000002EEEEEE0000000001 /* PanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000002EEEEEE0000000002 /* PanelView.swift */; };
 		EE000004EEEEEE0000000001 /* PullRequestStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000004EEEEEE0000000002 /* PullRequestStore.swift */; };
-		EE000005EEEEEE0000000001 /* PanelSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000005EEEEEE0000000002 /* PanelSettingsView.swift */; };
+		EE000005EEEEEE0000000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000005EEEEEE0000000002 /* SettingsView.swift */; };
 		FAF4F4A9DEA893B8C52E35DD /* GitHubClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D70EEF936C8C44138D017938 /* GitHubClientTests.swift */; };
 		FF000001FFFFFF0000000001 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000001FFFFFF0000000002 /* ThemeColors.swift */; };
 /* End PBXBuildFile section */
@@ -82,11 +80,9 @@
 		0AB25D23E0FFF5E054AA5635 /* TimelinePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelinePolicyTests.swift; sourceTree = "<group>"; };
 		161E7524F5C25BDAD228E4B6 /* TimelinePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelinePresentationTests.swift; sourceTree = "<group>"; };
 		37BCA4CFB9CD03CB5DAB0BCC /* AppRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntime.swift; sourceTree = "<group>"; };
-		43A2ED75C4C8059FCBF0682A /* SectionTitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionTitle.swift; sourceTree = "<group>"; };
 		4CF40492DC582C06770ECB81 /* AvatarDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarDecodingTests.swift; sourceTree = "<group>"; };
 		576EFC3808115CC88F0526D7 /* TimelineCleanupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineCleanupTests.swift; sourceTree = "<group>"; };
 		6CB0F81002A0CE65A8659445 /* TimelineRenderingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRenderingTests.swift; sourceTree = "<group>"; };
-		769F4E1A2765A2B900594911 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		769F4E7A277B97B300594911 /* Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifications.swift; sourceTree = "<group>"; };
 		7A8294BDA22F1A2A49088D86 /* PullRefreshTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PullRefreshTrackerTests.swift; sourceTree = "<group>"; };
 		7E629C6B0C0A6030877DD368 /* TimelinePolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelinePolicies.swift; sourceTree = "<group>"; };
@@ -115,7 +111,7 @@
 		AB1000000000000000000003 /* TimelineModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineModel.swift; sourceTree = "<group>"; };
 		AB1000000000000000000004 /* TimelinePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelinePanel.swift; sourceTree = "<group>"; };
 		AB1000000000000000000005 /* TimelineRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRows.swift; sourceTree = "<group>"; };
-		AB1000000000000000000007 /* TimelineSettingsPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineSettingsPane.swift; sourceTree = "<group>"; };
+		AB1000000000000000000007 /* FreshnessSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreshnessSettings.swift; sourceTree = "<group>"; };
 		AB1000000000000000000008 /* TimelinePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelinePreview.swift; sourceTree = "<group>"; };
 		AB1000000000000000000009 /* TimelineToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineToolbar.swift; sourceTree = "<group>"; };
 		AB100000000000000000000A /* CheckStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckStatus.swift; sourceTree = "<group>"; };
@@ -137,7 +133,7 @@
 		EDFA4D9E93E1EABFD4A40BAE /* ServiceCleanupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceCleanupTests.swift; sourceTree = "<group>"; };
 		EE000002EEEEEE0000000002 /* PanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelView.swift; sourceTree = "<group>"; };
 		EE000004EEEEEE0000000002 /* PullRequestStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PullRequestStore.swift; sourceTree = "<group>"; };
-		EE000005EEEEEE0000000002 /* PanelSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelSettingsView.swift; sourceTree = "<group>"; };
+		EE000005EEEEEE0000000002 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		FF000001FFFFFF0000000002 /* ThemeColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColors.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -206,11 +202,9 @@
 			children = (
 				EE000002EEEEEE0000000002 /* PanelView.swift */,
 				AB3000000000000000000001 /* Timeline */,
-				EE000005EEEEEE0000000002 /* PanelSettingsView.swift */,
-				769F4E1A2765A2B900594911 /* AboutView.swift */,
+				EE000005EEEEEE0000000002 /* SettingsView.swift */,
 				A48A051AA8B0EB7578CEC5F7 /* AsyncAvatarView.swift */,
 				900DD289E9218651C1D70BE7 /* OnboardingView.swift */,
-				43A2ED75C4C8059FCBF0682A /* SectionTitle.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -250,7 +244,7 @@
 				AB1000000000000000000004 /* TimelinePanel.swift */,
 				AF1000000000000000000002 /* TimelineNativeScrollView.swift */,
 				AB1000000000000000000005 /* TimelineRows.swift */,
-				AB1000000000000000000007 /* TimelineSettingsPane.swift */,
+				AB1000000000000000000007 /* FreshnessSettings.swift */,
 				AB1000000000000000000008 /* TimelinePreview.swift */,
 				AB1000000000000000000009 /* TimelineToolbar.swift */,
 				AB100000000000000000000D /* TimelineIntelligenceViews.swift */,
@@ -425,7 +419,6 @@
 				AB200000000000000000000D /* TimelineIntelligenceViews.swift in Sources */,
 				AB200000000000000000000C /* PRIntelligenceService.swift in Sources */,
 				AB200000000000000000000B /* IntelligenceModels.swift in Sources */,
-				769F4E1B2765A2B900594911 /* AboutView.swift in Sources */,
 				8CECBBF42742AB3F00A2802D /* GitHubClient.swift in Sources */,
 				AC0000000000000000000001 /* GitHubSession.swift in Sources */,
 				AF0000000000000000000001 /* PullSnapshotCache.swift in Sources */,
@@ -436,7 +429,7 @@
 				EE000002EEEEEE0000000001 /* PanelView.swift in Sources */,
 				AB2000000000000000000009 /* TimelineToolbar.swift in Sources */,
 				AB2000000000000000000008 /* TimelinePreview.swift in Sources */,
-				AB2000000000000000000007 /* TimelineSettingsPane.swift in Sources */,
+				AB2000000000000000000007 /* FreshnessSettings.swift in Sources */,
 				AB2000000000000000000005 /* TimelineRows.swift in Sources */,
 				AB2000000000000000000004 /* TimelinePanel.swift in Sources */,
 				AF1000000000000000000001 /* TimelineNativeScrollView.swift in Sources */,
@@ -444,14 +437,13 @@
 				AB2000000000000000000002 /* TimelineDrawing.swift in Sources */,
 				AB2000000000000000000001 /* TimelineDetailView.swift in Sources */,
 				EE000004EEEEEE0000000001 /* PullRequestStore.swift in Sources */,
-				EE000005EEEEEE0000000001 /* PanelSettingsView.swift in Sources */,
+				EE000005EEEEEE0000000001 /* SettingsView.swift in Sources */,
 				6BCAC93CE9230D3B6201483C /* AppRuntime.swift in Sources */,
 				2E2FC6389A8A67AC9349EEDC /* TimelineRowGeometry.swift in Sources */,
 				BFA8BBDBF479FE39F548FCE2 /* TimelinePolicies.swift in Sources */,
 				8343228B017B93A0FA9B518E /* TimelineScreenController.swift in Sources */,
 				DCE53682F3DAAE8AFA46D7F4 /* AsyncAvatarView.swift in Sources */,
 				31ACB35B6FF4CD10CC8A7AAB /* OnboardingView.swift in Sources */,
-				CEA9588AD9CB178DB974EFFE /* SectionTitle.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

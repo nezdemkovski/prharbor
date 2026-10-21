@@ -12,7 +12,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return PullRequestStore(startAutomatically: services.startsSync, session: services.session, cache: services.cache)
     }()
     private var statusBar: StatusBarController?
-    private var settingsWindow: NSWindow?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         // Set before launch completes, so a notification click that launched the app is delivered.
@@ -24,26 +23,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard runtime == .production else { return }
         let session = store.session
         Task { await session.restoreFromSavedToken(baseURL: Defaults[.githubApiBaseUrl]) }
-        statusBar = StatusBarController(store: store, onSettings: { [weak self] in self?.showSettings() })
+        statusBar = StatusBarController(store: store)
         requestNotificationAuthorization()
-    }
-
-    func showSettings() {
-        statusBar?.closePanel()
-        if settingsWindow == nil {
-            let hosting = NSHostingController(rootView: PanelSettingsView(store: store,
-                usernameOverride: runtime.usernameOverride).frame(width: 780, height: 568))
-            hosting.sizingOptions = []
-            let window = NSWindow(contentViewController: hosting)
-            window.title = "PR Harbor Settings"
-            window.styleMask = [.titled, .closable, .miniaturizable]
-            window.setContentSize(NSSize(width: 780, height: 568))
-            window.isReleasedWhenClosed = false
-            window.center()
-            settingsWindow = window
-        }
-        NSApp.activate()
-        settingsWindow?.makeKeyAndOrderFront(nil)
     }
 
     func applicationWillTerminate(_ notification: Notification) { statusBar?.invalidate() }

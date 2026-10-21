@@ -12,7 +12,7 @@ final class StatusBarController: NSObject {
     private let store: PullRequestStore
     private var countObservation: Task<Void, Never>?
 
-    init(store: PullRequestStore, onSettings: @escaping () -> Void) {
+    init(store: PullRequestStore) {
         self.store = store
         super.init()
 
@@ -34,7 +34,7 @@ final class StatusBarController: NSObject {
         menu.addItem(quit)
 
         let hosting = NSHostingController(rootView: PanelView(store: store,
-            onQuit: { [weak self] in self?.quit() }, onSettings: onSettings))
+            onQuit: { [weak self] in self?.quit() }))
         // The panel has a fixed width and a natural height; the row area has an explicit
         // height, so tracking the preferred size never measures scrolling content.
         hosting.sizingOptions = [.preferredContentSize]

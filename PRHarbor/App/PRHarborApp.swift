@@ -11,7 +11,7 @@ struct PRHarborApp: App {
             if AppRuntime.current == .timelinePreview {
                 TimelinePreviewHost(store: store)
             } else {
-                PanelView(store: store, onQuit: { NSApp.terminate(nil) }, onSettings: appDelegate.showSettings)
+                PanelView(store: store, onQuit: { NSApp.terminate(nil) })
             }
         }
         .windowResizability(.contentSize)
@@ -19,15 +19,9 @@ struct PRHarborApp: App {
         .restorationBehavior(.disabled)
         #endif
         Settings {
-            PanelSettingsView(store: store, usernameOverride: AppRuntime.current.usernameOverride)
-                .frame(width: 780, height: 568)
-        }.windowResizability(.contentSize)
+            SettingsView(store: store, usernameOverride: AppRuntime.current.usernameOverride)
+        }
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
-        .commands {
-            CommandGroup(replacing: .appSettings) {
-                Button("Settings…", action: appDelegate.showSettings).keyboardShortcut(",")
-            }
-        }
     }
 }

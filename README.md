@@ -49,9 +49,11 @@ Grab the latest `.dmg` from [GitHub Releases](https://github.com/nezdemkovski/pr
 
 GitHub CLI is the only connection method. API requests, pagination, stack loading, and user-triggered rebases run through `gh api`; PR Harbor never extracts or copies the CLI token and never runs `gh auth login`, requests organization approval, or changes CLI permissions. Access is limited to what the existing CLI account can already access. If the active account changes, reconnect in Account settings. Disconnecting PR Harbor clears its local account selection and leaves `gh` signed in. GitHub Enterprise is supported through the API URL setting (for example `https://github.example.com/api/v3`).
 
-PR Harbor launches `gh` directly as a background child process. App Sandbox is disabled for this CLI integration; Hardened Runtime remains enabled. No Application Scripts bridge is needed, so synchronization does not create macOS script-monitor menu items. Cancellation and timeouts terminate the owned CLI process. Existing bridge-based account selections migrate to the installed `gh` executable automatically, without another sign-in. The existing preferences domain is retained; preferences from the former sandbox container are imported once if readable.
+PR Harbor launches `gh` directly as a background child process. App Sandbox is disabled for this CLI integration; Hardened Runtime remains enabled. No Application Scripts bridge is needed, so synchronization does not create macOS script-monitor menu items. Cancellation and timeouts terminate the owned CLI process. Each search response and each stack rebase confirms that the active `gh` account is still the connected one.
 
-When updating from a version with built-in sign-in, the app preserves an active CLI connection and retires its old local account selection. A one-time migration deletes only PR Harbor’s two previous credential entries from its own Keychain service. It does not read their contents or touch GitHub CLI credentials. Built-in OAuth and manual token entry are removed.
+### Updating from v0.1.x
+
+Versions before 0.2.0 were sandboxed and used built-in sign-in. Their settings and sign-in are not carried over: connect GitHub CLI again in Settings → Account and re-apply your preferences. The old sign-in may remain in Keychain as `com.nezdemkovski.prharbor` items named `githubToken` and `githubSession`; delete them in Keychain Access if you like. PR Harbor never reads them, and GitHub CLI credentials are separate.
 
 ## Development
 
@@ -87,4 +89,4 @@ Open `PRHarbor/Views/Timeline/TimelinePreview.swift` in Xcode for a SwiftUI prev
 
 Ordinary Debug and Release runs both stay in the menu bar, without a Dock icon or a separate timeline window. For an explicit live-data development window, set `PRHARBOR_DEBUG_WINDOW=1` in the Xcode scheme's Run environment. Development windows are not restored on the next launch.
 
-The Test action sets `PRHARBOR_TESTING=1`. Hosted tests skip production startup, notifications and credential migrations, use a fresh preferences suite and temporary cache, and supply fixture GitHub transports. Tests are organized by suite in `PRHarborTests/`; shared transports and gates live in `TestSupport.swift`.
+The Test action sets `PRHARBOR_TESTING=1`. Hosted tests skip production startup and notifications, use a fresh preferences suite and temporary cache, and supply fixture GitHub transports. Tests are organized by suite in `PRHarborTests/`; shared transports and gates live in `TestSupport.swift`.

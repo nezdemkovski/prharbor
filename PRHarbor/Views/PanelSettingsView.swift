@@ -154,10 +154,6 @@ private struct AccountCard: View {
             if let error = connector.error {
                 Text(error).font(.system(size: 11)).foregroundStyle(Theme.failure)
             }
-            if let error = session.cleanupError {
-                Text(error).font(.system(size: 11)).foregroundStyle(Theme.failure)
-                Button("Retry cleanup", action: session.cleanupLegacyCredentials).controlSize(.small)
-            }
         }
         .onDisappear { connector.cancel() }
         .onChange(of: connector.successfulConnections) { _, _ in store.refresh() }

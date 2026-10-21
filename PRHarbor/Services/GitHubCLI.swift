@@ -28,7 +28,6 @@ nonisolated struct GitHubCLI: GitHubAPITransport {
     var timeout: TimeInterval = 60
 
     init(executablePath: String, apiBaseURL: String, timeout: TimeInterval = 60) throws {
-        let executablePath = try Self.resolvedExecutablePath(executablePath)
         guard executablePath.hasPrefix("/"), FileManager.default.isExecutableFile(atPath: executablePath) else {
             throw GitHubCLIError.notInstalled
         }
@@ -54,14 +53,6 @@ nonisolated struct GitHubCLI: GitHubAPITransport {
             throw GitHubCLIError.notInstalled
         }
         return path
-    }
-
-    // Previous builds saved the user-script bridge as the executable. Never launch it
-    // again; resolve gh directly while retaining the selected account and host.
-    static func resolvedExecutablePath(_ savedPath: String,
-                                       findExecutable: () throws -> String = { try GitHubCLI.findExecutable() }) throws -> String {
-        URL(fileURLWithPath: savedPath).lastPathComponent == "prharbor-gh"
-            ? try findExecutable() : savedPath
     }
 
     func api(_ endpoint: String, body: Data? = nil) async throws -> Data {

@@ -63,15 +63,18 @@ final class PullNotificationCoordinator {
     private var knownRotting: Set<String>?
     private var previousThresholds: [Int]?
 
-    func refreshed(assigned: [Edge], created: [Edge], requested: [Edge], fetched: PullSources, items: [TimelineItem]) {
+    /// Returns the day of a morning summary it sent, for the caller to remember.
+    @discardableResult
+    func refreshed(assigned: [Edge], created: [Edge], requested: [Edge], fetched: PullSources,
+                   items: [TimelineItem], settings: PullRequestSettings) -> String? {
         let newRequested = reviewRequested.update(edges: requested, fetched: fetched.contains(.requested), canNotify: hasLoadedOnce)
         let newAssigned = self.assigned.update(edges: assigned, fetched: fetched.contains(.assigned), canNotify: hasLoadedOnce)
         let newCreated = self.created.update(edges: created, fetched: fetched.contains(.created), canNotify: hasLoadedOnce)
         if hasLoadedOnce {
-            sendPRNotifications(newReviewRequested: newRequested, newAssigned: newAssigned, newCreated: newCreated)
+            sendPRNotifications(newReviewRequested: newRequested, newAssigned: newAssigned, newCreated: newCreated, settings: settings)
         }
-        summarize(items)
         hasLoadedOnce = true
+        return summarize(items, settings: settings)
     }
 
     func reset() {
@@ -83,31 +86,33 @@ final class PullNotificationCoordinator {
         previousThresholds = nil
     }
 
-    private func summarize(_ items: [TimelineItem]) {
+    private func summarize(_ items: [TimelineItem], settings: PullRequestSettings) -> String? {
         let rotting = TimelineNotificationPolicy.rottingOwned(items)
-        let thresholds = Defaults[.freshnessThresholds]
-        if Defaults[.notifyRotting] {
+        let thresholds = settings.thresholds
+        if settings.notifyRotting {
             for item in TimelineNotificationPolicy.newlyRotting(rotting, previousIDs: knownRotting, previousThresholds: previousThresholds, thresholds: thresholds) {
                 sendPRNotification(title: "A pull request went quiet", pr: item.pull, category: "rotting")
             }
         }
         knownRotting = Set(rotting.map(\.id))
         previousThresholds = thresholds
-        guard Defaults[.morningSummary] else { return }
-        guard let day = TimelineNotificationPolicy.summaryDay(now: .now, calendar: .current, scheduledMinutes: Defaults[.morningSummaryMinutes], refreshMinutes: Defaults[.refreshRate], lastDay: Defaults[.lastMorningSummary]) else { return }
+        guard settings.morningSummary,
+              let day = TimelineNotificationPolicy.summaryDay(now: .now, calendar: .current, scheduledMinutes: settings.morningSummaryMinutes,
+                                                              refreshMinutes: settings.refreshMinutes, lastDay: settings.lastMorningSummary) else { return nil }
         let waiting = TimelineNotificationPolicy.waitingForReview(items).count
-        guard waiting > 0 || !rotting.isEmpty else { return }
+        guard waiting > 0 || !rotting.isEmpty else { return nil }
         sendTimelineNotification(title: "Your pull requests this morning", body: "\(waiting) waiting for your review · \(rotting.count) of yours rotting")
-        Defaults[.lastMorningSummary] = day
+        return day
     }
 }
 
 func sendPRNotifications(
     newReviewRequested: [Pull],
     newAssigned: [Pull],
-    newCreated: [Pull]
+    newCreated: [Pull],
+    settings: PullRequestSettings
 ) {
-    if Defaults[.notifyReviewRequested] {
+    if settings.notifyReviewRequested {
         for pr in newReviewRequested {
             sendPRNotification(
                 title: "Review requested",
@@ -117,7 +122,7 @@ func sendPRNotifications(
         }
     }
 
-    if Defaults[.notifyAssigned] {
+    if settings.notifyAssigned {
         for pr in newAssigned {
             sendPRNotification(
                 title: "PR assigned to you",
@@ -127,7 +132,7 @@ func sendPRNotifications(
         }
     }
 
-    if Defaults[.notifyCreated] {
+    if settings.notifyCreated {
         for pr in newCreated {
             sendPRNotification(
                 title: "New PR created",

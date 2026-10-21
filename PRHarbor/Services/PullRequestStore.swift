@@ -48,6 +48,7 @@ final class PullRequestStore {
     let session: GitHubSession
     private let cache: PullSnapshotCache
     private let clientProvider: (String, BuildType) async throws -> GitHubClient
+    private let settings: () -> PullRequestSettings
     private var cacheWriteTask: Task<Void, Never>?
     private var cacheRemovalTask: Task<Void, Never>?
     private var startupTask: Task<Void, Never>?
@@ -55,10 +56,12 @@ final class PullRequestStore {
 
     init(startAutomatically: Bool = true, session: GitHubSession? = nil,
          cache: PullSnapshotCache = .temporary(),
-         clientProvider: ((String, BuildType) async throws -> GitHubClient)? = nil) {
+         clientProvider: ((String, BuildType) async throws -> GitHubClient)? = nil,
+         settings: @escaping () -> PullRequestSettings = { .saved }) {
         let session = session ?? GitHubSession()
         self.session = session
         self.cache = cache
+        self.settings = settings
         self.clientProvider = clientProvider ?? { try await session.client(baseURL: $0, buildType: $1) }
         guard startAutomatically else { return }
         startWithCache()
@@ -87,7 +90,7 @@ final class PullRequestStore {
     }
 
     private var currentCount: Int {
-        switch Defaults[.counterType] {
+        switch settings().counterType {
         case .rotting:
             timelineItems.filter { $0.hasKnownQuietPeriod && $0.freshness == .rotting && $0.snoozedUntil == nil }.count
         case .waitingOnYou:
@@ -139,7 +142,7 @@ final class PullRequestStore {
     }
     private func startAutoRefresh() {
         refreshTimer?.invalidate()
-        let interval = Double(max(1, Defaults[.refreshRate])) * 60
+        let interval = settings().refreshInterval
         let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.refresh(respectFreshness: true)
@@ -154,56 +157,43 @@ final class PullRequestStore {
     }
 
     private func observeRefreshRate() {
-        refreshRateObservation = Defaults.observe(.refreshRate) { [weak self] change in
-            guard change.oldValue != change.newValue else { return }
-            Task { @MainActor in
-                self?.startAutoRefresh()
-            }
-        }
+        onChange(of: .refreshRate) { $0.startAutoRefresh() }
     }
 
     private func observeCounterType() {
-        counterTypeObservation = Defaults.observe(.counterType) { [weak self] change in
-            guard change.oldValue != change.newValue else { return }
-            Task { @MainActor in
-                self?.rebuildTimelineItems()
-                self?.scheduleSettingsRefresh()
-            }
+        onChange(of: .counterType) {
+            $0.rebuildTimelineItems()
+            $0.scheduleSettingsRefresh()
         }
     }
 
     private func observeDataSettings() {
-        func watch<T: Defaults.Serializable & Equatable>(_ key: Defaults.Key<T>) {
-            settingsObservations.append(
-                Defaults.observe(key) { [weak self] change in
-                    guard change.oldValue != change.newValue else { return }
-                    Task { @MainActor in self?.scheduleSettingsRefresh() }
-                }
-            )
+        for key in [Defaults.Key<Bool>.showAssigned, .showCreated, .showRequested, .hideDrafts, .notifyReviewRequested,
+                    .notifyAssigned, .notifyCreated, .notifyRotting, .morningSummary] {
+            onChange(of: key) { $0.scheduleSettingsRefresh() }
         }
-        watch(.showAssigned)
-        watch(.showCreated)
-        watch(.showRequested)
-        watch(.buildType)
-        watch(.hideDrafts)
-        watch(.notifyReviewRequested)
-        watch(.notifyAssigned)
-        watch(.notifyCreated)
-        watch(.notifyRotting)
-        watch(.morningSummary)
-        watch(.githubApiBaseUrl)
+        onChange(of: .buildType) { $0.scheduleSettingsRefresh() }
+        onChange(of: .githubApiBaseUrl) { $0.scheduleSettingsRefresh() }
         // These change presentation and counters, never the GitHub query.
-        func watchLocal<T: Defaults.Serializable & Equatable>(_ key: Defaults.Key<T>) {
-            settingsObservations.append(Defaults.observe(key) { [weak self] change in
-                guard change.oldValue != change.newValue else { return }
-                Task { @MainActor in self?.rebuildTimelineItems() }
-            })
-        }
-        watchLocal(.morningSummaryMinutes)
-        watchLocal(.freshnessThresholds)
-        watchLocal(.ownCommentsCount)
-        watchLocal(.botAccounts)
-        watchLocal(.snoozedPulls)
+        onChange(of: .morningSummaryMinutes) { $0.rebuildTimelineItems() }
+        onChange(of: .freshnessThresholds) { $0.rebuildTimelineItems() }
+        onChange(of: .ownCommentsCount) { $0.rebuildTimelineItems() }
+        onChange(of: .botAccounts) { $0.rebuildTimelineItems() }
+        onChange(of: .snoozedPulls) { $0.rebuildTimelineItems() }
+    }
+
+    /// Preference changes made in the UI arrive on the main thread and are handled in the same
+    /// turn, so the panel never draws a frame with the previous projection.
+    private func onChange<T: Defaults.Serializable & Equatable>(of key: Defaults.Key<T>,
+                                                               _ action: @escaping @MainActor (PullRequestStore) -> Void) {
+        settingsObservations.append(Defaults.observe(key) { [weak self] change in
+            guard change.oldValue != change.newValue else { return }
+            if Thread.isMainThread {
+                MainActor.assumeIsolated { self.map(action) }
+            } else {
+                Task { @MainActor in self.map(action) }
+            }
+        })
     }
 
     private func scheduleSettingsRefresh() {
@@ -217,29 +207,7 @@ final class PullRequestStore {
     }
 
     var snapshotScope: PullSnapshotScope {
-        let username = session.connection?.username ?? ""
-        let showAssigned = Defaults[.showAssigned]
-        let showCreated = Defaults[.showCreated]
-        let showRequested = Defaults[.showRequested]
-        let counterType = Defaults[.counterType]
-        let fetchAssigned = showAssigned
-            || Defaults[.notifyAssigned]
-            || counterType == .assigned
-        let fetchCreated = showCreated
-            || Defaults[.notifyRotting]
-            || Defaults[.morningSummary]
-            || counterType == .rotting
-            || Defaults[.notifyCreated]
-            || counterType == .created
-        let fetchRequested = showRequested
-            || Defaults[.morningSummary]
-            || counterType == .waitingOnYou
-            || counterType == .rotting
-            || Defaults[.notifyReviewRequested]
-            || counterType == .reviewRequested
-        return PullSnapshotScope(username: username, baseURL: Defaults[.githubApiBaseUrl],
-                                 buildType: Defaults[.buildType], hideDrafts: Defaults[.hideDrafts],
-                                 assigned: fetchAssigned, created: fetchCreated, requested: fetchRequested)
+        settings().scope(username: session.connection?.username ?? "")
     }
 
     private func currentToken() -> RefreshToken {
@@ -284,7 +252,7 @@ final class PullRequestStore {
     func refresh(force: Bool = false, respectFreshness: Bool = false) {
         if respectFreshness, error == nil, let snapshot = currentSnapshot,
            snapshot.scope == snapshotScope,
-           snapshot.isFresh(at: .now, interval: Double(max(1, Defaults[.refreshRate])) * 60) { return }
+           snapshot.isFresh(at: .now, interval: settings().refreshInterval) { return }
         guard !isLoading || force else { return }
         guard isConfigured else {
             refreshTask?.cancel()
@@ -436,12 +404,14 @@ final class PullRequestStore {
         hasIncompleteData = false
         reconcileSnoozes(assigned + created + requested)
         publishPulls(assigned: assigned, created: created, requested: requested)
-        notifications.refreshed(assigned: assigned, created: created, requested: requested,
-                                fetched: fetched, items: timelineItems)
+        if let day = notifications.refreshed(assigned: assigned, created: created, requested: requested,
+                                             fetched: fetched, items: timelineItems, settings: settings()) {
+            Defaults[.lastMorningSummary] = day
+        }
         startMinuteTimer()
         // Schedule from completion, so a slow request cannot make the next tick
         // fall just before freshness expires and accidentally skip a whole interval.
-        refreshTimer?.fireDate = (lastSyncedAt ?? .now).addingTimeInterval(Double(max(1, Defaults[.refreshRate])) * 60)
+        refreshTimer?.fireDate = (lastSyncedAt ?? .now).addingTimeInterval(settings().refreshInterval)
         isLoading = false
         refreshTask = nil
     }
@@ -479,19 +449,22 @@ final class PullRequestStore {
                        ownComments: Bool? = nil, snoozed: [String: Double]? = nil,
                        includeAssigned: Bool = true, includeCreated: Bool = true,
                        includeRequested: Bool = true, username: String? = nil) -> TimelineInput {
-        TimelineInput(assigned: assignedPulls, created: createdPulls, requested: reviewRequestedPulls,
+        let settings = settings()
+        return TimelineInput(assigned: assignedPulls, created: createdPulls, requested: reviewRequestedPulls,
                       includeAssigned: includeAssigned, includeCreated: includeCreated, includeRequested: includeRequested,
                       username: username ?? session.connection?.username ?? "", now: now,
-                      thresholds: thresholds ?? Defaults[.freshnessThresholds], bots: bots ?? Defaults[.botAccounts],
-                      ownComments: ownComments ?? Defaults[.ownCommentsCount], snoozed: snoozed ?? Defaults[.snoozedPulls])
+                      thresholds: thresholds ?? settings.thresholds, bots: bots ?? settings.bots,
+                      ownComments: ownComments ?? settings.ownComments, snoozed: snoozed ?? settings.snoozed)
     }
 
     private func reconcileSnoozes(_ edges: [Edge]) {
-        let (snoozed, activity) = TimelineSnoozePolicy.reconcile(edges: edges, snoozed: Defaults[.snoozedPulls],
-            activity: Defaults[.snoozeActivity], now: .now, wakeOnComment: Defaults[.wakeOnComment],
+        let settings = settings()
+        let (snoozed, activity) = TimelineSnoozePolicy.reconcile(edges: edges, snoozed: settings.snoozed,
+            activity: settings.snoozeActivity, now: .now, wakeOnComment: settings.wakeOnComment,
             username: session.connection?.username ?? "")
-        if Defaults[.snoozedPulls] != snoozed { Defaults[.snoozedPulls] = snoozed }
-        if Defaults[.snoozeActivity] != activity { Defaults[.snoozeActivity] = activity }
+        // Waking a snoozed pull request is the store's only preference write besides the summary day.
+        if settings.snoozed != snoozed { Defaults[.snoozedPulls] = snoozed }
+        if settings.snoozeActivity != activity { Defaults[.snoozeActivity] = activity }
     }
 
     private func finishFailedRefresh(_ error: Error, generation: Int) {

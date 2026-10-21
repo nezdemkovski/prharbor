@@ -5,6 +5,35 @@ import Testing
 
 @Suite("Service cleanup")
 struct ServiceCleanupTests {
+    @Test @MainActor func refreshQueriesFollowTheInjectedSettings() {
+        var settings = PullRequestSettings(showAssigned: false, showCreated: false, showRequested: false,
+                                           notifyAssigned: false, notifyCreated: false, notifyReviewRequested: false)
+        settings.counterType = .none
+        let session = GitHubSession(connection: GitHubConnection(username: "octocat", apiBaseURL: settings.apiBaseURL))
+        var current = settings
+        let store = PullRequestStore(startAutomatically: false, session: session, settings: { current })
+        #expect(!store.snapshotScope.assigned && !store.snapshotScope.created && !store.snapshotScope.requested)
+        // The rotting counter needs your own PRs and the ones waiting on you, even when both tabs are hidden.
+        current.counterType = .rotting
+        #expect(!store.snapshotScope.assigned && store.snapshotScope.created && store.snapshotScope.requested)
+        #expect(store.snapshotScope.username == "octocat")
+    }
+
+    @Test @MainActor func snoozingUpdatesTheProjectionInTheSameTurn() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory); Defaults[.snoozedPulls] = [:] }
+        let cache = PullSnapshotCache(directory: directory)
+        let session = GitHubSession(connection: GitHubConnection(username: "yuri", apiBaseURL: Defaults[.githubApiBaseUrl]))
+        let probe = PullRequestStore(startAutomatically: false, session: session)
+        let edge = Edge(node: try #require(TimelinePreviewData.items(now: .now).first { $0.snoozedUntil == nil }).pull)
+        await cache.save(PullSnapshot(scope: probe.snapshotScope, syncedAt: .now, assigned: [edge], created: [], requested: []))
+        let store = PullRequestStore(session: session, cache: cache, clientProvider: { _, _ in throw CancellationError() })
+        for _ in 0..<100 where store.timelineItems.isEmpty { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(store.timelineItems.first?.snoozedUntil == nil)
+        Defaults[.snoozedPulls] = [edge.node.url.absoluteString: Date.now.addingTimeInterval(86_400).timeIntervalSince1970]
+        #expect(store.timelineItems.first?.snoozedUntil != nil)
+    }
+
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
 
     private func pull(owner: String = "octocat") -> Pull {

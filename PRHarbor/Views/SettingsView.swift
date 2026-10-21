@@ -4,12 +4,13 @@ import LaunchAtLogin
 import UserNotifications
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general = "General", timeline = "Timeline", bots = "Bots", notifications = "Notifications"
-    case intelligence = "Intelligence", account = "Account"
+    case general = "General", pullRequests = "Pull Requests", timeline = "Timeline", bots = "Bots"
+    case notifications = "Notifications", intelligence = "Apple Intelligence", account = "Account"
     var id: Self { self }
     var symbol: String {
         switch self {
         case .general: "gearshape"
+        case .pullRequests: "arrow.triangle.pull"
         case .timeline: "chart.bar.xaxis"
         case .bots: "gearshape.2"
         case .notifications: "bell.badge"
@@ -49,6 +50,7 @@ struct SettingsView: View {
         Group {
             switch tab {
             case .general: GeneralSettings()
+            case .pullRequests: PullRequestsSettings()
             case .timeline: TimelineSettings(store: store, usernameOverride: usernameOverride)
             case .bots: BotSettings()
             case .notifications: NotificationSettings()
@@ -62,42 +64,56 @@ struct SettingsView: View {
 }
 
 private struct GeneralSettings: View {
-    @Default(.showRequested) private var requested
-    @Default(.showAssigned) private var assigned
-    @Default(.showCreated) private var created
-    @Default(.hideDrafts) private var hideDrafts
-    @Default(.sortOrder) private var sort
-    @Default(.buildType) private var buildType
-    @Default(.counterType) private var counter
     @Default(.refreshRate) private var refresh
-    @Default(.wakeOnComment) private var wake
-    private var createdSort: Binding<Bool> {
-        Binding(get: { sort == .createdNewest || sort == .createdOldest }, set: { sort = $0 ? .createdNewest : .updatedNewest })
-    }
+    @Default(.counterType) private var counter
 
     var body: some View {
         Form {
-            Section("Pull requests") {
-                Toggle("Review requested", isOn: $requested)
-                Toggle("Assigned to me", isOn: $assigned)
-                Toggle("My pull requests", isOn: $created)
-                Toggle("Hide drafts", isOn: $hideDrafts)
-                Picker("Sort inside a repository", selection: createdSort) {
-                    Text("Last updated").tag(false)
-                    Text("Created").tag(true)
+            Section("Startup") {
+                LaunchAtLogin.Toggle("Open at login")
+            }
+            Section {
+                Picker("Refresh every", selection: $refresh) {
+                    ForEach([1, 5, 10, 15, 30], id: \.self) { Text("\($0) min").tag($0) }
                 }
-                Picker("Checks from", selection: $buildType) {
-                    ForEach(BuildType.allCases) { Text($0.description).tag($0) }
-                }
+            } header: {
+                Text("Sync")
+            } footer: {
+                Text("Opening the panel also refreshes when the last sync is older than this.")
             }
             Section("Menu bar") {
                 Picker("Counter", selection: $counter) {
                     ForEach(CounterType.allCases) { Text($0.description).tag($0) }
                 }
-                Picker("Refresh every", selection: $refresh) {
-                    ForEach([1, 5, 10, 15, 30], id: \.self) { Text("\($0) min").tag($0) }
+            }
+        }
+    }
+}
+
+private struct PullRequestsSettings: View {
+    @Default(.showRequested) private var requested
+    @Default(.showAssigned) private var assigned
+    @Default(.showCreated) private var created
+    @Default(.hideDrafts) private var hideDrafts
+    @Default(.buildType) private var buildType
+    @Default(.wakeOnComment) private var wake
+
+    var body: some View {
+        Form {
+            Section("Show in the panel") {
+                Toggle("Review requested", isOn: $requested)
+                Toggle("Assigned to me", isOn: $assigned)
+                Toggle("My pull requests", isOn: $created)
+                Toggle("Hide drafts", isOn: $hideDrafts)
+            }
+            Section {
+                Picker("CI status from", selection: $buildType) {
+                    ForEach(BuildType.allCases) { Text($0.description).tag($0) }
                 }
-                LaunchAtLogin.Toggle("Open at login")
+            } header: {
+                Text("CI status")
+            } footer: {
+                Text("Which checks the panel reads for each pull request's latest commit.")
             }
             Section {
                 Toggle("Wake up when someone comments", isOn: $wake)
@@ -113,7 +129,6 @@ private struct GeneralSettings: View {
 private struct TimelineSettings: View {
     let store: PullRequestStore
     let usernameOverride: String?
-    @Default(.timelineRange) private var range
     @Default(.ownCommentsCount) private var comments
     @Default(.mergedLayersStyle) private var merged
 
@@ -121,22 +136,14 @@ private struct TimelineSettings: View {
         Form {
             Section {
                 FreshnessSettings(store: store, usernameOverride: usernameOverride)
-            } header: {
-                Text("Freshness")
-            } footer: {
-                Text("How long a pull request can sit quietly before it changes color. Drag the handles.")
-            }
-            Section {
-                Picker("Default range", selection: $range) {
-                    Text("2 weeks").tag(14)
-                    Text("1 month").tag(30)
-                    Text("3 months").tag(90)
-                    Text("6 months").tag(182)
-                }
                 Toggle(isOn: $comments) {
                     Text("My own comments count as activity")
                     Text("When off, only commits reset the quiet time on your pull requests.")
                 }
+            } header: {
+                Text("Freshness")
+            } footer: {
+                Text("How long a pull request can sit quietly before it changes color. Drag the handles.")
             }
             Section("Stacks") {
                 Picker(selection: $merged) {
@@ -228,12 +235,14 @@ private struct NotificationSettings: View {
                 Toggle("One of yours starts rotting", isOn: $rotting)
             }
             Section {
-                Toggle("Morning summary", isOn: $morning)
+                Toggle("Morning summary notification", isOn: $morning)
                 if morning {
                     DatePicker("Time", selection: time, displayedComponents: .hourAndMinute)
                 }
+            } header: {
+                Text("Daily summary")
             } footer: {
-                Text("Notifications appear while PR Harbor is running.")
+                Text("How many pull requests wait for your review and how many of yours are rotting. Notifications appear while PR Harbor is running.")
             }
         }
         .task { await permission.refresh() }
@@ -264,12 +273,12 @@ private struct IntelligenceSettings: View {
                     Text("Type a phrase in the search field. Results update automatically; regular searches stay instant.")
                 }
                 Toggle(isOn: $morning) {
-                    Text("Morning brief")
-                    Text("An overview of up to three pull requests. Expand it to generate short explanations.")
+                    Text("Morning overview in the panel")
+                    Text("Up to three pull requests that need you, with short explanations when expanded.")
                 }
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Uses Apple's on-device model. Both features are off by default and do not change regular search or morning notifications.")
+                    Text("Uses Apple's on-device model. Both features are off by default and do not change regular search or the morning summary notification.")
                     if let message = PRIntelligenceService.unavailableMessage { Text(message) }
                 }
             }
@@ -295,6 +304,13 @@ private struct AccountSettings: View {
 
     var body: some View {
         Form {
+            Section {
+                TextField("API URL", text: $apiURL)
+            } header: {
+                Text("Server")
+            } footer: {
+                Text("Use https://api.github.com for GitHub, or your Enterprise API URL ending in /api/v3. Set it before adding a token; changing it disconnects the account.")
+            }
             Section {
                 if let username = usernameOverride ?? (session.isConfigured ? session.connection?.username : nil), !replacing {
                     LabeledContent("Signed in as") {
@@ -343,13 +359,6 @@ private struct AccountSettings: View {
                 Text(session.isConfigured && !replacing
                     ? "The token is stored in your Keychain."
                     : "For organizations with SAML single sign-on, choose Configure SSO next to the token on GitHub and authorize it.")
-            }
-            Section {
-                TextField("API URL", text: $apiURL)
-            } header: {
-                Text("Server")
-            } footer: {
-                Text("Use https://api.github.com for GitHub, or your Enterprise API URL ending in /api/v3.")
             }
         }
         .onDisappear { connector.cancel() }

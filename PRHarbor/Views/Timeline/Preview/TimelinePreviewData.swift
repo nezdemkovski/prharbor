@@ -55,7 +55,7 @@ enum TimelinePreviewData {
         struct Event: Decodable { let t: Double, type: String; var who: String? }
         struct Stack: Decodable { let id: String, num: Int, pos: Int, base: String }
     }
-    // Identical public mock data from prototype/timeline.html; never reads private data.js.
+    // Public mock data from the original design prototype; never real pull requests.
     private static let prototypeJSON = #"""
     [
     {"id":1,"repo":"prharbor","num":418,"title":"Timeline view for open pull requests","author":"yuri","created":2.1,"draft":true,"ci":"pass","review":"none","reviewers":[],"add":812,"del":140,"events":[{"t":2.1,"type":"opened"},{"t":1.4,"type":"commit"},{"t":0.3,"type":"commit"}]},

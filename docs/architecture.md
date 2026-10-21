@@ -11,6 +11,7 @@ The Xcode project uses synchronized folders: a file joins its target by being in
 - `Services/`: the store, snapshot cache, screen controller and intelligence.
 - `Views/Timeline/`: the panel, with `Drawing/` for the axis, grid, track and avatars and `Rows/` for row types.
 - `Views/Settings/`: the settings window, one file per pane.
+- `Views/Components/`: the panel's controls as SwiftUI styles over system buttons and toggles: `SegmentedControl`, `ChipToggleStyle`, `PrimaryButtonStyle`, `IconButtonStyle` and `TintedButtonStyle`. Screens use these instead of styling a plain button in place, so hover, press, disabled and accessibility behave the same everywhere.
 - `Helpers/`: design tokens, preference keys, notifications.
 
 ## Responsibilities

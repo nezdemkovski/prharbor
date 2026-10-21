@@ -51,9 +51,7 @@ struct TimelineAxis: View {
                 if let brush {
                     Button(action: clearBrush) {
                         HStack(spacing: Spacing.xs) { Text(brush.upperBound.isFinite ? "\(TimelinePolicy.duration(brush.lowerBound))–\(TimelinePolicy.duration(brush.upperBound))" : "\(TimelinePolicy.duration(brush.lowerBound))+"); Image(systemName: "xmark").font(.ui(Typography.micro)) }
-                            .font(.ui(Typography.caption, .semibold)).padding(.horizontal, Spacing.m).padding(.vertical, Spacing.xxxs)
-                            .foregroundStyle(Palette.onAccent).background(Palette.accentFill, in: Capsule())
-                    }.buttonStyle(.plain).fixedSize()
+                    }.buttonStyle(.primaryCompact).fixedSize()
                         .position(x: max(45, min(geometry.size.width - 45, (scale.position(age: brush.lowerBound) + scale.position(age: brush.upperBound)) / 2 * geometry.size.width)), y: 18)
                         .accessibilityLabel("Clear timeline selection")
                 } else if let cursorAge {

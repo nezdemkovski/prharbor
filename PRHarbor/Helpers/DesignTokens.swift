@@ -186,6 +186,13 @@ nonisolated enum Opacity {
     static let shadowSoft = 0.08      // segment selection shadow
     static let shadow = 0.2           // button shadow
     static let shadowStrong = 0.25    // handles
+    static let disabled = 0.45        // disabled controls and empty filters
+}
+
+/// Brightness changes that show a control reacting to the pointer.
+nonisolated enum Feedback {
+    static let hoverBrightness = 0.04
+    static let pressedBrightness = -0.08
 }
 
 /// Panel geometry shared by views and layout calculations.

@@ -69,8 +69,8 @@ struct TimelineDetailView: View {
                 Text(item.pull.headRefName).font(.ui(Typography.footnote, .medium, design: .monospaced)).lineLimit(1).truncationMode(.tail)
                 Button {
                     NSPasteboard.general.clearContents(); NSPasteboard.general.setString(item.pull.headRefName, forType: .string); copied = true
-                } label: { Image(systemName: copied ? "checkmark" : "doc.on.doc").font(.ui(Typography.footnote)).frame(width: Size.smallButton, height: Size.smallButton).foregroundStyle(Palette.textTertiary) }
-                    .buttonStyle(.plain).help("Copy branch name").accessibilityLabel("Copy branch name")
+                } label: { Image(systemName: copied ? "checkmark" : "doc.on.doc") }
+                    .buttonStyle(.icon(size: Size.smallButton, symbolSize: Typography.footnote, color: Palette.textTertiary)).help("Copy branch name").accessibilityLabel("Copy branch name")
                     .task(id: copied) { guard copied else { return }; try? await Task.sleep(for: .seconds(2)); if !Task.isCancelled { copied = false } }
             }.frame(minWidth: Layout.branchMinWidth, maxWidth: Layout.branchMaxWidth)
             }
@@ -92,18 +92,13 @@ struct TimelineDetailView: View {
                 Menu {
                     if item.snoozedUntil != nil { Button("Wake up") { wake() } }
                     else { Button("Tomorrow") { snooze(days: 1) }; Button("In 3 days") { snooze(days: 3) }; Button("Next week") { snooze(days: 7) } }
-                } label: { Image(systemName: "moon").font(.ui(Typography.icon)).foregroundStyle(Palette.textSecondary).frame(width: Size.iconButton, height: Size.iconButton) }
-                .tint(Palette.textSecondary).menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("Snooze (S)").accessibilityLabel("Snooze")
+                } label: { Image(systemName: "moon") }
+                .menuStyle(.button).buttonStyle(.icon).menuIndicator(.hidden).fixedSize().help("Snooze (S)").accessibilityLabel("Snooze")
             }
             if item.isMine { tool("xmark", label: "Close on GitHub") { openURL(item.pull.url) } }
             Button(action: primary) {
                 HStack(spacing: Spacing.xs) { Text(primaryLabel); Text("⏎").opacity(Opacity.deemphasized) }
-                    .font(.ui(Typography.body, .medium)).foregroundStyle(Palette.onAccent)
-                    .padding(.horizontal, Spacing.xxl).frame(height: Size.button)
-                    .background(Palette.accentFill, in: RoundedRectangle(cornerRadius: Radius.m))
-                    .overlay(alignment: .top) { RoundedRectangle(cornerRadius: Radius.m).strokeBorder(Palette.onAccent.opacity(Opacity.outline), lineWidth: 0.5) }
-                    .shadow(color: Palette.shadow.opacity(Opacity.shadow), radius: 0.5, y: 0.5)
-            }.buttonStyle(.plain).disabled(rebasing).padding(.leading, Spacing.m)
+            }.buttonStyle(.primary).disabled(rebasing).padding(.leading, Spacing.m)
                 .help(!item.isBlocked ? "Continue on GitHub (Return)" : "Select the base pull request (Return)")
                 .contextMenu {
                     if item.pull.stack != nil { Button("Rebase stack…") { confirmRebase = true }.disabled(rebasing) }
@@ -111,8 +106,8 @@ struct TimelineDetailView: View {
         }.fixedSize()
     }
     private func tool(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Image(systemName: symbol).font(.ui(Typography.icon)).foregroundStyle(Palette.textSecondary).frame(width: Size.iconButton, height: Size.iconButton) }
-            .buttonStyle(.plain).help(label).accessibilityLabel(label)
+        Button(action: action) { Image(systemName: symbol) }
+            .buttonStyle(.icon).help(label).accessibilityLabel(label)
     }
     @ViewBuilder private var checksSummary: some View {
         let failures = item.checks.filter { ciStatusKind($0.status) == .failure }

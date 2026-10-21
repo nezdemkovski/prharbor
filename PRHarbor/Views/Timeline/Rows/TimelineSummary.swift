@@ -8,26 +8,18 @@ struct TimelineSummary: View {
             HStack(spacing: Spacing.xxxs) {
                 ForEach(Freshness.allCases) { freshness in
                     let count = items.filter { $0.snoozedUntil == nil && $0.hasKnownQuietPeriod && $0.freshness == freshness }.count
-                    Button {
-                        zone = zone == freshness ? nil : freshness
-                    } label: {
+                    Toggle(isOn: Binding(get: { zone == freshness }, set: { zone = $0 ? freshness : nil })) {
                         HStack(spacing: Spacing.xs) {
                             Circle().fill(freshness.fill).frame(width: Size.dot, height: Size.dot)
                             Text(freshness.rawValue)
                             Text("\(count)").fontWeight(.semibold).foregroundStyle(Palette.textPrimary)
                         }
-                        .font(.ui(Typography.callout)).foregroundStyle(Palette.textSecondary)
-                        .padding(.horizontal, Spacing.m).padding(.vertical, Spacing.xxs).frame(height: Size.chip)
-                        .background(zone == freshness ? Palette.raised : .clear, in: RoundedRectangle(cornerRadius: Radius.s))
-                        .overlay { if zone == freshness { RoundedRectangle(cornerRadius: Radius.s).strokeBorder(Palette.strong) } }
                     }
-                    .buttonStyle(.plain)
-                    .disabled(count == 0 && zone != freshness).opacity(count == 0 ? 0.45 : 1)
-                    .accessibilityAddTraits(zone == freshness ? [.isSelected] : [])
+                    .toggleStyle(.chip)
+                    .disabled(count == 0 && zone != freshness)
                 }
             }
-            .padding(Spacing.xxs).background(Palette.track, in: RoundedRectangle(cornerRadius: Radius.control))
-            .overlay(RoundedRectangle(cornerRadius: Radius.control).strokeBorder(Palette.line))
+            .controlTrack()
             let people = Set(items.filter { !$0.isMine && !$0.isBot && $0.reviewRequested && $0.snoozedUntil == nil }.compactMap { $0.pull.author?.login }).count
             if people > 0 {
                 Text("blocking **\(people)** \(people == 1 ? "person" : "people")").font(.ui(Typography.callout)).foregroundStyle(Palette.textSecondary)

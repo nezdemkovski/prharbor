@@ -1,42 +1,6 @@
 import SwiftUI
 import Defaults
 
-struct TimelineSegment<Value: Hashable>: View {
-    let label: String
-    @Binding var selection: Value
-    let options: [(value: Value, title: String, count: Int?)]
-    var body: some View {
-        HStack(spacing: 0) {
-            ForEach(options.indices, id: \.self) { index in
-                let option = options[index]
-                Button { selection = option.value } label: {
-                    HStack(spacing: Spacing.xs) {
-                        Text(option.title)
-                        if let count = option.count { Text("\(count)").fontWeight(.medium).foregroundStyle(Palette.textTertiary) }
-                    }
-                    .font(.ui(Typography.callout, .medium))
-                    .foregroundStyle(selection == option.value ? Palette.textPrimary : Palette.textSecondary)
-                    .padding(.horizontal, Spacing.l).padding(.vertical, Spacing.xs).frame(height: Size.control)
-                    .background {
-                        if selection == option.value {
-                            RoundedRectangle(cornerRadius: Radius.s).fill(Palette.raised)
-                                .shadow(color: Palette.shadow.opacity(Opacity.shadowSoft), radius: 1, y: 1)
-                                .overlay(RoundedRectangle(cornerRadius: Radius.s).strokeBorder(Palette.strong, lineWidth: 1))
-                        }
-                    }
-                    .contentShape(Rectangle())
-                }.buttonStyle(.plain)
-                    .accessibilityLabel(option.title + (option.count.map { ", \($0) pull requests" } ?? ""))
-                    .accessibilityAddTraits(selection == option.value ? [.isSelected] : [])
-            }
-        }
-        .padding(Spacing.xxs).background(Palette.track, in: RoundedRectangle(cornerRadius: Radius.control))
-        .overlay(RoundedRectangle(cornerRadius: Radius.control).strokeBorder(Palette.line))
-        .accessibilityElement(children: .contain).accessibilityLabel(label)
-        .fixedSize()
-    }
-}
-
 struct TimelineSearchBar: View {
     @Binding var query: String
     var focus: FocusState<Bool>.Binding
@@ -60,10 +24,8 @@ struct TimelineSearchBar: View {
                 Image(systemName: "sparkles").foregroundStyle(Palette.accent).frame(width: Size.statusIcon)
                     .help("Search understood with Apple Intelligence").accessibilityLabel("Search understood with Apple Intelligence")
             }
-            Button { focus.wrappedValue = true } label: {
-                Text("/").font(.ui(Typography.body, .semibold)).frame(width: Size.button, height: Size.button)
-                    .foregroundStyle(Palette.accent).background(Palette.accentSoft, in: RoundedRectangle(cornerRadius: Radius.control))
-            }.buttonStyle(.plain).help("Focus filter (/)").accessibilityLabel("Focus filter")
+            Button("/") { focus.wrappedValue = true }
+                .buttonStyle(.key).help("Focus filter (/)").accessibilityLabel("Focus filter")
         }.padding(.horizontal, Spacing.panel).padding(.vertical, Spacing.xxxl)
         .overlay(alignment: .bottom) { Rectangle().fill(Palette.line).frame(height: Size.hairline) }
     }
@@ -171,22 +133,22 @@ struct TimelineHeading: View {
     }
     var body: some View {
         HStack(spacing: Spacing.l) {
-            TimelineSegment(label: "Pull requests", selection: $tab, options: TimelineTab.allCases.map { tab in
+            SegmentedControl(label: "Pull requests", selection: $tab, options: TimelineTab.allCases.map { tab in
                 (tab, tab.rawValue, items.filter { tab == .all || (tab == .mine ? $0.isMine : !$0.isMine) }.count)
             })
-            HStack(spacing: Spacing.s) {
-                Circle().fill(syncColor).frame(width: Size.statusDot, height: Size.statusDot)
-                Text(isPreview ? "Mock data" : syncLabel).font(.ui(Typography.subheadline, .semibold))
+            Button { if !isPreview { store.refresh() } } label: {
+                HStack(spacing: Spacing.s) {
+                    Circle().fill(syncColor).frame(width: Size.statusDot, height: Size.statusDot)
+                    Text(isPreview ? "Mock data" : syncLabel)
+                }
             }
-            .foregroundStyle(syncColor)
-            .padding(.horizontal, Spacing.m).padding(.vertical, Spacing.xxs)
-            .background(isPreview ? Palette.track : syncColor.opacity(Opacity.badge), in: Capsule())
-            .help("Refresh from GitHub (⌘R)").onTapGesture { if !isPreview { store.refresh() } }
+            .buttonStyle(.badge(syncColor, background: isPreview ? Palette.track : syncColor.opacity(Opacity.badge)))
+            .help("Refresh from GitHub (⌘R)")
             Spacer(minLength: 0)
-            TimelineSegment(label: "Sort", selection: created, options: [(false, "Updated", nil), (true, "Created", nil)])
-            TimelineSegment(label: "Timeline range", selection: $range, options: [(14, "2W", nil), (30, "1M", nil), (90, "3M", nil), (182, "6M", nil)])
-            Button(action: onSettings) { Image(systemName: "gearshape").font(.ui(Typography.iconLarge)).frame(width: Size.iconButton, height: Size.iconButton).foregroundStyle(Palette.textSecondary) }
-                .buttonStyle(.plain).help("Settings (⌘,)").accessibilityLabel("Settings").keyboardShortcut(",")
+            SegmentedControl(label: "Sort", selection: created, options: [(false, "Updated", nil), (true, "Created", nil)])
+            SegmentedControl(label: "Timeline range", selection: $range, options: [(14, "2W", nil), (30, "1M", nil), (90, "3M", nil), (182, "6M", nil)])
+            Button(action: onSettings) { Image(systemName: "gearshape") }
+                .buttonStyle(.icon(size: Size.iconButton, symbolSize: Typography.iconLarge)).help("Settings (⌘,)").accessibilityLabel("Settings").keyboardShortcut(",")
                 .contextMenu { Button("Refresh") { store.refresh() }; Button("About PR Harbor", action: onAbout); Button("Quit PR Harbor", action: onQuit) }
         }.padding(.horizontal, Spacing.panel).padding(.top, Spacing.xxxl).padding(.bottom, Spacing.s)
         .background {

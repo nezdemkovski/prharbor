@@ -134,7 +134,9 @@ private actor CleanupQueryTransport: GitHubAPITransport {
     var lastQuery = ""
     func api(_ endpoint: String, body: Data?) async throws -> Data {
         lastQuery = try query(from: body!)
-        return Data(#"{"data":{"search":{"edges":[],"issueCount":0,"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#.utf8)
+        // One listed pull request makes the client request its details; none come back.
+        if lastQuery.contains("nodes(ids:") { return Data(#"{"data":{"nodes":[]}}"#.utf8) }
+        return Data(#"{"data":{"search":{"nodes":[{"id":"PR_1","url":"https://github.com/o/r/pull/1","updatedAt":"2026-09-16T00:00:00Z","isDraft":false,"mergeable":"MERGEABLE"}],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#.utf8)
     }
 }
 
@@ -267,10 +269,9 @@ private actor CleanupMutationTransport {
         }
         var fetched = edge
         fetched.node.title = revision == 1 ? "Before rebase" : "After rebase"
-        let response = GraphQLSearchResponse(data: ResponseData(search: Search(edges: [fetched],
-            pageInfo: PageInfo(hasNextPage: false, endCursor: nil))))
-        let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
-        return try encoder.encode(response)
+        // A rebase pushes new commits, which moves updatedAt.
+        fetched.node.updatedAt = fetched.node.updatedAt.addingTimeInterval(Double(revision))
+        return try PullFixtureResponse.data(for: body, edges: [fetched])
     }
 
     func releaseOld() {

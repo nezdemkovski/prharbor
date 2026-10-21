@@ -1,19 +1,45 @@
 
 import Foundation
 
-nonisolated struct GraphQLSearchResponse: Codable, Sendable {
-    var data: ResponseData
+/// Phase one of a refresh: a search page of identities and change markers.
+nonisolated struct GraphQLSummaryResponse: Decodable, Sendable {
+    var data: SummaryData
+
+    struct SummaryData: Decodable, Sendable {
+        var search: SummaryPage
+        /// The account that answered the query, compared with the connected account.
+        var viewer: User?
+    }
 }
 
-nonisolated struct ResponseData: Codable, Sendable {
-    var search: Search
-    /// The account that answered the query, compared with the connected account.
-    var viewer: User? = nil
-}
-
-nonisolated struct Search: Codable, Sendable {
-    var edges: [Edge]
+nonisolated struct SummaryPage: Decodable, Sendable {
+    var nodes: [PullSummary]
     var pageInfo: PageInfo
+    fileprivate enum CodingKeys: String, CodingKey { case nodes, pageInfo }
+}
+
+/// Enough of a pull request to tell whether cached details are still current.
+nonisolated struct PullSummary: Decodable, Sendable {
+    var id: String
+    var url: URL
+    var updatedAt: Date
+    var isDraft: Bool
+    var mergeable: String?
+    var stack: PullRequestStack?
+    var stackEntry: PullRequestStackPosition?
+    var commits: CommitsNodes?
+
+    var ciState: String? { commits?.nodes.first?.commit.statusCheckRollup?.state }
+}
+
+/// Phase two: full details for the requested node IDs.
+nonisolated struct GraphQLDetailsResponse: Decodable, Sendable {
+    var data: DetailsData
+
+    struct DetailsData: Decodable, Sendable {
+        var nodes: [Pull]
+        fileprivate enum CodingKeys: String, CodingKey { case nodes }
+    }
 }
 
 nonisolated struct PageInfo: Codable, Sendable {
@@ -264,12 +290,17 @@ nonisolated extension KeyedDecodingContainer {
     }
 }
 
-nonisolated extension Search {
-    private struct NullableEdge: Decodable, Sendable { var node: Pull? }
+nonisolated extension SummaryPage {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        edges = try container.decodeCompact([NullableEdge].self, forKey: .edges).compactMap { $0.node.map(Edge.init) }
+        nodes = try container.decodeCompact([PullSummary].self, forKey: .nodes)
         pageInfo = try container.decode(PageInfo.self, forKey: .pageInfo)
+    }
+}
+
+nonisolated extension GraphQLDetailsResponse.DetailsData {
+    init(from decoder: Decoder) throws {
+        nodes = try decoder.container(keyedBy: CodingKeys.self).decodeCompact([Pull].self, forKey: .nodes)
     }
 }
 

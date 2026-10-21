@@ -8,25 +8,65 @@ import Testing
 
 @Suite(.serialized)
 struct GitHubClientTests {
+    @Test func refreshesFetchDetailsOnlyForNewOrChangedPullRequests() async throws {
+        let fixtures = TimelinePreviewData.items(now: .now).map { Edge(node: $0.pull) }
+        var current = fixtures
+        let transport = TwoPhaseTransport(edges: current)
+        let client = try GitHubClient(baseURL: "https://api.github.com", buildType: .checks, transport: transport)
+
+        let first = try await client.fetchPulls(filter: "author:octocat")
+        #expect(first.map(\.node.url) == fixtures.map(\.node.url))
+        let firstBatches = await transport.detailBatches
+        #expect(firstBatches.map(\.count).reduce(0, +) == fixtures.count)
+        #expect(firstBatches.allSatisfy { $0.count <= GitHubClient.detailBatchSize })
+
+        // Nothing changed: one search, no details, and the cached details are reused.
+        await transport.reset(edges: current)
+        let known = Dictionary(uniqueKeysWithValues: first.map { ($0.node.url, $0.node) })
+        let unchanged = try await client.fetchPulls(filter: "author:octocat", known: known)
+        #expect(await transport.detailBatches.isEmpty)
+        #expect(unchanged.map(\.node) == first.map(\.node))
+
+        // A new comment moves updatedAt; a finished check only changes the CI state.
+        current[0].node.updatedAt = current[0].node.updatedAt.addingTimeInterval(60)
+        current[0].node.title = "Edited"
+        let checked = try #require(current.firstIndex { $0.node.commits?.nodes.first?.commit.statusCheckRollup != nil && $0.node.url != current[0].node.url })
+        current[checked].node.commits?.nodes[0].commit.statusCheckRollup?.state = "FAILURE"
+        await transport.reset(edges: current)
+        let changed = try await client.fetchPulls(filter: "author:octocat", known: known)
+        #expect(Set(await transport.detailBatches.flatMap { $0 }) == [current[0].node.url.absoluteString, current[checked].node.url.absoluteString])
+        #expect(changed[0].node.title == "Edited")
+        #expect(changed[checked].node.commits?.nodes.first?.commit.statusCheckRollup?.state == "FAILURE")
+        #expect(changed.map(\.node.url) == current.map(\.node.url))
+    }
+
     @Test func pagesDecodeWithEveryNullTheSchemaAllows() throws {
         // Null lists, null list elements and null objects are all legal in GitHub's schema
         // for the fields we select; none of them may fail the whole page.
-        let json = #"""
-        {"data":{"viewer":{"login":"octocat"},"search":{"pageInfo":{"hasNextPage":false,"endCursor":null},"edges":[null,{"node":null},{"node":{
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let summaries = #"""
+        {"data":{"viewer":{"login":"octocat"},"search":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[null,{
+          "id":"PR_7","url":"https://github.com/o/r/pull/7","updatedAt":"2026-09-16T00:00:00Z","isDraft":false,"mergeable":"MERGEABLE",
+          "stack":null,"stackEntry":null,"commits":{"nodes":[null,{"commit":{"statusCheckRollup":null}}]}}]}}}
+        """#
+        let page = try decoder.decode(GraphQLSummaryResponse.self, from: Data(summaries.utf8)).data.search
+        #expect(page.nodes.map(\.id) == ["PR_7"])
+        #expect(page.nodes.first?.ciState == nil)
+        let details = #"""
+        {"data":{"nodes":[null,{
           "number":7,"createdAt":"2026-09-16T00:00:00Z","updatedAt":"2026-09-16T00:00:00Z","title":"T","headRefName":"h","baseRefName":"main",
-          "url":"https://github.com/o/r/pull/7","isDraft":false,"reviewDecision":null,"mergeable":"MERGEABLE","stack":null,"stackEntry":null,
+          "url":"https://github.com/o/r/pull/7","isDraft":false,"reviewDecision":null,"mergeable":"MERGEABLE",
           "author":null,"repository":{"name":"r","nameWithOwner":"o/r"},
           "timelineItems":{"pageInfo":{"hasPreviousPage":false},"nodes":null},
           "reviewRequests":{"nodes":[null,{"requestedReviewer":null}]},
           "commits":{"nodes":[null,{"commit":{"statusCheckRollup":null,"checkSuites":{"nodes":[null,{"app":null,"checkRuns":null},
             {"app":{"name":"CI"},"checkRuns":{"nodes":[null,{"name":"build","conclusion":null,"detailsUrl":null}]}}]}}}]}
-        }}]}}}
+        }]}}
         """#
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let edges = try decoder.decode(GraphQLSearchResponse.self, from: Data(json.utf8)).data.search.edges
-        #expect(edges.map(\.node.number) == [7])
-        let pull = try #require(edges.first?.node)
+        let pulls = try decoder.decode(GraphQLDetailsResponse.self, from: Data(details.utf8)).data.nodes
+        #expect(pulls.map(\.number) == [7])
+        let pull = try #require(pulls.first)
         #expect(pull.timelineItems?.nodes.isEmpty == true)
         #expect(pull.reviewRequests?.nodes.count == 1)
         let checks = pull.commits.map(CICheck.from) ?? []
@@ -115,8 +155,8 @@ struct GitHubClientTests {
         let retryVariables = try #require(retry["variables"] as? [String: Any])
         #expect(secondVariables["cursor"] as? String == "next-page")
         #expect(retryVariables["cursor"] as? String == "next-page")
-        #expect(secondVariables["pageSize"] as? Int == 20)
-        #expect(retryVariables["pageSize"] as? Int == 10)
+        #expect(secondVariables["pageSize"] as? Int == 100)
+        #expect(retryVariables["pageSize"] as? Int == 50)
     }
 
     @Test
@@ -168,7 +208,7 @@ struct GitHubClientTests {
         let query = try #require(firstJSON["query"] as? String)
 
         #expect(query.contains("first: $pageSize"))
-        #expect(firstVariables["pageSize"] as? Int == 20)
+        #expect(firstVariables["pageSize"] as? Int == 100)
         #expect(query.contains("pageInfo"))
         #expect(query.contains("stack {"))
         #expect(query.contains("stackEntry {"))
@@ -240,10 +280,12 @@ struct GitHubClientTests {
             let query = try query(from: #require(requestBody(from: request)))
             let data: Data
 
-            if query.contains("query PullRequestStacks") {
+            if query.contains("query PullRequestDetails") {
+                data = Data(#"{"data":{"nodes":[{"number":102,"createdAt":"2026-09-16T00:00:00Z","updatedAt":"2026-09-16T00:00:00Z","title":"UI","headRefName":"stack/ui","url":"https://github.com/example/repo/pull/102","isDraft":true,"reviewDecision":null,"mergeable":"UNKNOWN","author":{"login":"octocat","avatarUrl":null},"repository":{"name":"repo","nameWithOwner":"example/repo"}}]}}"#.utf8)
+            } else if query.contains("query PullRequestStacks") {
                 data = Data(#"{"data":{"nodes":[{"id":"PRS_example","number":42,"baseRefName":"main","size":2,"entries":{"nodes":[{"position":1,"pullRequest":{"id":"PR_101","number":101,"title":"Foundation","url":"https://github.com/example/repo/pull/101","state":"OPEN","isDraft":false,"headRefName":"stack/foundation","headRefOid":"oid-101","reviewDecision":"APPROVED","mergeable":"MERGEABLE"}},{"position":2,"pullRequest":{"id":"PR_102","number":102,"title":"UI","url":"https://github.com/example/repo/pull/102","state":"OPEN","isDraft":true,"headRefName":"stack/ui","headRefOid":"oid-102","reviewDecision":null,"mergeable":"UNKNOWN"}}]}}]}}"#.utf8)
             } else {
-                data = Data(#"{"data":{"search":{"edges":[{"node":{"number":102,"createdAt":"2026-09-16T00:00:00Z","updatedAt":"2026-09-16T00:00:00Z","title":"UI","headRefName":"stack/ui","url":"https://github.com/example/repo/pull/102","deletions":1,"additions":2,"isDraft":true,"isReadByViewer":false,"reviewDecision":null,"mergeable":"UNKNOWN","stack":{"id":"PRS_example","number":42,"baseRefName":"main","size":2},"stackEntry":{"position":2},"author":{"login":"octocat","avatarUrl":null},"repository":{"name":"repo","nameWithOwner":"example/repo"},"labels":{"nodes":[]},"reviews":{"totalCount":0,"edges":[]}}}],"issueCount":1,"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#.utf8)
+                data = Data(#"{"data":{"search":{"nodes":[{"id":"PR_102","url":"https://github.com/example/repo/pull/102","updatedAt":"2026-09-16T00:00:00Z","isDraft":true,"mergeable":"UNKNOWN","stack":{"id":"PRS_example","number":42,"baseRefName":"main","size":2},"stackEntry":{"position":2}}],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#.utf8)
             }
 
             let response = HTTPURLResponse(
@@ -252,7 +294,7 @@ struct GitHubClientTests {
                 httpVersion: nil,
                 headerFields: ["Content-Type": "application/json"]
             )!
-            #expect(requestNumber <= 2)
+            #expect(requestNumber <= 3)
             return (response, data)
         }
         defer { MockURLProtocol.requestHandler = nil }
@@ -269,7 +311,7 @@ struct GitHubClientTests {
         let pulls = try await client.fetchPulls(filter: "author:octocat")
 
         let pull = try #require(pulls.first?.node)
-        #expect(recorder.bodies.count == 2)
+        #expect(recorder.bodies.count == 3)
         #expect(pull.stackEntry?.position == 2)
         #expect(pull.stack?.entries?.nodes.count == 2)
         #expect(pull.stack?.entries?.nodes.last?.pullRequest?.title == "UI")
@@ -400,3 +442,23 @@ struct GitHubClientTests {
         )
     }
 }
+
+/// Serves both refresh phases from fixtures and records the IDs of each detail batch.
+private actor TwoPhaseTransport: GitHubAPITransport {
+    private var edges: [Edge]
+    private(set) var detailBatches: [[String]] = []
+    init(edges: [Edge]) { self.edges = edges }
+    func reset(edges: [Edge]) { self.edges = edges; detailBatches = [] }
+    func api(_ endpoint: String, body: Data?) async throws -> Data {
+        let object = try JSONSerialization.jsonObject(with: body!) as! [String: Any]
+        if let ids = (object["variables"] as? [String: Any])?["ids"] as? [String], query(from: body!).contains("PullRequestDetails") {
+            detailBatches.append(ids)
+        }
+        return try PullFixtureResponse.data(for: body!, edges: edges)
+    }
+
+    private func query(from body: Data) -> String {
+        ((try? JSONSerialization.jsonObject(with: body)) as? [String: Any])?["query"] as? String ?? ""
+    }
+}
+

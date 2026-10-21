@@ -117,16 +117,38 @@ nonisolated struct ProgressivePullTransport: GitHubAPITransport {
     func api(_ endpoint: String, body: Data?) async throws -> Data {
         let object = try JSONSerialization.jsonObject(with: body!) as! [String: Any]
         let variables = object["variables"] as! [String: Any]
-        let filter = variables["query"] as! String
+        guard let filter = variables["query"] as? String else {
+            return try PullFixtureResponse.data(for: body!, edges: [edge])
+        }
         if filter.contains("review-requested:") {
             await gate.wait()
             if failRequested { throw URLError(.notConnectedToInternet) }
         }
-        let edges = filter.contains("assignee:") ? [edge] : []
-        let response = GraphQLSearchResponse(data: ResponseData(search: Search(edges: edges,
-            pageInfo: PageInfo(hasNextPage: false, endCursor: nil))))
+        return try PullFixtureResponse.data(for: body!, edges: filter.contains("assignee:") ? [edge] : [])
+    }
+}
+
+/// Answers both refresh phases from full fixtures: a search lists them with their URL as
+/// node ID, and a node batch returns the requested ones in full.
+nonisolated enum PullFixtureResponse {
+    static func data(for body: Data, edges: [Edge], viewer: String? = nil) throws -> Data {
+        let object = try JSONSerialization.jsonObject(with: body) as! [String: Any]
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
-        return try encoder.encode(response)
+        func json(_ pull: Pull) throws -> [String: Any] {
+            var node = try JSONSerialization.jsonObject(with: encoder.encode(pull)) as! [String: Any]
+            node["id"] = pull.url.absoluteString
+            return node
+        }
+        let response: [String: Any]
+        if (object["query"] as! String).contains("nodes(ids:") {
+            let ids = Set((object["variables"] as! [String: Any])["ids"] as! [String])
+            response = ["data": ["nodes": try edges.filter { ids.contains($0.node.url.absoluteString) }.map { try json($0.node) }]]
+        } else {
+            var data: [String: Any] = ["search": ["pageInfo": ["hasNextPage": false], "nodes": try edges.map { try json($0.node) }]]
+            if let viewer { data["viewer"] = ["login": viewer] }
+            response = ["data": data]
+        }
+        return try JSONSerialization.data(withJSONObject: response)
     }
 }

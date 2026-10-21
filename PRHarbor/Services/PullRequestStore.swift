@@ -310,6 +310,13 @@ final class PullRequestStore {
         let hideDrafts = scope.hideDrafts
         let baseURL = scope.baseURL
         let buildType = scope.buildType
+        // Pull requests already on screen for the same account, host and check mode keep
+        // their details unless the search reports a change; only the rest are fetched in full.
+        let reusable = currentSnapshot.map {
+            $0.scope.username == scope.username && $0.scope.baseURL == scope.baseURL && $0.scope.buildType == scope.buildType
+        } ?? false
+        let known = reusable ? Dictionary((assignedPulls + createdPulls + reviewRequestedPulls).map { ($0.node.url, $0.node) },
+                                          uniquingKeysWith: { first, _ in first }) : [:]
         let started = ContinuousClock.now
         refreshTask = Task { [weak self] in
             guard let self else { return }
@@ -332,7 +339,7 @@ final class PullRequestStore {
                             case .requested: enabled = fetchRequested; filter = "review-requested:\(username)"
                             }
                             do {
-                                let edges = enabled ? try await client.fetchPulls(filter: filter) : []
+                                let edges = enabled ? try await client.fetchPulls(filter: filter, known: known) : []
                                 return PullCategoryResult(category: category, result: .success(edges))
                             } catch { return PullCategoryResult(category: category, result: .failure(error)) }
                         }

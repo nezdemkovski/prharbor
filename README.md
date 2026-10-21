@@ -47,7 +47,7 @@ Grab the latest `.dmg` from [GitHub Releases](https://github.com/nezdemkovski/pr
 2. Open PR Harbor from the menu bar and choose **Settings → Account**.
 3. Paste the token and choose **Connect**. PR Harbor checks the token's account and scopes, then loads the pull requests it can access.
 
-A personal access token works across all your organizations without installing or approving an OAuth or GitHub App in each of them. PR Harbor stores the token in your login Keychain, sends it only to the configured GitHub API host over HTTPS, and keeps responses out of the shared URL cache. Requests go straight to GitHub's GraphQL API; nothing else needs to be installed. Disconnecting removes the token from the Keychain; revoke it on GitHub if you no longer need it.
+A personal access token works across all your organizations without installing or approving an OAuth or GitHub App in each of them. PR Harbor stores the token in your login Keychain, sends it only to the configured GitHub API host over HTTPS, and keeps responses out of the shared URL cache. Requests go straight to GitHub's GraphQL API; nothing else needs to be installed. The app runs in the App Sandbox with only outgoing network access. Disconnecting removes the token from the Keychain; revoke it on GitHub if you no longer need it.
 
 Fine-grained tokens also work, but each one covers a single owner, so pull requests from other organizations are missing. GitHub Enterprise is supported through the API URL setting (for example `https://github.example.com/api/v3`); create the token on that host.
 
@@ -55,7 +55,7 @@ Each search response confirms that the token still belongs to the connected acco
 
 ### Updating from earlier versions
 
-Version 0.2 connected through GitHub CLI. After updating, add a personal access token in Settings → Account; your other settings are kept. Versions before 0.2.0 were sandboxed and used built-in sign-in, so their settings are not carried over. Their sign-in may remain in Keychain as `com.nezdemkovski.prharbor` items named `githubToken` and `githubSession`; delete them in Keychain Access if you like. PR Harbor never reads them.
+PR Harbor runs in the App Sandbox, so its preferences live in its own container. Updating from 0.2, which ran outside the sandbox and connected through GitHub CLI, starts with default settings: add a personal access token in Settings → Account and re-apply your preferences. A token PR Harbor already saved in the Keychain reconnects automatically. Versions before 0.2.0 used built-in sign-in; their sign-in may remain in Keychain as `com.nezdemkovski.prharbor` items named `githubToken` and `githubSession`, which you can delete in Keychain Access. PR Harbor never reads them.
 
 ## Development
 

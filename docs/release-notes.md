@@ -1,14 +1,15 @@
-PR Harbor now centers on a native pull-request timeline with All, Mine and Reviewing tabs, repository groups, quiet-time filters, event history and stack details.
+PR Harbor now connects with a personal access token and no longer needs GitHub CLI.
 
-- GitHub uses your existing `gh` login through direct background `gh api` requests. Built-in OAuth, manual tokens and the user-script bridge are removed. PR Harbor does not request organization access or change GitHub CLI permissions.
-- A persistent snapshot appears at startup while stale data refreshes. Categories load progressively, and the timeline mounts a bounded viewport.
-- Native settings, snooze, CI summaries, keyboard navigation and a right-click Quit menu are included. Natural-language search and morning explanations use optional Apple Intelligence settings, both off by default.
-- CI uses GitHub's aggregate check state. Explicitly truncated history is treated as unknown when the relevant activity is missing.
+- **Personal access token.** Settings → Account opens GitHub's new-token form with the `repo` and `read:org` scopes preselected; paste the token and choose Connect. One classic token covers all your organizations without approving an OAuth or GitHub App in each of them. The token is kept in your login Keychain and sent only to the configured GitHub host.
+- **Faster refresh.** A refresh first lists your pull requests with their change markers, then fetches full details only for new or changed ones, in parallel. A typical refresh takes about 3 seconds instead of about 14.
+- **App Sandbox.** PR Harbor runs sandboxed again, with only outgoing network access.
+- **Sturdier sync.** Every field GitHub may return as null, such as a check run without a details link, is handled instead of failing the whole page. GitHub errors are recognized by their codes. Rejected tokens and rate limits are reported with the step to fix them or the time to retry.
+- **Panel.** The panel sizes itself to its content, and the menu bar count and the timeline share one up-to-date view of your pull requests.
 
-**Requirements:** macOS 27 or later on Apple silicon; GitHub CLI installed and already signed in. After installation, use Settings → Account → Connect GitHub CLI.
+**Updating from 0.2:** settings start from their defaults once, because sandboxed preferences live in the app's container. Add a personal access token in Settings → Account and re-apply your preferences.
 
-**Signing:** the DMG contains an ad hoc signed app with Hardened Runtime. App Sandbox is disabled for direct CLI access. This personal build has no Developer ID signature or Apple notarization; macOS can require manual approval under Privacy & Security when opening a downloaded copy.
+**Requirements:** macOS 26 or later on Apple silicon, and a GitHub personal access token with the `repo` and `read:org` scopes. For organizations with SAML single sign-on, authorize the token for them on GitHub.
 
-**Known limitation:** fast scrolling can still stutter on dense timelines. Profiling isolated repeated SwiftUI row-host layout, and no renderer performance fix is claimed in this release. GitHub event/check detail slices remain bounded.
+**Signing:** the DMG contains an ad hoc signed, sandboxed app with Hardened Runtime. This personal build has no Developer ID signature or Apple notarization; macOS can require manual approval under Privacy & Security when opening a downloaded copy, and can ask once for Keychain access after an update.
 
 `SHA256SUMS` is provided for download integrity verification.

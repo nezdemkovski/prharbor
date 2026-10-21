@@ -112,12 +112,13 @@ jobs:
             homepage "https://github.com/nezdemkovski/prharbor"
 
             app "PRHarbor.app"
-            depends_on macos: :golden_gate
+            depends_on macos: ">= :tahoe"
             depends_on arch: :arm64
-            depends_on formula: "gh"
 
             zap trash: [
+              "~/Library/Containers/com.nezdemkovski.prharbor",
               "~/Library/Preferences/com.nezdemkovski.prharbor.plist",
+              "~/Library/Caches/PRHarbor",
             ]
           end
           EOF

@@ -33,6 +33,14 @@ swift format format --in-place --recursive PRHarbor PRHarborTests
 - `TimelineScreenController` owns tab, filter, selection, collapse and asynchronous search interpretation. It publishes one immutable snapshot containing the matching presentation, selected item, brief, brush and search state. Keyboard selection reuses the cached presentation. Focus, hover, pointer gestures and scrolling stay in the view.
 - `TimelinePresentation` groups and orders rows and supplies navigation/ranges. `TimelineRowGeometry` defines the sizing contract used by both presentation and rendered rows. `TimelineNativeScrollView` mounts the visible/prefetch host set with incremental scroll preparation; tab replacement prepares visible rows synchronously.
 
+## Timeline rendering
+
+`TimelinePresentation` computes every row's height and position once per data or filter change, from the fixed sizes in `TimelineRowGeometry`. The scroll view therefore has its final height at once, and rows can be mounted only near the viewport.
+
+`TimelineVirtualDocumentView` is a plain AppKit document view. It hosts one SwiftUI row per `NSHostingView`, mounts rows within 240 pt of the viewport, recycles hosts that leave it, and prepares new rows one per frame after the visible ones. Until a row is ready the document draws a placeholder with the row's title in the same place. The grid, the "Today" rule and the pointer cursor are one `Canvas` behind the scroll view, so pointer movement never invalidates rows.
+
+The engine is custom on purpose. In October 2026 an `NSTableView` with SwiftUI cells was measured against it on the same 68 pull requests, scrolling 600 frames: the table dropped 19–28 frames over 16.7 ms at 12 and 40 pt per frame, in Debug and Release; this engine dropped 0–1. The table lays out each newly visible SwiftUI row synchronously in the frame it appears, which costs 15–25 ms for a full row. Preparing rows ahead of the viewport on later frames is what keeps scrolling smooth. Revisit if SwiftUI hosting becomes cheaper.
+
 ## Data certainty
 
 CI detail lists are bounded. The overall status comes from GitHub's `statusCheckRollup.state`, including Actions detail mode. A legacy cache can expose a known failure or pending check, but a successful detail slice cannot establish overall success.

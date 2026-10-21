@@ -225,6 +225,8 @@ nonisolated enum TimelineMetrics {
     static let panelWidth: CGFloat = 780
     static let labelWidth: CGFloat = 270
     static let inset: CGFloat = Spacing.panel
+    /// Where every row's track starts, from the panel's leading edge.
+    static let trackOrigin = inset + labelWidth
     static let trackWidth = panelWidth - 2 * inset - labelWidth
     static let rowAreaHeight: CGFloat = 456
     /// The least the rows keep when the morning brief takes part of their height.

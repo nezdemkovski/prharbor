@@ -9,8 +9,8 @@ final class TimelineInteraction {
     @ObservationIgnored var brushing = false
     @ObservationIgnored var isScrolling = false
     @ObservationIgnored var scale = TimelineScale(days: 182)
-    private let width = TimelineMetrics.panelWidth - 2 * TimelineMetrics.inset - TimelineMetrics.labelWidth
-    private let trackOrigin = TimelineMetrics.inset + TimelineMetrics.labelWidth
+    private let width = TimelineMetrics.trackWidth
+    private let trackOrigin = TimelineMetrics.trackOrigin
     func hover(at x: CGFloat) {
         // Gestures are attached after padding, so their coordinates include the inset.
         let position = x - trackOrigin

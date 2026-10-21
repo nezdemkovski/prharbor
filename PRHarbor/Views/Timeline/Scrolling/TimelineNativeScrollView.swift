@@ -31,7 +31,6 @@ struct TimelineNativeScrollView<Content: View>: NSViewRepresentable {
     }
 
     static func dismantleNSView(_ scroll: TimelineAppKitScrollView, coordinator: Coordinator) {
-        coordinator.generation += 1
         coordinator.document.stopLoading()
         scroll.documentView = nil
         scroll.interaction?.isScrolling = false
@@ -49,15 +48,9 @@ struct TimelineNativeScrollView<Content: View>: NSViewRepresentable {
             placeholder: placeholder, activate: activate, appearance: NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua))
         coordinator.rowIDs = rowIDs
         coordinator.ranges = ranges
-        coordinator.generation += 1
-        let generation = coordinator.generation
-        // Replace the visible content in this update, before AppKit can draw a
-        // frame of placeholders. Recheck after SwiftUI settles the panel size.
+        // Replace the visible content in this update, before AppKit can draw a frame of
+        // placeholders. The row area has a fixed height, so the viewport is already final.
         coordinator.positionViewport(scroll, anchor: anchor, offset: offset, top: top, changedSelection: changedSelection)
-        DispatchQueue.main.async { [weak scroll, weak coordinator] in
-            guard let scroll, let coordinator, coordinator.generation == generation else { return }
-            coordinator.positionViewport(scroll, anchor: anchor, offset: offset, top: top, changedSelection: changedSelection)
-        }
     }
 
     @MainActor final class Coordinator {
@@ -65,7 +58,6 @@ struct TimelineNativeScrollView<Content: View>: NSViewRepresentable {
         var rowIDs: [String] = []
         var ranges: [String: Range<CGFloat>] = [:]
         var selection: String?
-        var generation = 0
         init(content: @escaping (String) -> Content) { document = TimelineVirtualDocumentView(content: content) }
 
         func positionViewport(

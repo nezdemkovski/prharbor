@@ -1,14 +1,21 @@
 import AppKit
 import SwiftUI
 
+/// A document view that mounts rows for the viewport it is told about.
 @MainActor protocol TimelineViewportDocument: AnyObject {
-    var mountedRowIDs: Set<String> { get }
-    var preparedRowIDs: Set<String> { get }
-    var retainedHostingViewCount: Int { get }
-    var configurationCount: Int { get }
-    var totalPreparedRowCount: Int { get }
     func updateViewport(_ bounds: NSRect)
 }
+
+#if DEBUG || PRHARBOR_TEST_FIXTURES
+    /// What tests and the scroll profiler read about the document's rows and hosts.
+    @MainActor protocol TimelineViewportInspection: TimelineViewportDocument {
+        var mountedRowIDs: Set<String> { get }
+        var preparedRowIDs: Set<String> { get }
+        var retainedHostingViewCount: Int { get }
+        var configurationCount: Int { get }
+        var totalPreparedRowCount: Int { get }
+    }
+#endif
 
 /// The document is lightweight AppKit geometry. Heavy SwiftUI row trees are
 /// prepared ahead of the viewport, one per interval; scrolling only moves the
@@ -29,11 +36,13 @@ import SwiftUI
     private var preparationTask: Task<Void, Never>?
     private var preparationGeneration = 0
     private var needsViewportRefresh = false
-    private(set) var configurationCount = 0
-    private(set) var totalPreparedRowCount = 0
-    var mountedRowIDs: Set<String> { Set(needed) }
-    var preparedRowIDs: Set<String> { Set(hosts.keys) }
-    var retainedHostingViewCount: Int { hosts.count + pool.count }
+    #if DEBUG || PRHARBOR_TEST_FIXTURES
+        private(set) var configurationCount = 0
+        private(set) var totalPreparedRowCount = 0
+        var mountedRowIDs: Set<String> { Set(needed) }
+        var preparedRowIDs: Set<String> { Set(hosts.keys) }
+        var retainedHostingViewCount: Int { hosts.count + pool.count }
+    #endif
 
     init(content: @escaping (String) -> Content) {
         self.content = content
@@ -47,7 +56,9 @@ import SwiftUI
         placeholder: @escaping (String) -> TimelineRowPlaceholder = { _ in TimelineRowPlaceholder(title: "", subtitle: "") },
         activate: @escaping (String) -> Void = { _ in }, appearance: NSAppearance?
     ) {
-        configurationCount += 1
+        #if DEBUG || PRHARBOR_TEST_FIXTURES
+            configurationCount += 1
+        #endif
         isConfiguring = true
         defer { isConfiguring = false }
         stopLoading()
@@ -125,7 +136,9 @@ import SwiftUI
 
     private func prepare(_ id: String) {
         guard let range = ranges[id] else { return }
-        totalPreparedRowCount += 1
+        #if DEBUG || PRHARBOR_TEST_FIXTURES
+            totalPreparedRowCount += 1
+        #endif
         let host: NSHostingView<Content>
         if let recycled = pool.popLast() {
             host = recycled
@@ -232,3 +245,7 @@ private nonisolated enum PlaceholderLayout {
     static let avatarY: CGFloat = 10
     static let trackHeight: CGFloat = 32
 }
+
+#if DEBUG || PRHARBOR_TEST_FIXTURES
+    extension TimelineVirtualDocumentView: TimelineViewportInspection {}
+#endif

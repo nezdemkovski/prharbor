@@ -1,7 +1,29 @@
 import AppKit
 
+/// Tells the virtual document where the viewport is, and the timeline whether a live scroll is
+/// under way, so hover does not follow rows moving under a still pointer.
 @MainActor final class TimelineAppKitScrollView: NSScrollView {
     weak var interaction: TimelineInteraction?
+    private var liveScrollObservers: [NSObjectProtocol] = []
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        let center = NotificationCenter.default
+        liveScrollObservers = [
+            center.addObserver(forName: NSScrollView.willStartLiveScrollNotification, object: self, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.setScrolling(true) }
+            },
+            center.addObserver(forName: NSScrollView.didEndLiveScrollNotification, object: self, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.setScrolling(false) }
+            }
+        ]
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    isolated deinit {
+        for observer in liveScrollObservers { NotificationCenter.default.removeObserver(observer) }
+    }
 
     override func reflectScrolledClipView(_ clipView: NSClipView) {
         super.reflectScrolledClipView(clipView)
@@ -10,16 +32,11 @@ import AppKit
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        interaction?.isScrolling = false
+        setScrolling(false)
     }
 
-    override func scrollWheel(with event: NSEvent) {
-        let ended =
-            event.momentumPhase.contains(.ended) || event.momentumPhase.contains(.cancelled)
-            || (event.momentumPhase.isEmpty && (event.phase.contains(.ended) || event.phase.contains(.cancelled)))
-        interaction?.isScrolling = !ended
-        if !ended { interaction?.cursorAge = nil }
-        super.scrollWheel(with: event)
-        if ended || (event.phase.isEmpty && event.momentumPhase.isEmpty) { interaction?.isScrolling = false }
+    private func setScrolling(_ scrolling: Bool) {
+        interaction?.isScrolling = scrolling
+        if scrolling { interaction?.cursorAge = nil }
     }
 }

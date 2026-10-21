@@ -32,7 +32,7 @@ struct NativeScrollingTests {
         hosting.view.layoutSubtreeIfNeeded()
         try await Task.sleep(for: .milliseconds(100))
         let scroll = try #require(findScrollView(in: hosting.view))
-        let virtual = try #require(scroll.documentView as? any TimelineViewportDocument)
+        let virtual = try #require(scroll.documentView as? any TimelineViewportInspection)
         for tab in ["mine", "reviewing", "all", "mine", "all"] {
             hosting.rootView = content(tab: tab)
             hosting.view.layoutSubtreeIfNeeded()
@@ -112,7 +112,7 @@ struct NativeScrollingTests {
             scroll.reflectScrolledClipView(scroll.contentView)
             hosting.view.layoutSubtreeIfNeeded()
             maximumObservedOffset = max(maximumObservedOffset, scroll.contentView.bounds.origin.y)
-            if let virtual = document as? any TimelineViewportDocument {
+            if let virtual = document as? any TimelineViewportInspection {
                 #expect(virtual.preparedRowIDs.isSubset(of: virtual.mountedRowIDs))
                 #expect(virtual.retainedHostingViewCount <= 42)
             }
@@ -125,7 +125,7 @@ struct NativeScrollingTests {
         #expect(maximumObservedOffset > 0)
         // Only viewport rows and the prefetch margin are mounted, even
         // after traversing the entire list repeatedly.
-        let virtual = try #require(document as? any TimelineViewportDocument)
+        let virtual = try #require(document as? any TimelineViewportInspection)
         #expect(virtual.mountedRowIDs.count <= 36)
         #expect(!virtual.mountedRowIDs.isEmpty)
         for _ in 0..<50 where virtual.preparedRowIDs != virtual.mountedRowIDs {
@@ -167,7 +167,7 @@ struct NativeScrollingTests {
         try await Task.sleep(for: .milliseconds(300))
         let scroll = try #require(findScrollView(in: hosting.view))
         let document = try #require(scroll.documentView)
-        let virtual = try #require(document as? any TimelineViewportDocument)
+        let virtual = try #require(document as? any TimelineViewportInspection)
         try Data(String(ProcessInfo.processInfo.processIdentifier).utf8).write(to: URL(fileURLWithPath: output + ".ready"))
         // Give Instruments time to attach to the isolated Release test host.
         try await Task.sleep(for: .seconds(10))
@@ -310,7 +310,7 @@ struct NativeScrollingTests {
         try await Task.sleep(for: .milliseconds(100))
         let scroll = try #require(findScrollView(in: hosting.view))
         let document = try #require(scroll.documentView)
-        let virtual = try #require(document as? any TimelineViewportDocument)
+        let virtual = try #require(document as? any TimelineViewportInspection)
         #expect(!virtual.mountedRowIDs.contains("row:99"))
         hosting.rootView = content(selection: "row:99")
         hosting.view.layoutSubtreeIfNeeded()
@@ -322,6 +322,29 @@ struct NativeScrollingTests {
         try await Task.sleep(for: .milliseconds(100))
         #expect(virtual.mountedRowIDs.contains("row:0"))
         #expect(scroll.contentView.bounds.minY == 0)
+    }
+
+    @Test @MainActor func liveScrollingHidesTheCursorUntilItEnds() throws {
+        let ids = (0..<100).map { "row:\($0)" }
+        let ranges = Dictionary(
+            uniqueKeysWithValues: ids.enumerated().map { index, id in (id, CGFloat(index * 50)..<CGFloat((index + 1) * 50)) })
+        let interaction = TimelineInteraction()
+        interaction.cursorAge = 3
+        let hosting = NSHostingController(
+            rootView: TimelineNativeScrollView(
+                height: 5_004, rowIDs: ids, ranges: ranges, selection: nil, interaction: interaction,
+                content: { id in Text(id).frame(height: 50) }
+            ).frame(width: 780, height: 456))
+        let window = NSWindow(contentViewController: hosting)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        hosting.view.layoutSubtreeIfNeeded()
+        let scroll = try #require(findScrollView(in: hosting.view))
+        NotificationCenter.default.post(name: NSScrollView.willStartLiveScrollNotification, object: scroll)
+        #expect(interaction.isScrolling)
+        #expect(interaction.cursorAge == nil)
+        NotificationCenter.default.post(name: NSScrollView.didEndLiveScrollNotification, object: scroll)
+        #expect(!interaction.isScrolling)
     }
 
     @MainActor private func findScrollView(in view: NSView) -> NSScrollView? {

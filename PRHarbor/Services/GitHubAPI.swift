@@ -1,7 +1,11 @@
 import Defaults
 import Foundation
 import Observation
+import os
 import Security
+
+/// Request and sync timings, visible in Console under the "sync" category.
+nonisolated let syncLog = Logger(subsystem: "com.nezdemkovski.prharbor", category: "sync")
 
 /// The connected account. Its token lives in the Keychain, never in preferences.
 nonisolated struct GitHubConnection: Codable, Defaults.Serializable, Equatable, Sendable {
@@ -90,8 +94,10 @@ nonisolated struct GitHubHTTPTransport: GitHubAPITransport {
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
         if body != nil { request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
+        let started = ContinuousClock.now
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+        syncLog.notice("HTTP \(endpoint, privacy: .public) \(http.statusCode) \(data.count / 1024) KB in \(started.duration(to: .now), privacy: .public), rate limit remaining \(http.value(forHTTPHeaderField: "X-RateLimit-Remaining") ?? "?", privacy: .public)")
         if (200..<300).contains(http.statusCode) { return (data, http) }
         if http.statusCode == 401 { throw GitHubAccessError.invalidToken }
         // Primary limits exhaust the remaining count; secondary limits send Retry-After.

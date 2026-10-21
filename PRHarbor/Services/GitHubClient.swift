@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 nonisolated protocol GitHubAPITransport: Sendable {
     func api(_ endpoint: String, body: Data?) async throws -> Data
@@ -60,9 +61,11 @@ nonisolated struct GitHubClient: Sendable {
         var pageSize = 20
 
         var visitedCursors = Set<String>()
+        let kind = queryString.split(separator: " ").first { $0.contains(":") && !$0.hasPrefix("is:") }?.split(separator: ":").first ?? "search"
         while true {
             try Task.checkCancellation()
             let response: GraphQLSearchResponse
+            let started = ContinuousClock.now
             do {
                 response = try await postGraphQL(
                     query: graphQLQuery,
@@ -74,6 +77,7 @@ nonisolated struct GitHubClient: Sendable {
             }
             try verifyAccount(response.data.viewer?.login)
             edges.append(contentsOf: response.data.search.edges)
+            syncLog.notice("Search \(kind, privacy: .public) page \(visitedCursors.count + 1): \(response.data.search.edges.count) PRs of page size \(pageSize), stacks \(includeStacks), in \(started.duration(to: .now), privacy: .public)")
 
             guard response.data.search.pageInfo.hasNextPage else { break }
             guard let nextCursor = response.data.search.pageInfo.endCursor,

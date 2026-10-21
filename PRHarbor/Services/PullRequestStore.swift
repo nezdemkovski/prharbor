@@ -2,6 +2,7 @@
 import Foundation
 import Defaults
 import Observation
+import os
 
 private nonisolated enum PullCategory: CaseIterable, Sendable { case assigned, created, requested }
 private nonisolated struct PullCategoryResult: Sendable {
@@ -309,8 +310,10 @@ final class PullRequestStore {
         let hideDrafts = scope.hideDrafts
         let baseURL = scope.baseURL
         let buildType = scope.buildType
+        let started = ContinuousClock.now
         refreshTask = Task { [weak self] in
             guard let self else { return }
+            defer { syncLog.notice("Sync finished in \(started.duration(to: .now), privacy: .public)") }
             do {
                 let client = try await clientProvider(baseURL, buildType)
                 try Task.checkCancellation()

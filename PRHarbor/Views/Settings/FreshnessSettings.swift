@@ -90,7 +90,7 @@ struct FreshnessSettings: View {
                         ).frame(maxWidth: .infinity, alignment: .trailing).padding(Spacing.xxs)
                     }.frame(height: Layout.freshnessSampleHeight)
                     Text("\(TimelinePolicy.duration(item.quietDays)) · \(item.freshness.rawValue)").font(.ui(Typography.callout, .semibold))
-                        .foregroundStyle(item.freshness.label).frame(width: 92, alignment: .trailing)
+                        .foregroundStyle(item.freshness.label).frame(width: Layout.freshnessSampleValueWidth, alignment: .trailing)
                 }
             }
         }

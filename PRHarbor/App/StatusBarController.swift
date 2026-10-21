@@ -34,7 +34,7 @@ final class StatusBarController: NSObject {
         menu.addItem(quit)
 
         let hosting = NSHostingController(rootView: PanelView(store: store,
-            onQuit: { NSApp.terminate(nil) }, onSettings: onSettings,
+            onQuit: { [weak self] in self?.quit() }, onSettings: onSettings,
             onSizeChange: { [weak self] size in self?.resizePanel(to: size) }))
         // The SwiftUI panel reports its explicit bounds only when they change.
         // Ideal-size tracking would measure the lazy scroll content during scrolling.
@@ -66,11 +66,17 @@ final class StatusBarController: NSObject {
 
     func closePanel() { popover.performClose(nil) }
 
+    /// The popover's window belongs to AppKit; closing it through the popover first keeps
+    /// termination from closing it as an ordinary window. The status item leaves with the process.
     func invalidate() {
-        closePanel()
+        popover.close()
         countObservation?.cancel()
         countObservation = nil
-        NSStatusBar.system.removeStatusItem(statusItem)
+    }
+
+    private func quit() {
+        popover.close()
+        NSApp.terminate(nil)
     }
 
     private func updateCount(_ count: Int) {
@@ -91,5 +97,5 @@ final class StatusBarController: NSObject {
         }
     }
 
-    @objc private func quitApplication(_ sender: Any?) { NSApp.terminate(sender) }
+    @objc private func quitApplication(_ sender: Any?) { quit() }
 }

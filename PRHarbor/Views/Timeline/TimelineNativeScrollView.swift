@@ -185,7 +185,9 @@ struct TimelineNativeScrollView<Content: View>: NSViewRepresentable {
         // appear together; only scrolling and offscreen prefetch use the queue.
         if prepareVisible {
             for id in visible where hosts[id] == nil { prepare(id) }
-            for id in visible { hosts[id]?.layoutSubtreeIfNeeded() }
+            // This can run inside AppKit's layout pass (clip view reflection), where forcing
+            // a subtree layout is illegal. Marked hosts are laid out in the same pass, before display.
+            for id in visible { hosts[id]?.needsLayout = true }
         }
         let pending = next.filter { hosts[$0] == nil }.sorted { a, b in
             let aVisible = ranges[a].map { $0.upperBound > bounds.minY && $0.lowerBound < bounds.maxY } ?? false

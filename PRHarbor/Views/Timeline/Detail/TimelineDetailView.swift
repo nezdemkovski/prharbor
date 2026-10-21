@@ -30,7 +30,7 @@ struct TimelineDetailView: View {
             if showHistory {
                 HStack(spacing: Spacing.l) {
                     Text(item.pull.createdAt, format: .dateTime.month(.abbreviated).day()).fixedSize()
-                    TimelineTrack(item: item, scale: TimelineScale(days: max(1, Int(ceil(item.age * 1.04)))), now: now).scaleEffect(x: 1, y: 0.65).frame(height: Layout.historyTrackHeight)
+                    TimelineTrack(item: item, scale: TimelineScale(days: max(1, Int(ceil(item.age * 1.04)))), now: now).scaleEffect(x: 1, y: Layout.historyTrackScale).frame(height: Layout.historyTrackHeight)
                     HStack(spacing: Spacing.xxs) { Text("today ·"); Text(item.hasKnownQuietPeriod ? "\(TimelinePolicy.duration(item.quietDays)) quiet" : "quiet time unknown").fontWeight(.semibold).foregroundStyle(item.hasKnownQuietPeriod ? item.freshness.label : Palette.textSecondary) }.fixedSize()
                 }.font(.ui(Typography.footnote)).foregroundStyle(Palette.textTertiary).padding(.leading, Spacing.panel)
                 if item.pull.timelineItems?.pageInfo?.hasPreviousPage == true {

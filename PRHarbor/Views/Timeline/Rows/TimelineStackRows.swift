@@ -59,7 +59,7 @@ struct TimelineStackRows: View {
         }
         .background(alignment: .topLeading) {
             if !isCollapsed {
-                TimelineLiquidRail(layers: items.count).frame(width: Layout.stackRailWidth, height: CGFloat(items.count) * TimelineRowGeometry.layerHeight + TimelineRowGeometry.stackFooterHeight).offset(x: -6)
+                TimelineLiquidRail(layers: items.count).frame(width: Layout.stackRailWidth, height: CGFloat(items.count) * TimelineRowGeometry.layerHeight + TimelineRowGeometry.stackFooterHeight).offset(x: Layout.stackRailOffset)
             }
         }
         .padding(.vertical, TimelineRowGeometry.stackPadding)
@@ -69,17 +69,29 @@ struct TimelineStackRows: View {
 /// Same blurred drops and threshold as the prototype's SVG liquid capsule.
 struct TimelineLiquidRail: View {
     let layers: Int
+    // A drop behind each layer's avatar, a smaller one at the base, and a stem joining them;
+    // blurring and thresholding merges them into one capsule.
+    private static let drop = CGRect(x: 3, y: 0, width: 36, height: 36)
+    private static let base = CGRect(x: 8, y: 0, width: 26, height: 26)
+    private static let stem = CGRect(x: 12, y: 22, width: 18, height: 0)
+    private static let blur: CGFloat = 7
+    private static let threshold = 9.0 / 22
+
     var body: some View {
         Canvas(rendersAsynchronously: true) { context, _ in
-            context.addFilter(.alphaThreshold(min: 9.0 / 22, color: Palette.active))
-            context.addFilter(.blur(radius: 7))
+            context.addFilter(.alphaThreshold(min: Self.threshold, color: Palette.active))
+            context.addFilter(.blur(radius: Self.blur))
             context.drawLayer { layer in
+                let layerHeight = TimelineRowGeometry.layerHeight
                 for index in 0..<layers {
-                    layer.fill(Path(ellipseIn: CGRect(x: 3, y: TimelineRowGeometry.layerHeight / 2 + CGFloat(index) * TimelineRowGeometry.layerHeight - 18, width: 36, height: 36)), with: .color(.black))
+                    let center = layerHeight / 2 + CGFloat(index) * layerHeight
+                    layer.fill(Path(ellipseIn: Self.drop.offsetBy(dx: 0, dy: center - Self.drop.height / 2)), with: .color(.black))
                 }
-                let tail = CGFloat(layers) * TimelineRowGeometry.layerHeight + 13
-                layer.fill(Path(ellipseIn: CGRect(x: 8, y: tail - 13, width: 26, height: 26)), with: .color(.black))
-                layer.fill(Path(CGRect(x: 12, y: 22, width: 18, height: tail - 22)), with: .color(.black))
+                let baseCenter = CGFloat(layers) * layerHeight + Self.base.height / 2
+                layer.fill(Path(ellipseIn: Self.base.offsetBy(dx: 0, dy: baseCenter - Self.base.height / 2)), with: .color(.black))
+                var stem = Self.stem
+                stem.size.height = baseCenter - stem.minY
+                layer.fill(Path(stem), with: .color(.black))
             }
         }.allowsHitTesting(false).accessibilityHidden(true)
     }

@@ -17,23 +17,23 @@ struct TimelineGrid: View {
             for tick in TimelineAxisLayout(scale: scale, now: now).gridAges where tick > 0 {
                 let x = scale.position(age: tick) * size.width
                 var path = Path(); path.move(to: CGPoint(x: x, y: 0)); path.addLine(to: CGPoint(x: x, y: size.height))
-                context.stroke(path, with: .color(Palette.line), lineWidth: 1)
+                context.stroke(path, with: .color(Palette.line), lineWidth: Stroke.hairline)
             }
-            var today = Path(); today.move(to: CGPoint(x: size.width - 0.75, y: 0)); today.addLine(to: CGPoint(x: size.width - 0.75, y: size.height))
-            context.stroke(today, with: .color(Palette.textPrimary.opacity(Opacity.todayLine)), lineWidth: 2)
+            var today = Path(); today.move(to: CGPoint(x: size.width - Stroke.today / 2, y: 0)); today.addLine(to: CGPoint(x: size.width - Stroke.today / 2, y: size.height))
+            context.stroke(today, with: .color(Palette.textPrimary.opacity(Opacity.todayLine)), lineWidth: Stroke.today)
             if let brush {
                 let left = scale.position(age: brush.upperBound) * size.width
                 let right = scale.position(age: brush.lowerBound) * size.width
                 context.fill(Path(CGRect(x: left, y: 0, width: right - left, height: size.height)), with: .color(Palette.accent.opacity(Opacity.brushFill)))
                 for x in [left, right] {
                     var edge = Path(); edge.move(to: CGPoint(x: x, y: 0)); edge.addLine(to: CGPoint(x: x, y: size.height))
-                    context.stroke(edge, with: .color(Palette.accent.opacity(Opacity.brushEdge)), lineWidth: 1)
+                    context.stroke(edge, with: .color(Palette.accent.opacity(Opacity.brushEdge)), lineWidth: Stroke.hairline)
                 }
             }
             if let cursorAge, brush == nil {
                 let x = scale.position(age: cursorAge) * size.width
                 var path = Path(); path.move(to: CGPoint(x: x, y: 0)); path.addLine(to: CGPoint(x: x, y: size.height))
-                context.stroke(path, with: .color(Palette.accent), lineWidth: 1)
+                context.stroke(path, with: .color(Palette.accent), lineWidth: Stroke.hairline)
             }
         }.accessibilityHidden(true).allowsHitTesting(false)
     }

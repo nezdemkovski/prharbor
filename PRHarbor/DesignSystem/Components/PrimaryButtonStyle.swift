@@ -18,7 +18,7 @@ struct PrimaryButtonStyle: ButtonStyle {
                 .font(.ui(Typography.body, .medium)).foregroundStyle(Palette.onAccent)
                 .padding(.horizontal, Spacing.xxl).frame(height: Size.button)
                 .background(Palette.accentFill, in: shape)
-                .overlay { shape.strokeBorder(Palette.onAccent.opacity(Opacity.outline), lineWidth: 0.5) }
+                .overlay { shape.strokeBorder(Palette.onAccent.opacity(Opacity.outline), lineWidth: Stroke.fine) }
                 .shadow(color: Palette.shadow.opacity(Opacity.shadow), radius: 0.5, y: 0.5)
                 .controlFeedback(isPressed: configuration.isPressed)
         }

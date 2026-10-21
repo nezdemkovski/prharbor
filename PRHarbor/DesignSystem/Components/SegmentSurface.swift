@@ -11,7 +11,7 @@ struct SegmentSurface: View {
         if isSelected {
             shape.fill(Palette.raised)
                 .shadow(color: Palette.shadow.opacity(Opacity.shadowSoft), radius: 1, y: 1)
-                .overlay(shape.strokeBorder(Palette.strong, lineWidth: 1))
+                .overlay(shape.strokeBorder(Palette.strong, lineWidth: Stroke.hairline))
         } else if isPressed || hovering {
             shape.fill(isPressed ? Palette.active : Palette.hover)
         }

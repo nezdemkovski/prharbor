@@ -42,7 +42,7 @@ struct TimelineAxis: View {
             GeometryReader { geometry in
                 ForEach(TimelineAxisLayout(scale: scale, now: now).labels, id: \.age) { tick in
                     Text(tick.text).font(.ui(Typography.footnote)).foregroundStyle(Palette.textTertiary).fixedSize()
-                        .position(x: tick.age == Double(scale.days) ? 12 : scale.position(age: tick.age) * geometry.size.width, y: 16)
+                        .position(x: tick.age == Double(scale.days) ? Layout.axisLeadingLabelX : scale.position(age: tick.age) * geometry.size.width, y: Layout.axisLabelY)
                 }
                 Text("Today").font(.ui(Typography.caption, .semibold))
                     .foregroundStyle(Palette.inverseText).padding(.horizontal, Spacing.s).padding(.vertical, Spacing.xxxs)
@@ -52,13 +52,13 @@ struct TimelineAxis: View {
                     Button(action: clearBrush) {
                         HStack(spacing: Spacing.xs) { Text(brush.upperBound.isFinite ? "\(TimelinePolicy.duration(brush.lowerBound))–\(TimelinePolicy.duration(brush.upperBound))" : "\(TimelinePolicy.duration(brush.lowerBound))+"); Image(systemName: "xmark").font(.ui(Typography.micro)) }
                     }.buttonStyle(.primaryCompact).fixedSize()
-                        .position(x: max(45, min(geometry.size.width - 45, (scale.position(age: brush.lowerBound) + scale.position(age: brush.upperBound)) / 2 * geometry.size.width)), y: 18)
+                        .position(x: max(Layout.brushChipHalfWidth, min(geometry.size.width - Layout.brushChipHalfWidth, (scale.position(age: brush.lowerBound) + scale.position(age: brush.upperBound)) / 2 * geometry.size.width)), y: Layout.axisChipY)
                         .accessibilityLabel("Clear timeline selection")
                 } else if let cursorAge {
                     Text(now.addingTimeInterval(-cursorAge * 86_400), format: .dateTime.month(.abbreviated).day())
                         .font(.ui(Typography.caption, .semibold)).padding(.horizontal, Spacing.m).padding(.vertical, Spacing.xxxs)
                         .foregroundStyle(Palette.onAccent).background(Palette.accentFill, in: Capsule()).fixedSize()
-                        .position(x: min(geometry.size.width - 35, max(35, scale.position(age: cursorAge) * geometry.size.width)), y: 18)
+                        .position(x: min(geometry.size.width - Layout.cursorChipHalfWidth, max(Layout.cursorChipHalfWidth, scale.position(age: cursorAge) * geometry.size.width)), y: Layout.axisChipY)
                 }
             }
         }.frame(height: Layout.axisHeight)

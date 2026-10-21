@@ -24,31 +24,31 @@ struct TimelineTrack: View {
             RoundedRectangle(cornerRadius: Radius.l).fill(Palette.track)
             RoundedRectangle(cornerRadius: Radius.l).strokeBorder(Palette.line)
             Canvas(rendersAsynchronously: true) { context, size in
-                let active = CGRect(x: start, y: 5, width: max(0, quietStart - start), height: size.height - 10)
+                let active = CGRect(x: start, y: Layout.trackBarInset, width: max(0, quietStart - start), height: size.height - 2 * Layout.trackBarInset)
                 context.fill(UnevenRoundedRectangle(topLeadingRadius: Radius.s, bottomLeadingRadius: Radius.s).path(in: active), with: .color(Palette.active))
                 guard item.hasKnownQuietPeriod else { return }
-                let quiet = CGRect(x: quietStart, y: 5, width: max(2, size.width - quietStart), height: size.height - 10)
+                let quiet = CGRect(x: quietStart, y: Layout.trackBarInset, width: max(2, size.width - quietStart), height: size.height - 2 * Layout.trackBarInset)
                 let leading = quietStart > start + 1 ? 0 : Radius.s
                 let quietPath = UnevenRoundedRectangle(topLeadingRadius: leading, bottomLeadingRadius: leading, bottomTrailingRadius: Radius.s, topTrailingRadius: Radius.s).path(in: quiet)
                 context.fill(quietPath, with: .color(tint.opacity(Opacity.tintFill)))
-                context.stroke(quietPath, with: .color(tint.opacity(Opacity.tintStroke)), lineWidth: 1)
+                context.stroke(quietPath, with: .color(tint.opacity(Opacity.tintStroke)), lineWidth: Stroke.hairline)
                 context.clip(to: quietPath)
                 var hatching = Path()
-                for x in stride(from: quietStart - size.height, to: size.width + size.height, by: 6 * sqrt(2.0)) {
+                for x in stride(from: quietStart - size.height, to: size.width + size.height, by: Layout.hatchSpacing) {
                     hatching.move(to: CGPoint(x: x, y: size.height))
                     hatching.addLine(to: CGPoint(x: x + size.height, y: 0))
                 }
-                context.stroke(hatching, with: .color(tint.opacity(Opacity.hatching)), lineWidth: 2)
+                context.stroke(hatching, with: .color(tint.opacity(Opacity.hatching)), lineWidth: Stroke.hatch)
             }
             .mask {
                 if item.age > Double(scale.days) {
-                    LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: min(1, 24 / max(1, width)))], startPoint: .leading, endPoint: .trailing)
+                    LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: min(1, Layout.trackFadeWidth / max(1, width)))], startPoint: .leading, endPoint: .trailing)
                 } else { Rectangle() }
             }
             .accessibilityHidden(true)
             ForEach(workEvents) { event in
                 Rectangle().fill(Palette.textPrimary.opacity(Opacity.eventTick)).frame(width: Size.eventTick.width, height: Size.eventTick.height)
-                    .position(x: scale.position(age: TimelinePolicy.days(since: event.date, now: now)) * width, y: 17)
+                    .position(x: scale.position(age: TimelinePolicy.days(since: event.date, now: now)) * width, y: Layout.trackHeight / 2)
                     .help(event.label + " · " + event.date.formatted(date: .abbreviated, time: .shortened))
             }
             ForEach(clusters(width: width), id: \.id) { cluster in
@@ -61,7 +61,7 @@ struct TimelineTrack: View {
                             .padding(Spacing.xxs).background(Palette.raised, in: Circle())
                     }
                 }
-                .position(x: max(12, min(width - 12, cluster.position)), y: 17)
+                .position(x: max(Layout.trackEdgeInset, min(width - Layout.trackEdgeInset, cluster.position)), y: Layout.trackHeight / 2)
                 .help(cluster.events.map { $0.label + " · " + $0.date.formatted(date: .abbreviated, time: .omitted) }.joined(separator: "\n"))
             }
             if item.age > Double(scale.days) {
@@ -112,7 +112,7 @@ struct TimelineEventMark: View {
     var body: some View {
         TimelineAvatar(person: event.person, size: Size.eventAvatar, miniature: true)
             .background(Circle().fill(Palette.raised).padding(-Spacing.xxs))
-            .overlay(Circle().stroke(color, lineWidth: 1.5).padding(-0.75))
+            .overlay(Circle().stroke(color, lineWidth: Stroke.eventRing).padding(-Stroke.eventRing / 2))
             .accessibilityLabel(event.label)
     }
     private var color: Color {

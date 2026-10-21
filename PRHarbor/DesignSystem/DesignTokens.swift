@@ -164,8 +164,31 @@ nonisolated enum Layout {
     static let settingsSidebarWidth: CGFloat = 220
     static let settingsMinSize = CGSize(width: 720, height: 460)
     static let settingsDefaultSize = CGSize(width: 800, height: 560)
+    static let trackBarInset: CGFloat = 5          // active and quiet bars inside a track
+    static let hatchSpacing: CGFloat = 6 * 2.0.squareRoot()
+    static let trackFadeWidth: CGFloat = 24        // fade where history runs past the range
+    static let trackEdgeInset: CGFloat = 12        // keeps event clusters inside the track
+    static let axisLabelY: CGFloat = 16
+    static let axisChipY: CGFloat = 18
+    static let axisLeadingLabelX: CGFloat = 12     // the oldest label, kept off the edge
+    static let brushChipHalfWidth: CGFloat = 45    // keeps the range chip inside the axis
+    static let cursorChipHalfWidth: CGFloat = 35   // keeps the date chip inside the axis
+    static let collapsedDotInset: CGFloat = 4      // keeps freshness dots inside a collapsed header
+    static let positionBadgeOffset = CGSize(width: 5, height: 4)
+    static let stackRailOffset: CGFloat = -6       // centers the rail under the layer avatars
+    static let historyTrackScale: CGFloat = 0.65   // the details card's history track, vertically
+    static let brushDragThreshold: CGFloat = 8     // pointer travel before a drag selects a range
     static let branchMinWidth: CGFloat = 90
     static let branchMaxWidth: CGFloat = 160
+}
+
+/// Line widths by role.
+nonisolated enum Stroke {
+    static let hairline: CGFloat = 1     // borders, grid lines, brush edges
+    static let hatch: CGFloat = 2        // diagonal hatching in a quiet bar
+    static let today: CGFloat = 2        // the "Today" rule
+    static let eventRing: CGFloat = 1.5  // ring around an event avatar
+    static let fine: CGFloat = 0.5       // button and handle edges
 }
 
 /// Opacities by role, applied to the color they tint.

@@ -14,6 +14,8 @@ import SwiftUI
 /// prepared ahead of the viewport, one per interval; scrolling only moves the
 /// clip bounds and recycles offscreen hosts. It never publishes SwiftUI state.
 @MainActor final class TimelineVirtualDocumentView<Content: View>: NSView, TimelineViewportDocument {
+    /// Rows within this distance of the viewport are mounted ahead of scrolling.
+    private static var prefetchMargin: CGFloat { 240 }
     override var isFlipped: Bool { true }
     private var rowIDs: [String] = []
     private var ranges: [String: Range<CGFloat>] = [:]
@@ -67,8 +69,8 @@ import SwiftUI
     func updateViewport(_ bounds: NSRect) { updateViewport(bounds, prepareVisibleImmediately: false) }
     private func updateViewport(_ bounds: NSRect, prepareVisibleImmediately: Bool) {
         guard !isConfiguring else { return }
-        let lower = max(0, bounds.minY - 240)
-        let upper = min(frame.height, bounds.maxY + 240)
+        let lower = max(0, bounds.minY - Self.prefetchMargin)
+        let upper = min(frame.height, bounds.maxY + Self.prefetchMargin)
         var first = 0
         var end = rowIDs.count
         while first < end {
@@ -162,20 +164,23 @@ import SwiftUI
             let rect = NSRect(x: 0, y: range.lowerBound, width: frame.width, height: range.upperBound - range.lowerBound)
             guard rect.intersects(dirtyRect) else { continue }
             let preview = placeholder(id)
-            let x: CGFloat = preview.isRepository ? 18 : 58
+            let inset = TimelineMetrics.inset
+            let x = preview.isRepository ? inset : inset + Size.avatar + Spacing.l
+            let textWidth = TimelineMetrics.labelWidth - Size.avatar - Spacing.l
             let title = NSAttributedString(string: preview.title, attributes: [
-                .font: NSFont.systemFont(ofSize: preview.isRepository ? 12 : 13, weight: .medium),
+                .font: NSFont.systemFont(ofSize: preview.isRepository ? Typography.callout : Typography.body, weight: .medium),
                 .foregroundColor: preview.isRepository ? NSColor.secondaryLabelColor : NSColor.labelColor])
-            title.draw(in: NSRect(x: x, y: rect.minY + 9, width: 230, height: 17))
+            title.draw(in: NSRect(x: x, y: rect.minY + PlaceholderLayout.titleY, width: textWidth, height: PlaceholderLayout.titleHeight))
             if !preview.isRepository {
                 NSColor.quaternaryLabelColor.setFill()
-                NSBezierPath(ovalIn: NSRect(x: 18, y: rect.minY + 10, width: 30, height: 30)).fill()
-                NSAttributedString(string: preview.subtitle, attributes: [.font: NSFont.systemFont(ofSize: 11.5),
+                NSBezierPath(ovalIn: NSRect(x: inset, y: rect.minY + PlaceholderLayout.avatarY, width: Size.avatar, height: Size.avatar)).fill()
+                NSAttributedString(string: preview.subtitle, attributes: [.font: NSFont.systemFont(ofSize: Typography.subheadline),
                     .foregroundColor: NSColor.secondaryLabelColor])
-                    .draw(in: NSRect(x: x, y: rect.minY + 26, width: 230, height: 15))
-                NSColor.quaternaryLabelColor.withAlphaComponent(0.12).setFill()
-                NSBezierPath(roundedRect: NSRect(x: 288, y: rect.minY + 9, width: TimelineMetrics.trackWidth, height: 32),
-                             xRadius: 10, yRadius: 10).fill()
+                    .draw(in: NSRect(x: x, y: rect.minY + PlaceholderLayout.subtitleY, width: textWidth, height: PlaceholderLayout.subtitleHeight))
+                NSColor.quaternaryLabelColor.withAlphaComponent(Opacity.badge).setFill()
+                NSBezierPath(roundedRect: NSRect(x: inset + TimelineMetrics.labelWidth, y: rect.minY + PlaceholderLayout.titleY,
+                                                 width: TimelineMetrics.trackWidth, height: PlaceholderLayout.trackHeight),
+                             xRadius: Radius.l, yRadius: Radius.l).fill()
             }
         }
     }
@@ -190,4 +195,14 @@ nonisolated struct TimelineRowPlaceholder {
     let title: String
     let subtitle: String
     var isRepository = false
+}
+
+/// Where a placeholder draws its text and track, matching the final row.
+private nonisolated enum PlaceholderLayout {
+    static let titleY: CGFloat = 9
+    static let titleHeight: CGFloat = 17
+    static let subtitleY: CGFloat = 26
+    static let subtitleHeight: CGFloat = 15
+    static let avatarY: CGFloat = 10
+    static let trackHeight: CGFloat = 32
 }

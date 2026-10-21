@@ -3,6 +3,15 @@ import SwiftUI
 
 /// Freshness thresholds as a draggable scale, with sample pull requests colored by them.
 struct FreshnessSettings: View {
+    /// The threshold scale: a colored bar with zone names under it and draggable handles on it.
+    private enum Scale {
+        static let maximumDays = 60
+        static let barY: CGFloat = 28
+        static let barHeight: CGFloat = 10
+        static let handleY: CGFloat = 33
+        static let handleLabelOffset: CGFloat = -22
+        static let zoneLabelY: CGFloat = 53
+    }
     let store: PullRequestStore
     var usernameOverride: String? = nil
     @Default(.freshnessThresholds) private var thresholds
@@ -10,7 +19,7 @@ struct FreshnessSettings: View {
     @Default(.botAccounts) private var bots
     @Default(.ownCommentsCount) private var comments
     private var values: [Int] { TimelinePolicy.validThresholds(thresholds) }
-    private func position(_ days: Double) -> Double { log1p(days / 2) / log1p(60 / 2) }
+    private func position(_ days: Double) -> Double { log1p(days / 2) / log1p(Double(Scale.maximumDays) / 2) }
     @State private var samples: [TimelineItem] = []
     private var sampleInput: TimelineInput {
         store.timelineInput(now: Date(timeIntervalSince1970: floor(Date().timeIntervalSince1970 / 60) * 60), thresholds: values, bots: bots, ownComments: comments, snoozed: [:], username: usernameOverride ?? username)
@@ -27,22 +36,22 @@ struct FreshnessSettings: View {
     var body: some View {
         VStack(spacing: Spacing.s) {
             GeometryReader { geometry in
-                let edges = [0] + values + [60]
+                let edges = [0] + values + [Scale.maximumDays]
                 ZStack(alignment: .topLeading) {
                     HStack(spacing: 0) {
                         ForEach(0..<4, id: \.self) { index in
-                            Freshness.allCases[index].fill.frame(width: max(0, geometry.size.width * (position(Double(edges[index + 1])) - position(Double(edges[index])))), height: 10)
+                            Freshness.allCases[index].fill.frame(width: max(0, geometry.size.width * (position(Double(edges[index + 1])) - position(Double(edges[index])))), height: Scale.barHeight)
                         }
-                    }.clipShape(Capsule()).offset(y: 28)
+                    }.clipShape(Capsule()).offset(y: Scale.barY)
                     ForEach(0..<4, id: \.self) { index in
                         Text(Freshness.allCases[index].rawValue).font(.ui(Typography.footnote)).foregroundStyle(Palette.textSecondary)
-                            .position(x: geometry.size.width * (position(Double(edges[index])) + position(Double(edges[index + 1]))) / 2, y: 53)
+                            .position(x: geometry.size.width * (position(Double(edges[index])) + position(Double(edges[index + 1]))) / 2, y: Scale.zoneLabelY)
                     }
                     ForEach(0..<3, id: \.self) { index in
                         ZStack {
-                            Circle().fill(Palette.onAccent).overlay(Circle().strokeBorder(Palette.shadow.opacity(Opacity.outline), lineWidth: 0.5)).shadow(color: Palette.shadow.opacity(Opacity.shadowStrong), radius: 2, y: 1)
-                            Text(thresholdLabel(values[index])).font(.ui(Typography.footnote, .semibold)).foregroundStyle(Palette.textPrimary).fixedSize().offset(y: -22)
-                        }.frame(width: Size.handle, height: Size.handle).position(x: geometry.size.width * position(Double(values[index])), y: 33)
+                            Circle().fill(Palette.onAccent).overlay(Circle().strokeBorder(Palette.shadow.opacity(Opacity.outline), lineWidth: Stroke.fine)).shadow(color: Palette.shadow.opacity(Opacity.shadowStrong), radius: 2, y: 1)
+                            Text(thresholdLabel(values[index])).font(.ui(Typography.footnote, .semibold)).foregroundStyle(Palette.textPrimary).fixedSize().offset(y: Scale.handleLabelOffset)
+                        }.frame(width: Size.handle, height: Size.handle).position(x: geometry.size.width * position(Double(values[index])), y: Scale.handleY)
                             .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .named("freshness")).onChanged { value in
                                 set(index, days: Int((2 * expm1(min(1, max(0, value.location.x / geometry.size.width)) * log1p(30))).rounded()))
                             })
@@ -69,7 +78,7 @@ struct FreshnessSettings: View {
     private func thresholdLabel(_ days: Int) -> String { days >= 14 && days % 7 == 0 ? "\(days / 7)w" : "\(days)d" }
     private func set(_ index: Int, days: Int) {
         var next = values
-        next[index] = min(index == 2 ? 60 : next[index + 1] - 1, max(index == 0 ? 1 : next[index - 1] + 1, days))
+        next[index] = min(index == 2 ? Scale.maximumDays : next[index + 1] - 1, max(index == 0 ? 1 : next[index - 1] + 1, days))
         if thresholds != next { thresholds = next }
     }
 }

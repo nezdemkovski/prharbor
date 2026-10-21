@@ -128,7 +128,7 @@ struct TimelinePanel: View {
                 case .ended: interaction.cursorAge = nil
                 }
             }
-            .simultaneousGesture(DragGesture(minimumDistance: 8).onChanged { value in
+            .simultaneousGesture(DragGesture(minimumDistance: Layout.brushDragThreshold).onChanged { value in
                 interaction.drag(from: value.startLocation.x, to: value.location.x, scale: scale)
             }.onEnded { _ in
                 if interaction.brushing { writeIdle(interaction.dragging) }

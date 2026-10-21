@@ -26,7 +26,7 @@ struct TimelineRepositoryHeader: View {
                     if collapsed {
                         ForEach(items.filter(\.hasKnownQuietPeriod)) { item in
                             Circle().fill(item.freshness.fill).frame(width: Size.dot, height: Size.dot)
-                                .position(x: max(4, min(geometry.size.width - 4, scale.position(age: item.quietDays) * geometry.size.width)), y: 17)
+                                .position(x: max(Layout.collapsedDotInset, min(geometry.size.width - Layout.collapsedDotInset, scale.position(age: item.quietDays) * geometry.size.width)), y: Layout.trackHeight / 2)
                         }
                     }
                 }

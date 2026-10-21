@@ -18,7 +18,7 @@ struct TimelineRow: View {
                             if layer, let position = item.pull.stackEntry?.position {
                                 Text("\(position)").font(.ui(Typography.micro, .bold)).foregroundStyle(Palette.textSecondary)
                                     .frame(minWidth: Size.positionBadge).frame(height: Size.positionBadge).background(Palette.raised, in: Capsule())
-                                    .overlay(Capsule().strokeBorder(Palette.strong)).offset(x: 5, y: 4)
+                                    .overlay(Capsule().strokeBorder(Palette.strong)).offset(Layout.positionBadgeOffset)
                             }
                         }
                     VStack(alignment: .leading, spacing: Spacing.xxxs) {

@@ -63,7 +63,7 @@
 		EE000004EEEEEE0000000001 /* PullRequestStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000004EEEEEE0000000002 /* PullRequestStore.swift */; };
 		EE000005EEEEEE0000000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE000005EEEEEE0000000002 /* SettingsView.swift */; };
 		FAF4F4A9DEA893B8C52E35DD /* GitHubClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D70EEF936C8C44138D017938 /* GitHubClientTests.swift */; };
-		FF000001FFFFFF0000000001 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000001FFFFFF0000000002 /* ThemeColors.swift */; };
+		FF000001FFFFFF0000000001 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000001FFFFFF0000000002 /* DesignTokens.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -134,7 +134,7 @@
 		EE000002EEEEEE0000000002 /* PanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelView.swift; sourceTree = "<group>"; };
 		EE000004EEEEEE0000000002 /* PullRequestStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PullRequestStore.swift; sourceTree = "<group>"; };
 		EE000005EEEEEE0000000002 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		FF000001FFFFFF0000000002 /* ThemeColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColors.swift; sourceTree = "<group>"; };
+		FF000001FFFFFF0000000002 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -296,7 +296,7 @@
 				769F4E7A277B97B300594911 /* Notifications.swift */,
 				8CECBBFD2742AC0800A2802D /* DefaultsExtensions.swift */,
 				8C55444C274AD9E00079CA42 /* NSImageExtensions.swift */,
-				FF000001FFFFFF0000000002 /* ThemeColors.swift */,
+				FF000001FFFFFF0000000002 /* DesignTokens.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -425,7 +425,7 @@
 				AD0000000000000000000001 /* GitHubAPI.swift in Sources */,
 				8C55444D274AD9E00079CA42 /* NSImageExtensions.swift in Sources */,
 				8CECBBFE2742AC0800A2802D /* DefaultsExtensions.swift in Sources */,
-				FF000001FFFFFF0000000001 /* ThemeColors.swift in Sources */,
+				FF000001FFFFFF0000000001 /* DesignTokens.swift in Sources */,
 				EE000002EEEEEE0000000001 /* PanelView.swift in Sources */,
 				AB2000000000000000000009 /* TimelineToolbar.swift in Sources */,
 				AB2000000000000000000008 /* TimelinePreview.swift in Sources */,

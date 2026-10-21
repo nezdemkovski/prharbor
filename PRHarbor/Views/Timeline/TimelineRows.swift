@@ -11,29 +11,29 @@ struct TimelineRow: View {
     var body: some View {
         Button(action: select) {
             HStack(spacing: 0) {
-                HStack(spacing: 10) {
-                    TimelineAvatar(person: item.pull.author, size: 30)
+                HStack(spacing: Spacing.l) {
+                    TimelineAvatar(person: item.pull.author, size: Size.avatar)
                         .accessibilityHidden(true)
                         .overlay(alignment: .bottomTrailing) {
                             if layer, let position = item.pull.stackEntry?.position {
-                                Text("\(position)").font(.system(size: 9.5, weight: .bold)).foregroundStyle(TimelineStyle.muted)
-                                    .frame(minWidth: 16).frame(height: 16).background(TimelineStyle.panel, in: Capsule())
-                                    .overlay(Capsule().strokeBorder(TimelineStyle.strong)).offset(x: 5, y: 4)
+                                Text("\(position)").font(.ui(Typography.micro, .bold)).foregroundStyle(Palette.textSecondary)
+                                    .frame(minWidth: Size.positionBadge).frame(height: Size.positionBadge).background(Palette.panel, in: Capsule())
+                                    .overlay(Capsule().strokeBorder(Palette.strong)).offset(x: 5, y: 4)
                             }
                         }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(1)
-                        HStack(spacing: 4) {
+                    VStack(alignment: .leading, spacing: Spacing.xxxs) {
+                        Text(item.title).font(.ui(Typography.body, .medium)).lineLimit(1)
+                        HStack(spacing: Spacing.xs) {
                             Text(verbatim: "#\(item.pull.number)")
                             if let detail = item.isMine ? item.ticket : item.pull.author?.login { Text("·"); Text(detail).lineLimit(1) }
                             if item.pull.isDraft { Text("· draft") }
                             if item.snoozedUntil != nil { Image(systemName: "moon.zzz") }
                         }
-                        .font(.system(size: 11.5)).foregroundStyle(TimelineStyle.muted)
+                        .font(.ui(Typography.subheadline)).foregroundStyle(Palette.textSecondary)
                     }
                     Spacer(minLength: 0)
                 }
-                .padding(.trailing, 14)
+                .padding(.trailing, Spacing.xxl)
                 .frame(width: TimelineMetrics.labelWidth, alignment: .leading)
                 TimelineTrack(item: item, scale: scale, now: now, fixedWidth: TimelineMetrics.trackWidth)
             }
@@ -69,9 +69,9 @@ private struct TimelineRowHighlight: ViewModifier {
 
     func body(content: Content) -> some View {
         content.background {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(selected ? TimelineStyle.accentSoft.opacity(0.55) : hovering ? TimelineStyle.hover.opacity(0.7) : .clear)
-                .padding(.vertical, 2).padding(.horizontal, -8)
+            RoundedRectangle(cornerRadius: Radius.xl)
+                .fill(selected ? Palette.accentSoft.opacity(Opacity.rowSelected) : hovering ? Palette.hover.opacity(Opacity.rowHover) : .clear)
+                .padding(.vertical, Spacing.xxxs).padding(.horizontal, -Spacing.m)
         }
         .onHover { if hovering != $0 { hovering = $0 } }
     }
@@ -87,28 +87,28 @@ struct TimelineRepositoryHeader: View {
     var body: some View {
         Button(action: toggle) {
             HStack(spacing: 0) {
-                HStack(spacing: 5) {
-                    Image(systemName: collapsed ? "chevron.right" : "chevron.down").font(.system(size: 9, weight: .semibold)).frame(width: 12)
+                HStack(spacing: Spacing.xs) {
+                    Image(systemName: collapsed ? "chevron.right" : "chevron.down").font(.ui(Typography.micro, .semibold)).frame(width: Size.disclosure)
                     if name == "Bots" { Image(systemName: "gearshape.2") }
                     HStack(spacing: 0) {
-                        if showOwner, name.contains("/"), let owner = name.split(separator: "/").first { Text(String(owner) + "/").fontWeight(.medium).foregroundStyle(TimelineStyle.faint) }
+                        if showOwner, name.contains("/"), let owner = name.split(separator: "/").first { Text(String(owner) + "/").fontWeight(.medium).foregroundStyle(Palette.textTertiary) }
                         Text(name == "Bots" ? name : String(name.split(separator: "/").last ?? ""))
                     }.lineLimit(1)
-                    Text("\(items.count)").foregroundStyle(TimelineStyle.faint)
+                    Text("\(items.count)").foregroundStyle(Palette.textTertiary)
                     Spacer(minLength: 0)
                 }
-                .font(.system(size: 12, weight: .semibold)).foregroundStyle(TimelineStyle.muted)
+                .font(.ui(Typography.callout, .semibold)).foregroundStyle(Palette.textSecondary)
                 .frame(width: TimelineMetrics.labelWidth, alignment: .leading)
                 GeometryReader { geometry in
                     if collapsed {
                         ForEach(items.filter(\.hasKnownQuietPeriod)) { item in
-                            Circle().fill(item.freshness.color).frame(width: 7, height: 7)
+                            Circle().fill(item.freshness.fill).frame(width: Size.dot, height: Size.dot)
                                 .position(x: max(4, min(geometry.size.width - 4, scale.position(age: item.quietDays) * geometry.size.width)), y: 17)
                         }
                     }
                 }
             }
-            .frame(height: TimelineRowGeometry.repositoryHeight - 6).padding(.top, 6).contentShape(Rectangle())
+            .frame(height: TimelineRowGeometry.repositoryHeight - 6).padding(.top, Spacing.s).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(name), \(items.count) pull requests, \(collapsed ? "collapsed" : "expanded")")
@@ -131,12 +131,12 @@ struct TimelineStackRows: View {
                 Button(action: toggle) {
                     HStack(spacing: 0) {
                         SwiftUI.Label("Stack · \(items.count) layers", systemImage: "square.3.layers.3d")
-                            .font(.system(size: 12, weight: .medium)).frame(width: TimelineMetrics.labelWidth, alignment: .leading)
+                            .font(.ui(Typography.callout, .medium)).frame(width: TimelineMetrics.labelWidth, alignment: .leading)
                         VStack(spacing: TimelineRowGeometry.collapsedBarSpacing) {
                             ForEach(items) { item in
                                 GeometryReader { geometry in
                                     let start = scale.position(age: item.age) * geometry.size.width
-                                    Capsule().fill((item.hasKnownQuietPeriod ? item.freshness.color : TimelineStyle.faint).opacity(0.6)).frame(width: max(2, geometry.size.width - start)).offset(x: start)
+                                    Capsule().fill((item.hasKnownQuietPeriod ? item.freshness.fill : Palette.textTertiary).opacity(Opacity.quietBar)).frame(width: max(2, geometry.size.width - start)).offset(x: start)
                                 }.frame(height: TimelineRowGeometry.collapsedBarHeight)
                             }
                         }
@@ -151,29 +151,29 @@ struct TimelineStackRows: View {
                 }
             }
             Button(action: toggle) {
-                HStack(spacing: 10) {
-                    Image(systemName: "arrow.triangle.branch").font(.system(size: 11)).frame(width: 22, height: 22)
-                        .background(TimelineStyle.panel, in: Circle()).overlay(Circle().strokeBorder(TimelineStyle.strong))
-                        .padding(.horizontal, 4)
-                    HStack(alignment: .firstTextBaseline, spacing: 5) {
-                        Text(group.stack?.baseRefName ?? "base").font(.system(size: 11.5, weight: .semibold, design: .monospaced))
+                HStack(spacing: Spacing.l) {
+                    Image(systemName: "arrow.triangle.branch").font(.ui(Typography.footnote)).frame(width: Size.chip, height: Size.chip)
+                        .background(Palette.panel, in: Circle()).overlay(Circle().strokeBorder(Palette.strong))
+                        .padding(.horizontal, Spacing.xs)
+                    HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
+                        Text(group.stack?.baseRefName ?? "base").font(.ui(Typography.subheadline, .semibold, design: .monospaced))
                         if mergedStyle != 2, let entries = group.stack?.entries?.nodes {
                             let merged = entries.compactMap(\.pullRequest).filter { $0.state == "MERGED" }
                             if !merged.isEmpty {
                                 Text("· " + (mergedStyle == 0 ? "\(merged.count) merged" : merged.map { "#\($0.number)" }.joined(separator: " ")))
-                                    .font(.system(size: 11)).foregroundStyle(TimelineStyle.faint).lineLimit(1)
+                                    .font(.ui(Typography.footnote)).foregroundStyle(Palette.textTertiary).lineLimit(1)
                                     .help(merged.map { "#\($0.number) \($0.title)" }.joined(separator: "\n"))
                             }
                         }
                     }
                     Spacer()
-                }.foregroundStyle(TimelineStyle.muted).frame(height: 26)
+                }.foregroundStyle(Palette.textSecondary).frame(height: Layout.stackFooterHeight)
                     .frame(height: TimelineRowGeometry.stackFooterHeight, alignment: .top).contentShape(Rectangle())
             }.buttonStyle(.plain).help(isCollapsed ? "Expand stack" : "Collapse stack")
         }
         .background(alignment: .topLeading) {
             if !isCollapsed {
-                TimelineLiquidRail(layers: items.count).frame(width: 42, height: CGFloat(items.count) * TimelineRowGeometry.layerHeight + TimelineRowGeometry.stackFooterHeight).offset(x: -6)
+                TimelineLiquidRail(layers: items.count).frame(width: Layout.stackRailWidth, height: CGFloat(items.count) * TimelineRowGeometry.layerHeight + TimelineRowGeometry.stackFooterHeight).offset(x: -6)
             }
         }
         .padding(.vertical, TimelineRowGeometry.stackPadding)
@@ -184,33 +184,33 @@ struct TimelineSummary: View {
     let items: [TimelineItem]
     @Binding var zone: Freshness?
     var body: some View {
-        HStack(spacing: 14) {
-            HStack(spacing: 2) {
+        HStack(spacing: Spacing.xxl) {
+            HStack(spacing: Spacing.xxxs) {
                 ForEach(Freshness.allCases) { freshness in
                     let count = items.filter { $0.snoozedUntil == nil && $0.hasKnownQuietPeriod && $0.freshness == freshness }.count
                     Button {
                         zone = zone == freshness ? nil : freshness
                     } label: {
-                        HStack(spacing: 5) {
-                            Circle().fill(freshness.color).frame(width: 7, height: 7)
+                        HStack(spacing: Spacing.xs) {
+                            Circle().fill(freshness.fill).frame(width: Size.dot, height: Size.dot)
                             Text(freshness.rawValue)
-                            Text("\(count)").fontWeight(.semibold).foregroundStyle(TimelineStyle.text)
+                            Text("\(count)").fontWeight(.semibold).foregroundStyle(Palette.textPrimary)
                         }
-                        .font(.system(size: 12)).foregroundStyle(TimelineStyle.muted)
-                        .padding(.horizontal, 9).padding(.vertical, 3).frame(height: 22)
-                        .background(zone == freshness ? TimelineStyle.panel : .clear, in: RoundedRectangle(cornerRadius: 7))
-                        .overlay { if zone == freshness { RoundedRectangle(cornerRadius: 7).strokeBorder(TimelineStyle.strong) } }
+                        .font(.ui(Typography.callout)).foregroundStyle(Palette.textSecondary)
+                        .padding(.horizontal, Spacing.m).padding(.vertical, Spacing.xxs).frame(height: Size.chip)
+                        .background(zone == freshness ? Palette.panel : .clear, in: RoundedRectangle(cornerRadius: Radius.s))
+                        .overlay { if zone == freshness { RoundedRectangle(cornerRadius: Radius.s).strokeBorder(Palette.strong) } }
                     }
                     .buttonStyle(.plain)
                     .disabled(count == 0 && zone != freshness).opacity(count == 0 ? 0.45 : 1)
                     .accessibilityAddTraits(zone == freshness ? [.isSelected] : [])
                 }
             }
-            .padding(3).background(TimelineStyle.track, in: RoundedRectangle(cornerRadius: 9))
-            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(TimelineStyle.line))
+            .padding(Spacing.xxs).background(Palette.track, in: RoundedRectangle(cornerRadius: Radius.control))
+            .overlay(RoundedRectangle(cornerRadius: Radius.control).strokeBorder(Palette.line))
             let people = Set(items.filter { !$0.isMine && !$0.isBot && $0.reviewRequested && $0.snoozedUntil == nil }.compactMap { $0.pull.author?.login }).count
             if people > 0 {
-                Text("blocking **\(people)** \(people == 1 ? "person" : "people")").font(.system(size: 12)).foregroundStyle(TimelineStyle.muted)
+                Text("blocking **\(people)** \(people == 1 ? "person" : "people")").font(.ui(Typography.callout)).foregroundStyle(Palette.textSecondary)
             }
             Spacer(minLength: 0)
         }
@@ -223,7 +223,7 @@ struct TimelineLiquidRail: View {
     let layers: Int
     var body: some View {
         Canvas(rendersAsynchronously: true) { context, _ in
-            context.addFilter(.alphaThreshold(min: 9.0 / 22, color: TimelineStyle.active))
+            context.addFilter(.alphaThreshold(min: 9.0 / 22, color: Palette.active))
             context.addFilter(.blur(radius: 7))
             context.drawLayer { layer in
                 for index in 0..<layers {

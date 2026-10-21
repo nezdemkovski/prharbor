@@ -86,7 +86,7 @@ enum TimelinePreviewData {
     let store = PullRequestStore(startAutomatically: false)
     let now = Date()
     TimelinePanel(store: store, now: now, onSettings: {}, onAbout: {}, onQuit: {}, previewItems: TimelinePreviewData.items(now: now))
-        .frame(width: 780)
+        .frame(width: TimelineMetrics.panelWidth)
 }
 #endif
 
@@ -111,7 +111,7 @@ struct TimelinePreviewHost: View {
     }
     var body: some View {
         TimelinePanel(store: store, now: now, onSettings: { openSettings() }, onAbout: {}, onQuit: { NSApp.terminate(nil) }, previewItems: items)
-            .frame(width: 780)
+            .frame(width: TimelineMetrics.panelWidth)
             .background(Color(nsColor: .windowBackgroundColor))
             .onAppear {
                 let items = TimelinePreviewData.items(now: now)

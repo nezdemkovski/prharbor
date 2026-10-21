@@ -21,7 +21,7 @@ struct PRHarborApp: App {
         Settings {
             SettingsView(store: store, usernameOverride: AppRuntime.current.usernameOverride)
         }
-        .defaultSize(width: 800, height: 560)
+        .defaultSize(Layout.settingsDefaultSize)
         .windowResizability(.contentMinSize)
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)

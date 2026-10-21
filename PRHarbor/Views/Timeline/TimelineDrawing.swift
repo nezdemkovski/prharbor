@@ -1,32 +1,25 @@
 import SwiftUI
 import Observation
 
-private enum TimelineFreshnessColors {
-    static let fresh = TimelineStyle.color(0x22b25b)
-    static let aging = TimelineStyle.color(0xd4a106)
-    static let stale = TimelineStyle.color(0xf07a1a)
-    static let rotting = TimelineStyle.color(0xe5484d)
-}
-
 extension Freshness {
-    var color: Color {
+    /// Bars, dots and hatching.
+    var fill: Color {
         switch self {
-        case .fresh: TimelineFreshnessColors.fresh
-        case .aging: TimelineFreshnessColors.aging
-        case .stale: TimelineFreshnessColors.stale
-        case .rotting: TimelineFreshnessColors.rotting
+        case .fresh: Palette.freshFill
+        case .aging: Palette.agingFill
+        case .stale: Palette.staleFill
+        case .rotting: Palette.rottingFill
         }
     }
-}
-
-enum TimelineMetrics {
-    static let panelWidth: CGFloat = 780
-    static let labelWidth: CGFloat = 270
-    static let inset: CGFloat = 18
-    static let trackWidth = panelWidth - 2 * inset - labelWidth
-    static let maxRowAreaHeight: CGFloat = 456
-    /// Keeps the panel from collapsing while loading or showing only a few pull requests.
-    static let minRowAreaHeight: CGFloat = 260
+    /// Text in this freshness color.
+    var label: Color {
+        switch self {
+        case .fresh: Palette.freshLabel
+        case .aging: Palette.agingLabel
+        case .stale: Palette.staleLabel
+        case .rotting: Palette.rottingLabel
+        }
+    }
 }
 
 /// Axis labels and grid lines follow the prototype's log and Monday-aligned scales.
@@ -70,29 +63,29 @@ struct TimelineAxis: View {
             Color.clear.frame(width: TimelineMetrics.labelWidth)
             GeometryReader { geometry in
                 ForEach(TimelineAxisLayout(scale: scale, now: now).labels, id: \.age) { tick in
-                    Text(tick.text).font(.system(size: 11)).foregroundStyle(TimelineStyle.faint).fixedSize()
+                    Text(tick.text).font(.ui(Typography.footnote)).foregroundStyle(Palette.textTertiary).fixedSize()
                         .position(x: tick.age == Double(scale.days) ? 12 : scale.position(age: tick.age) * geometry.size.width, y: 16)
                 }
-                Text("Today").font(.system(size: 10.5, weight: .semibold))
-                    .foregroundStyle(TimelineStyle.panel).padding(.horizontal, 7).padding(.vertical, 2)
-                    .background(TimelineStyle.text, in: Capsule()).fixedSize()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing).padding(.bottom, 3)
+                Text("Today").font(.ui(Typography.caption, .semibold))
+                    .foregroundStyle(Palette.panel).padding(.horizontal, Spacing.s).padding(.vertical, Spacing.xxxs)
+                    .background(Palette.textPrimary, in: Capsule()).fixedSize()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing).padding(.bottom, Spacing.xxs)
                 if let brush {
                     Button(action: clearBrush) {
-                        HStack(spacing: 5) { Text(brush.upperBound.isFinite ? "\(TimelinePolicy.duration(brush.lowerBound))–\(TimelinePolicy.duration(brush.upperBound))" : "\(TimelinePolicy.duration(brush.lowerBound))+"); Image(systemName: "xmark").font(.system(size: 9)) }
-                            .font(.system(size: 10.5, weight: .semibold)).padding(.horizontal, 8).padding(.vertical, 2)
-                            .foregroundStyle(.white).background(TimelineStyle.accent, in: Capsule())
+                        HStack(spacing: Spacing.xs) { Text(brush.upperBound.isFinite ? "\(TimelinePolicy.duration(brush.lowerBound))–\(TimelinePolicy.duration(brush.upperBound))" : "\(TimelinePolicy.duration(brush.lowerBound))+"); Image(systemName: "xmark").font(.ui(Typography.micro)) }
+                            .font(.ui(Typography.caption, .semibold)).padding(.horizontal, Spacing.m).padding(.vertical, Spacing.xxxs)
+                            .foregroundStyle(Palette.onAccent).background(Palette.accentFill, in: Capsule())
                     }.buttonStyle(.plain).fixedSize()
                         .position(x: max(45, min(geometry.size.width - 45, (scale.position(age: brush.lowerBound) + scale.position(age: brush.upperBound)) / 2 * geometry.size.width)), y: 18)
                         .accessibilityLabel("Clear timeline selection")
                 } else if let cursorAge {
                     Text(now.addingTimeInterval(-cursorAge * 86_400), format: .dateTime.month(.abbreviated).day())
-                        .font(.system(size: 10.5, weight: .semibold)).padding(.horizontal, 8).padding(.vertical, 2)
-                        .foregroundStyle(.white).background(TimelineStyle.accent, in: Capsule()).fixedSize()
+                        .font(.ui(Typography.caption, .semibold)).padding(.horizontal, Spacing.m).padding(.vertical, Spacing.xxxs)
+                        .foregroundStyle(Palette.onAccent).background(Palette.accentFill, in: Capsule()).fixedSize()
                         .position(x: min(geometry.size.width - 35, max(35, scale.position(age: cursorAge) * geometry.size.width)), y: 18)
                 }
             }
-        }.frame(height: 30)
+        }.frame(height: Layout.axisHeight)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Timeline, last \(scale.days) days. Today is on the right.")
     }
@@ -109,29 +102,29 @@ struct TimelineGrid: View {
                 for day in 0...scale.days where Calendar.current.component(.weekday, from: now.addingTimeInterval(-Double(day) * 86_400)) == 7 {
                     let left = scale.position(age: Double(day) + 0.44) * size.width
                     let right = scale.position(age: Double(day) - 1.56) * size.width
-                    context.fill(Path(CGRect(x: left, y: 0, width: right - left, height: size.height)), with: .color(TimelineStyle.track.opacity(0.7)))
+                    context.fill(Path(CGRect(x: left, y: 0, width: right - left, height: size.height)), with: .color(Palette.track.opacity(Opacity.weekendShade)))
                 }
             }
             for tick in TimelineAxisLayout(scale: scale, now: now).gridAges where tick > 0 {
                 let x = scale.position(age: tick) * size.width
                 var path = Path(); path.move(to: CGPoint(x: x, y: 0)); path.addLine(to: CGPoint(x: x, y: size.height))
-                context.stroke(path, with: .color(TimelineStyle.line), lineWidth: 1)
+                context.stroke(path, with: .color(Palette.line), lineWidth: 1)
             }
             var today = Path(); today.move(to: CGPoint(x: size.width - 0.75, y: 0)); today.addLine(to: CGPoint(x: size.width - 0.75, y: size.height))
-            context.stroke(today, with: .color(TimelineStyle.text.opacity(0.75)), lineWidth: 2)
+            context.stroke(today, with: .color(Palette.textPrimary.opacity(Opacity.todayLine)), lineWidth: 2)
             if let brush {
                 let left = scale.position(age: brush.upperBound) * size.width
                 let right = scale.position(age: brush.lowerBound) * size.width
-                context.fill(Path(CGRect(x: left, y: 0, width: right - left, height: size.height)), with: .color(TimelineStyle.accent.opacity(0.09)))
+                context.fill(Path(CGRect(x: left, y: 0, width: right - left, height: size.height)), with: .color(Palette.accent.opacity(Opacity.brushFill)))
                 for x in [left, right] {
                     var edge = Path(); edge.move(to: CGPoint(x: x, y: 0)); edge.addLine(to: CGPoint(x: x, y: size.height))
-                    context.stroke(edge, with: .color(TimelineStyle.accent.opacity(0.55)), lineWidth: 1)
+                    context.stroke(edge, with: .color(Palette.accent.opacity(Opacity.brushEdge)), lineWidth: 1)
                 }
             }
             if let cursorAge, brush == nil {
                 let x = scale.position(age: cursorAge) * size.width
                 var path = Path(); path.move(to: CGPoint(x: x, y: 0)); path.addLine(to: CGPoint(x: x, y: size.height))
-                context.stroke(path, with: .color(TimelineStyle.accent), lineWidth: 1)
+                context.stroke(path, with: .color(Palette.accent), lineWidth: 1)
             }
         }.accessibilityHidden(true).allowsHitTesting(false)
     }
@@ -147,7 +140,7 @@ struct TimelineTrack: View {
             if let fixedWidth { drawing(width: fixedWidth) }
             else { GeometryReader { drawing(width: $0.size.width) } }
         }
-        .frame(height: 34)
+        .frame(height: Layout.trackHeight)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(TimelinePolicy.duration(item.age)) old, \(item.standing), \(item.hasKnownQuietPeriod ? item.freshness.rawValue : "quiet time unknown")")
         .accessibilityValue("\(item.events.count) events; \(item.events.last?.label ?? "opened")")
@@ -155,25 +148,27 @@ struct TimelineTrack: View {
     private func drawing(width: CGFloat) -> some View {
         let start = scale.position(age: item.age) * width
         let quietStart = item.hasKnownQuietPeriod ? max(start, scale.position(age: item.quietDays) * width) : width
-        let color = !item.isBlocked && item.hasKnownQuietPeriod ? item.freshness.color : TimelineStyle.faint
+        let tint = !item.isBlocked && item.hasKnownQuietPeriod ? item.freshness.fill : Palette.textTertiary
+        let label = !item.isBlocked && item.hasKnownQuietPeriod ? item.freshness.label : Palette.textSecondary
         return ZStack(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 10).fill(TimelineStyle.track)
-            RoundedRectangle(cornerRadius: 10).strokeBorder(TimelineStyle.line)
+            RoundedRectangle(cornerRadius: Radius.l).fill(Palette.track)
+            RoundedRectangle(cornerRadius: Radius.l).strokeBorder(Palette.line)
             Canvas(rendersAsynchronously: true) { context, size in
                 let active = CGRect(x: start, y: 5, width: max(0, quietStart - start), height: size.height - 10)
-                context.fill(UnevenRoundedRectangle(topLeadingRadius: 7, bottomLeadingRadius: 7).path(in: active), with: .color(TimelineStyle.active))
+                context.fill(UnevenRoundedRectangle(topLeadingRadius: Radius.s, bottomLeadingRadius: Radius.s).path(in: active), with: .color(Palette.active))
                 guard item.hasKnownQuietPeriod else { return }
                 let quiet = CGRect(x: quietStart, y: 5, width: max(2, size.width - quietStart), height: size.height - 10)
-                let quietPath = UnevenRoundedRectangle(topLeadingRadius: quietStart > start + 1 ? 0 : 7, bottomLeadingRadius: quietStart > start + 1 ? 0 : 7, bottomTrailingRadius: 7, topTrailingRadius: 7).path(in: quiet)
-                context.fill(quietPath, with: .color(color.opacity(0.14)))
-                context.stroke(quietPath, with: .color(color.opacity(0.45)), lineWidth: 1)
+                let leading = quietStart > start + 1 ? 0 : Radius.s
+                let quietPath = UnevenRoundedRectangle(topLeadingRadius: leading, bottomLeadingRadius: leading, bottomTrailingRadius: Radius.s, topTrailingRadius: Radius.s).path(in: quiet)
+                context.fill(quietPath, with: .color(tint.opacity(Opacity.tintFill)))
+                context.stroke(quietPath, with: .color(tint.opacity(Opacity.tintStroke)), lineWidth: 1)
                 context.clip(to: quietPath)
                 var hatching = Path()
                 for x in stride(from: quietStart - size.height, to: size.width + size.height, by: 6 * sqrt(2.0)) {
                     hatching.move(to: CGPoint(x: x, y: size.height))
                     hatching.addLine(to: CGPoint(x: x + size.height, y: 0))
                 }
-                context.stroke(hatching, with: .color(color.opacity(0.42)), lineWidth: 2)
+                context.stroke(hatching, with: .color(tint.opacity(Opacity.hatching)), lineWidth: 2)
             }
             .mask {
                 if item.age > Double(scale.days) {
@@ -182,40 +177,43 @@ struct TimelineTrack: View {
             }
             .accessibilityHidden(true)
             ForEach(workEvents) { event in
-                Rectangle().fill(TimelineStyle.text.opacity(0.38)).frame(width: 1.5, height: 12)
+                Rectangle().fill(Palette.textPrimary.opacity(Opacity.eventTick)).frame(width: Size.eventTick.width, height: Size.eventTick.height)
                     .position(x: scale.position(age: TimelinePolicy.days(since: event.date, now: now)) * width, y: 17)
                     .help(event.label + " · " + event.date.formatted(date: .abbreviated, time: .shortened))
             }
             ForEach(clusters(width: width), id: \.id) { cluster in
-                HStack(spacing: -5) {
+                HStack(spacing: -Spacing.xs) {
                     ForEach(Array(cluster.events.prefix(3))) { event in
                         TimelineEventMark(event: event)
                     }
                     if cluster.events.count > 3 {
-                        Text("+\(cluster.events.count - 3)").font(.system(size: 8, weight: .semibold))
-                            .padding(3).background(TimelineStyle.panel, in: Circle())
+                        Text("+\(cluster.events.count - 3)").font(.ui(Typography.nano, .semibold))
+                            .padding(Spacing.xxs).background(Palette.panel, in: Circle())
                     }
                 }
                 .position(x: max(12, min(width - 12, cluster.position)), y: 17)
                 .help(cluster.events.map { $0.label + " · " + $0.date.formatted(date: .abbreviated, time: .omitted) }.joined(separator: "\n"))
             }
             if item.age > Double(scale.days) {
-                Text("← \(TimelinePolicy.duration(item.age))").font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(TimelineStyle.muted).padding(.leading, 6)
+                Text("← \(TimelinePolicy.duration(item.age))").font(.ui(Typography.caption2, .semibold))
+                    .foregroundStyle(Palette.textSecondary).padding(.leading, Spacing.s)
             }
             if let until = item.snoozedUntil {
                 SwiftUI.Label(until.formatted(.dateTime.month(.abbreviated).day()), systemImage: "moon.zzz")
-                    .font(.system(size: 10, weight: .semibold)).foregroundStyle(TimelineStyle.muted)
-                    .frame(maxWidth: .infinity, alignment: .trailing).padding(.trailing, 6)
+                    .font(.ui(Typography.caption2, .semibold)).foregroundStyle(Palette.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing).padding(.trailing, Spacing.s)
             } else if !item.hasKnownQuietPeriod {
-                Text("quiet time unknown").font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(TimelineStyle.muted).frame(maxWidth: .infinity, alignment: .trailing).padding(.trailing, 6)
+                Text("quiet time unknown").font(.ui(Typography.caption2, .medium))
+                    .foregroundStyle(Palette.textSecondary).frame(maxWidth: .infinity, alignment: .trailing).padding(.trailing, Spacing.s)
             } else if item.quietDays >= 2, width - quietStart > 32 {
-                Text(TimelinePolicy.duration(item.quietDays)).font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(color).frame(maxWidth: .infinity, alignment: .trailing).padding(.trailing, 6)
+                // A solid backing keeps the label's contrast independent of the hatching behind it.
+                Text(TimelinePolicy.duration(item.quietDays)).font(.ui(Typography.footnote, .bold))
+                    .foregroundStyle(label).padding(.horizontal, Spacing.xxs)
+                    .background(Palette.panel, in: RoundedRectangle(cornerRadius: Radius.xs))
+                    .frame(maxWidth: .infinity, alignment: .trailing).padding(.trailing, Spacing.s)
             }
         }
-        .frame(width: width, height: 34)
+        .frame(width: width, height: Layout.trackHeight)
     }
     private var workEvents: [TimelineEvent] {
         item.events.filter { ($0.kind == .commit || ($0.kind == .comment && $0.person?.login == item.pull.author?.login)) && TimelinePolicy.days(since: $0.date, now: now) <= Double(scale.days) }
@@ -242,17 +240,17 @@ struct TimelineTrack: View {
 struct TimelineEventMark: View {
     let event: TimelineEvent
     var body: some View {
-        TimelineAvatar(person: event.person, size: 16, miniature: true)
-            .background(Circle().fill(TimelineStyle.panel).padding(-3))
+        TimelineAvatar(person: event.person, size: Size.eventAvatar, miniature: true)
+            .background(Circle().fill(Palette.panel).padding(-Spacing.xxs))
             .overlay(Circle().stroke(color, lineWidth: 1.5).padding(-0.75))
             .accessibilityLabel(event.label)
     }
     private var color: Color {
         switch event.kind {
-        case .approved: Freshness.fresh.color
-        case .changes: Freshness.stale.color
-        case .requested: TimelineStyle.accent
-        default: TimelineStyle.muted.opacity(0.7)
+        case .approved: Freshness.fresh.fill
+        case .changes: Freshness.stale.fill
+        case .requested: Palette.accent
+        default: Palette.textSecondary.opacity(Opacity.deemphasized)
         }
     }
 }
@@ -267,17 +265,35 @@ struct TimelineAvatar: View {
             else {
                 let login = person?.login ?? "ghost"
                 ZStack {
-                    Circle().fill(miniature ? AnyShapeStyle(TimelineStyle.track) : AnyShapeStyle(gradient(login)))
+                    Circle().fill(miniature ? AnyShapeStyle(Palette.track) : AnyShapeStyle(gradient(login)))
                     Text(String(login.prefix(1)).uppercased())
-                        .font(.system(size: miniature ? 8.5 : 12, weight: .semibold))
-                        .foregroundStyle(miniature ? TimelineStyle.muted : .white)
+                        .font(.ui(miniature ? Typography.nano : Typography.callout, .semibold))
+                        .foregroundStyle(miniature ? Palette.textSecondary : AvatarColors.initials(for: login))
                 }
             }
         }.frame(width: size, height: size).clipShape(Circle())
     }
     private func gradient(_ login: String) -> LinearGradient {
-        let hue = login.utf16.reduce(0) { ($0 * 31 + Int($1)) % 360 }
-        return LinearGradient(colors: [Color(hue: Double(hue) / 360, saturation: 0.7, brightness: 0.9), Color(hue: Double((hue + 40) % 360) / 360, saturation: 0.7, brightness: 0.8)], startPoint: .topLeading, endPoint: .bottomTrailing)
+        let hue = AvatarColors.hue(for: login)
+        return LinearGradient(colors: [Color(hue: hue, saturation: 0.7, brightness: 0.9), Color(hue: (hue + 40.0 / 360).truncatingRemainder(dividingBy: 1), saturation: 0.7, brightness: 0.8)], startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+}
+
+/// Generated avatar colors. Initials use white or near-black, whichever contrasts more with
+/// the gradient, so every hue reaches at least 4.5:1.
+nonisolated enum AvatarColors {
+    static func hue(for login: String) -> Double {
+        Double(login.utf16.reduce(0) { ($0 * 31 + Int($1)) % 360 }) / 360
+    }
+
+    static func initials(for login: String) -> Color {
+        // The gradient's middle: brightness 0.85 between its two stops.
+        let background = NSColor(hue: hue(for: login), saturation: 0.7, brightness: 0.85, alpha: 1).usingColorSpace(.sRGB) ?? .gray
+        func channel(_ value: CGFloat) -> CGFloat { value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4) }
+        let luminance = 0.2126 * channel(background.redComponent) + 0.7152 * channel(background.greenComponent) + 0.0722 * channel(background.blueComponent)
+        let onWhite = 1.05 / (luminance + 0.05)
+        let onDark = (luminance + 0.05) / (0.0137 + 0.05) // relative luminance of Palette.ink
+        return onWhite >= onDark ? Palette.onAccent : Palette.color(Palette.ink)
     }
 }
 

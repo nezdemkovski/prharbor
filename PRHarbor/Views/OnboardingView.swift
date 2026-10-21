@@ -4,39 +4,39 @@ struct OnboardingView: View {
     let onConnect: () -> Void
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: Spacing.section) {
             Spacer()
 
             Image("git-pull-request")
                 .resizable()
-                .frame(width: 36, height: 36)
-                .opacity(0.5)
+                .frame(width: Size.onboardingGlyph, height: Size.onboardingGlyph)
+                .opacity(Opacity.decorativeGlyph)
 
-            VStack(spacing: 6) {
+            VStack(spacing: Spacing.s) {
                 Text("Welcome to PR Harbor")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.ui(Typography.title, .bold))
                 Text("Keep track of your GitHub pull requests\nright from the menu bar.")
-                    .font(.system(size: 12))
+                    .font(.ui(Typography.callout))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(2)
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                OnboardingFeature(icon: "bell.badge", color: Theme.unread, text: "Get notified about new PRs")
-                OnboardingFeature(icon: "checkmark.circle", color: Theme.success, text: "Track CI status and reviews")
-                OnboardingFeature(icon: "arrow.triangle.branch", color: Theme.stale, text: "Copy branch names instantly")
+            VStack(alignment: .leading, spacing: Spacing.l) {
+                OnboardingFeature(icon: "bell.badge", color: Palette.accent, text: "Get notified about new PRs")
+                OnboardingFeature(icon: "checkmark.circle", color: Palette.success, text: "Track CI status and reviews")
+                OnboardingFeature(icon: "arrow.triangle.branch", color: Palette.staleFill, text: "Copy branch names instantly")
             }
-            .padding(.horizontal, 40)
+            .padding(.horizontal, Spacing.wide)
 
             Button {
                 onConnect()
             } label: {
-                HStack(spacing: 5) {
+                HStack(spacing: Spacing.xs) {
                     Image(systemName: "key")
                     Text("Add GitHub Token")
                 }
-                .font(.system(size: 12, weight: .semibold))
+                .font(.ui(Typography.callout, .semibold))
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.regular)
@@ -53,13 +53,13 @@ private struct OnboardingFeature: View {
     let text: String
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Spacing.l) {
             Image(systemName: icon)
-                .font(.system(size: 13))
+                .font(.ui(Typography.body))
                 .foregroundStyle(color)
-                .frame(width: 20)
+                .frame(width: Size.statusIcon)
             Text(text)
-                .font(.system(size: 11.5))
+                .font(.ui(Typography.subheadline))
                 .foregroundStyle(.secondary)
         }
     }

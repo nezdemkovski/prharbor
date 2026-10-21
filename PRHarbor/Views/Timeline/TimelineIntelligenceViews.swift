@@ -14,48 +14,48 @@ struct TimelineMorningBrief: View {
     var body: some View {
         VStack(spacing: 0) {
             Button { expanded.toggle() } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "sparkles").foregroundStyle(TimelineStyle.accent)
+                HStack(spacing: Spacing.m) {
+                    Image(systemName: "sparkles").foregroundStyle(Palette.accent)
                     Text("Morning brief").fontWeight(.medium)
-                    Text(snapshot.day.formatted(.dateTime.month(.abbreviated).day())).foregroundStyle(TimelineStyle.muted)
+                    Text(snapshot.day.formatted(.dateTime.month(.abbreviated).day())).foregroundStyle(Palette.textSecondary)
                     Spacer()
-                    Text("\(snapshot.waitingForReview) for review · \(snapshot.quietOwned) of yours quiet").foregroundStyle(TimelineStyle.muted)
-                    Image(systemName: expanded ? "chevron.up" : "chevron.down").font(.system(size: 10, weight: .semibold)).foregroundStyle(TimelineStyle.muted)
-                }.font(.system(size: 12)).padding(.horizontal, 12).frame(height: 36).contentShape(Rectangle())
+                    Text("\(snapshot.waitingForReview) for review · \(snapshot.quietOwned) of yours quiet").foregroundStyle(Palette.textSecondary)
+                    Image(systemName: expanded ? "chevron.up" : "chevron.down").font(.ui(Typography.caption2, .semibold)).foregroundStyle(Palette.textSecondary)
+                }.font(.ui(Typography.callout)).padding(.horizontal, Spacing.xl).frame(height: Layout.briefHeaderHeight).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityLabel("Morning brief")
                 .accessibilityValue(expanded ? "Expanded" : "Collapsed")
             if expanded {
                 if snapshot.entries.isEmpty {
                     Text(emptyMessage)
-                        .font(.system(size: 12)).foregroundStyle(TimelineStyle.muted).frame(maxWidth: .infinity, minHeight: 52)
+                        .font(.ui(Typography.callout)).foregroundStyle(Palette.textSecondary).frame(maxWidth: .infinity, minHeight: Layout.briefEmptyHeight)
                 } else {
                     ForEach(Array(snapshot.entries.enumerated()), id: \.element.id) { index, entry in
                         Button { select(entry.id) } label: {
-                            HStack(alignment: .center, spacing: 12) {
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(verbatim: "\(entry.repository) #\(entry.number) · \(entry.title)").font(.system(size: 12, weight: .medium)).lineLimit(1)
+                            HStack(alignment: .center, spacing: Spacing.xl) {
+                                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                                    Text(verbatim: "\(entry.repository) #\(entry.number) · \(entry.title)").font(.ui(Typography.callout, .medium)).lineLimit(1)
                                     Text(notes.indices.contains(index) ? notes[index] : entry.reason)
-                                        .font(.system(size: 11.5)).foregroundStyle(TimelineStyle.muted).lineLimit(2)
+                                        .font(.ui(Typography.subheadline)).foregroundStyle(Palette.textSecondary).lineLimit(2)
                                 }.frame(maxWidth: .infinity, alignment: .leading)
-                                Text(entry.action).font(.system(size: 11, weight: .medium)).foregroundStyle(TimelineStyle.accent)
-                                    .lineLimit(2).frame(width: 108, alignment: .trailing)
-                                Image(systemName: "chevron.right").font(.system(size: 10)).foregroundStyle(TimelineStyle.faint)
-                            }.padding(.horizontal, 12).frame(height: 74).contentShape(Rectangle())
+                                Text(entry.action).font(.ui(Typography.footnote, .medium)).foregroundStyle(Palette.accent)
+                                    .lineLimit(2).frame(width: Layout.briefActionWidth, alignment: .trailing)
+                                Image(systemName: "chevron.right").font(.ui(Typography.caption2)).foregroundStyle(Palette.textTertiary)
+                            }.padding(.horizontal, Spacing.xl).frame(height: Layout.briefRowHeight).contentShape(Rectangle())
                         }.buttonStyle(.plain).help(entry.reason)
-                            .overlay(alignment: .top) { Rectangle().fill(TimelineStyle.line).frame(height: 1) }
+                            .overlay(alignment: .top) { Rectangle().fill(Palette.line).frame(height: Size.hairline) }
                     }
-                    HStack(spacing: 6) {
+                    HStack(spacing: Spacing.s) {
                         if generating { ProgressView().controlSize(.mini) }
                         Text(generating ? "Preparing explanations on this Mac…" : (error ?? "Explanations by Apple Intelligence · Based on PR status and quiet time"))
-                            .font(.system(size: 10.5)).foregroundStyle(TimelineStyle.muted).lineLimit(2)
+                            .font(.ui(Typography.caption)).foregroundStyle(Palette.textSecondary).lineLimit(2)
                         Spacer(minLength: 0)
-                        if error != nil, PRIntelligenceService.unavailableMessage == nil { Button("Retry") { retry += 1 }.font(.system(size: 11)) }
-                    }.padding(.horizontal, 12).frame(height: 44)
+                        if error != nil, PRIntelligenceService.unavailableMessage == nil { Button("Retry") { retry += 1 }.font(.ui(Typography.footnote)) }
+                    }.padding(.horizontal, Spacing.xl).frame(height: Layout.briefFooterHeight)
                 }
             }
-        }.background(TimelineStyle.track, in: RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(TimelineStyle.line))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }.background(Palette.track, in: RoundedRectangle(cornerRadius: Radius.l))
+            .overlay(RoundedRectangle(cornerRadius: Radius.l).strokeBorder(Palette.line))
+            .clipShape(RoundedRectangle(cornerRadius: Radius.l))
             .task(id: Request(snapshot: snapshot, expanded: expanded, retry: retry)) {
                 notes = []; error = nil; generating = false
                 guard expanded, !snapshot.entries.isEmpty else { return }

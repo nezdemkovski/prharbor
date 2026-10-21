@@ -25,24 +25,24 @@ struct FreshnessSettings: View {
         }
     }
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: Spacing.s) {
             GeometryReader { geometry in
                 let edges = [0] + values + [60]
                 ZStack(alignment: .topLeading) {
                     HStack(spacing: 0) {
                         ForEach(0..<4, id: \.self) { index in
-                            Freshness.allCases[index].color.frame(width: max(0, geometry.size.width * (position(Double(edges[index + 1])) - position(Double(edges[index])))), height: 10)
+                            Freshness.allCases[index].fill.frame(width: max(0, geometry.size.width * (position(Double(edges[index + 1])) - position(Double(edges[index])))), height: 10)
                         }
                     }.clipShape(Capsule()).offset(y: 28)
                     ForEach(0..<4, id: \.self) { index in
-                        Text(Freshness.allCases[index].rawValue).font(.system(size: 11)).foregroundStyle(TimelineStyle.muted)
+                        Text(Freshness.allCases[index].rawValue).font(.ui(Typography.footnote)).foregroundStyle(Palette.textSecondary)
                             .position(x: geometry.size.width * (position(Double(edges[index])) + position(Double(edges[index + 1]))) / 2, y: 53)
                     }
                     ForEach(0..<3, id: \.self) { index in
                         ZStack {
-                            Circle().fill(.white).overlay(Circle().strokeBorder(.black.opacity(0.2), lineWidth: 0.5)).shadow(color: .black.opacity(0.25), radius: 2, y: 1)
-                            Text(thresholdLabel(values[index])).font(.system(size: 11, weight: .semibold)).foregroundStyle(TimelineStyle.text).fixedSize().offset(y: -22)
-                        }.frame(width: 18, height: 18).position(x: geometry.size.width * position(Double(values[index])), y: 33)
+                            Circle().fill(Palette.onAccent).overlay(Circle().strokeBorder(Palette.shadow.opacity(Opacity.outline), lineWidth: 0.5)).shadow(color: Palette.shadow.opacity(Opacity.shadowStrong), radius: 2, y: 1)
+                            Text(thresholdLabel(values[index])).font(.ui(Typography.footnote, .semibold)).foregroundStyle(Palette.textPrimary).fixedSize().offset(y: -22)
+                        }.frame(width: Size.handle, height: Size.handle).position(x: geometry.size.width * position(Double(values[index])), y: 33)
                             .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .named("freshness")).onChanged { value in
                                 set(index, days: Int((2 * expm1(min(1, max(0, value.location.x / geometry.size.width)) * log1p(30))).rounded()))
                             })
@@ -52,15 +52,15 @@ struct FreshnessSettings: View {
                             .accessibilityAdjustableAction { direction in set(index, days: values[index] + (direction == .increment ? 1 : -1)) }
                     }
                 }.coordinateSpace(name: "freshness")
-            }.frame(height: 68).padding(.horizontal, 10)
+            }.frame(height: Layout.freshnessScaleHeight).padding(.horizontal, Spacing.l)
             ForEach(samples) { item in
-                HStack(spacing: 10) {
-                    Text(item.title).font(.system(size: 12)).foregroundStyle(TimelineStyle.muted).lineLimit(1).frame(width: 170, alignment: .leading)
+                HStack(spacing: Spacing.l) {
+                    Text(item.title).font(.ui(Typography.callout)).foregroundStyle(Palette.textSecondary).lineLimit(1).frame(width: Layout.freshnessSampleTitleWidth, alignment: .leading)
                     GeometryReader { geometry in
-                        RoundedRectangle(cornerRadius: 6).fill(TimelineStyle.track).overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(TimelineStyle.line))
-                        TimelineHatching(color: item.freshness.color).frame(width: max(6, min(geometry.size.width, geometry.size.width * position(item.quietDays)))).frame(maxWidth: .infinity, alignment: .trailing).padding(3)
-                    }.frame(height: 18)
-                    Text("\(TimelinePolicy.duration(item.quietDays)) · \(item.freshness.rawValue)").font(.system(size: 12, weight: .semibold)).foregroundStyle(item.freshness.color).frame(width: 92, alignment: .trailing)
+                        RoundedRectangle(cornerRadius: Radius.s).fill(Palette.track).overlay(RoundedRectangle(cornerRadius: Radius.s).strokeBorder(Palette.line))
+                        TimelineHatching(color: item.freshness.fill).frame(width: max(6, min(geometry.size.width, geometry.size.width * position(item.quietDays)))).frame(maxWidth: .infinity, alignment: .trailing).padding(Spacing.xxs)
+                    }.frame(height: Layout.freshnessSampleHeight)
+                    Text("\(TimelinePolicy.duration(item.quietDays)) · \(item.freshness.rawValue)").font(.ui(Typography.callout, .semibold)).foregroundStyle(item.freshness.label).frame(width: 92, alignment: .trailing)
                 }
             }
         }
@@ -78,13 +78,13 @@ struct TimelineHatching: View {
     let color: Color
     var body: some View {
         Canvas { context, size in
-            let rect = Path(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: 4)
-            context.fill(rect, with: .color(color.opacity(0.15)))
-            context.stroke(rect, with: .color(color.opacity(0.45)), lineWidth: 1)
+            let rect = Path(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: Radius.xs)
+            context.fill(rect, with: .color(color.opacity(Opacity.tintFill)))
+            context.stroke(rect, with: .color(color.opacity(Opacity.tintStroke)), lineWidth: 1)
             context.clip(to: rect)
             for x in stride(from: -size.height, to: size.width + size.height, by: 6 * sqrt(2.0)) {
                 var line = Path(); line.move(to: CGPoint(x: x, y: size.height)); line.addLine(to: CGPoint(x: x + size.height, y: 0))
-                context.stroke(line, with: .color(color.opacity(0.55)), lineWidth: 2)
+                context.stroke(line, with: .color(color.opacity(Opacity.hatching)), lineWidth: 2)
             }
         }.accessibilityHidden(true)
     }

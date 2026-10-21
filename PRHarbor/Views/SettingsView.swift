@@ -38,12 +38,12 @@ struct SettingsView: View {
                 Label(tab.rawValue, systemImage: tab.symbol)
             }
             .toolbar(removing: .sidebarToggle)
-            .navigationSplitViewColumnWidth(220)
+            .navigationSplitViewColumnWidth(Layout.settingsSidebarWidth)
         } detail: {
             let tab = tab ?? .general
             pane(tab).navigationTitle(tab.rawValue)
         }
-        .frame(minWidth: 720, minHeight: 460)
+        .frame(minWidth: Layout.settingsMinSize.width, minHeight: Layout.settingsMinSize.height)
     }
 
     @ViewBuilder func pane(_ tab: SettingsTab) -> some View {
@@ -277,7 +277,7 @@ private struct IntelligenceSettings: View {
                     Text("Up to three pull requests that need you, with short explanations when expanded.")
                 }
             } footer: {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("Uses Apple's on-device model. Both features are off by default and do not change regular search or the morning summary notification.")
                     if let message = PRIntelligenceService.unavailableMessage { Text(message) }
                 }
@@ -314,8 +314,8 @@ private struct AccountSettings: View {
             Section {
                 if let username = usernameOverride ?? (session.isConfigured ? session.connection?.username : nil), !replacing {
                     LabeledContent("Signed in as") {
-                        HStack(spacing: 6) {
-                            TimelineAvatar(person: User(login: username), size: 20)
+                        HStack(spacing: Spacing.s) {
+                            TimelineAvatar(person: User(login: username), size: Size.avatarSmall)
                             Text("@" + username)
                         }
                     }

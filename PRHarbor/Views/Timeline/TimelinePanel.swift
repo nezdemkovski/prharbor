@@ -64,31 +64,31 @@ struct TimelinePanel: View {
                               searchMessage: request.needsInterpretation ? snapshot.searchMessage : nil, naturalLanguageEnabled: intelligentSearch)
             TimelineHeading(items: items, now: now, tab: tabBinding, range: $range, sortOrder: $sortOrder, store: store, isPreview: previewItems != nil, onSettings: onSettings, onAbout: onAbout, onQuit: onQuit)
             TimelineSummary(items: snapshot.tabItems, zone: zoneBinding)
-                .padding(.horizontal, 18).padding(.top, 2).padding(.bottom, 12)
+                .padding(.horizontal, Spacing.panel).padding(.top, Spacing.xxxs).padding(.bottom, Spacing.xl)
             if intelligentMorningBrief {
                 TimelineMorningBrief(snapshot: briefSnapshot, expanded: $briefExpanded, select: select,
                                      emptyMessage: store.isLoading && items.isEmpty ? "Waiting for pull requests…" : store.error != nil && items.isEmpty ? "Refresh pull requests to prepare an overview." : "All clear. No pull requests need attention right now.")
-                    .padding(.horizontal, 18).padding(.bottom, 8)
+                    .padding(.horizontal, Spacing.panel).padding(.bottom, Spacing.m)
                     .onGeometryChange(for: CGFloat.self, of: \.size.height) { briefHeight = $0 }
             }
             if let error = store.error {
                 HStack {
                     SwiftUI.Label(error, systemImage: "exclamationmark.triangle").lineLimit(2)
                     Spacer(); Button("Retry") { store.refresh() }
-                }.font(.caption).foregroundStyle(Theme.failure).padding(.horizontal, 18).padding(.bottom, 8)
+                }.font(.caption).foregroundStyle(Palette.failure).padding(.horizontal, Spacing.panel).padding(.bottom, Spacing.m)
             }
-            TimelineInteractiveAxis(scale: scale, now: now, interaction: interaction, brush: brush, clearBrush: { writeIdle(nil) }).padding(.horizontal, 18)
+            TimelineInteractiveAxis(scale: scale, now: now, interaction: interaction, brush: brush, clearBrush: { writeIdle(nil) }).padding(.horizontal, Spacing.panel)
             rows.frame(height: rowAreaHeight)
             if let selected {
                 TimelineDetailView(item: selected, now: now, store: store, select: select, availableURLs: Set(presentation.itemsByID.keys))
                     .id(selected.id)
-                    .padding(.horizontal, 18).padding(.top, 12).padding(.bottom, 18)
+                    .padding(.horizontal, Spacing.panel).padding(.top, Spacing.xl).padding(.bottom, Spacing.panel)
             }
         }
         .frame(width: TimelineMetrics.panelWidth, alignment: .top)
         // No background or frame of its own: the popover draws them, including its arrow.
-        .foregroundStyle(TimelineStyle.text)
-        .tint(TimelineStyle.accent)
+        .foregroundStyle(Palette.textPrimary)
+        .tint(Palette.accent)
         .monospacedDigit()
         .focusable().focused($navigating).focusEffectDisabled()
         .onKeyPress(phases: [.down, .repeat], action: handleNavigation)
@@ -121,8 +121,8 @@ struct TimelinePanel: View {
         Group { if let row { rowView(row) } }
             .focusable().focusEffectDisabled()
             .onKeyPress(phases: [.down, .repeat], action: handleNavigation)
-            .padding(.horizontal, 18)
-            .foregroundStyle(TimelineStyle.text).tint(TimelineStyle.accent).monospacedDigit()
+            .padding(.horizontal, Spacing.panel)
+            .foregroundStyle(Palette.textPrimary).tint(Palette.accent).monospacedDigit()
             .onContinuousHover { phase in
                 guard !interaction.isScrolling else { return }
                 switch phase {
@@ -141,17 +141,17 @@ struct TimelinePanel: View {
         ScrollViewReader { proxy in
             ScrollView {
                 if store.isLoading && items.isEmpty {
-                    ProgressView("Fetching pull requests…").frame(maxWidth: .infinity).padding(.top, 20)
+                    ProgressView("Fetching pull requests…").frame(maxWidth: .infinity).padding(.top, Spacing.section)
                 } else if presentation.visibleIDs.isEmpty {
                     Text(emptyMessage)
-                        .font(.system(size: 13)).foregroundStyle(TimelineStyle.muted)
-                        .frame(maxWidth: .infinity).padding(.vertical, 30)
+                        .font(.ui(Typography.body)).foregroundStyle(Palette.textSecondary)
+                        .frame(maxWidth: .infinity).padding(.vertical, Spacing.roomy)
                 } else {
                     Group {
                         if rendering == .eager { VStack(spacing: 0) { rowContent } }
                         else { LazyVStack(spacing: 0) { rowContent } }
                     }
-                    .padding(.bottom, TimelineRowGeometry.documentBottomPadding).padding(.horizontal, 18)
+                    .padding(.bottom, TimelineRowGeometry.documentBottomPadding).padding(.horizontal, Spacing.panel)
                     .onContinuousHover { phase in
                         guard !interaction.isScrolling else { return }
                         switch phase {

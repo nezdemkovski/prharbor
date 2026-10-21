@@ -17,31 +17,31 @@ struct TimelineDetailView: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack(alignment: .top, spacing: 10) {
-                Circle().fill(!item.isBlocked && item.hasKnownQuietPeriod ? item.freshness.color : TimelineStyle.muted).frame(width: 8, height: 8).padding(.top, 6)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.title).font(.system(size: 13.5, weight: .semibold)).tracking(-0.0675)
-                        .lineLimit(1).frame(height: 18, alignment: .leading).textSelection(.enabled)
+        VStack(alignment: .leading, spacing: Spacing.m) {
+            HStack(alignment: .top, spacing: Spacing.l) {
+                Circle().fill(!item.isBlocked && item.hasKnownQuietPeriod ? item.freshness.fill : Palette.textSecondary).frame(width: Size.detailDot, height: Size.detailDot).padding(.top, Spacing.s)
+                VStack(alignment: .leading, spacing: Spacing.xxxs) {
+                    Text(item.title).font(.ui(Typography.headline, .semibold)).tracking(-0.0675)
+                        .lineLimit(1).frame(height: Layout.detailLineHeight, alignment: .leading).textSelection(.enabled)
                     facts
                 }.frame(maxWidth: .infinity, alignment: .leading)
                 detailTools
             }
             if showHistory {
-                HStack(spacing: 10) {
+                HStack(spacing: Spacing.l) {
                     Text(item.pull.createdAt, format: .dateTime.month(.abbreviated).day()).fixedSize()
-                    TimelineTrack(item: item, scale: TimelineScale(days: max(1, Int(ceil(item.age * 1.04)))), now: now).scaleEffect(x: 1, y: 0.65).frame(height: 22)
-                    HStack(spacing: 3) { Text("today ·"); Text(item.hasKnownQuietPeriod ? "\(TimelinePolicy.duration(item.quietDays)) quiet" : "quiet time unknown").fontWeight(.semibold).foregroundStyle(item.hasKnownQuietPeriod ? item.freshness.color : TimelineStyle.muted) }.fixedSize()
-                }.font(.system(size: 11)).foregroundStyle(TimelineStyle.faint).padding(.leading, 18)
+                    TimelineTrack(item: item, scale: TimelineScale(days: max(1, Int(ceil(item.age * 1.04)))), now: now).scaleEffect(x: 1, y: 0.65).frame(height: Layout.historyTrackHeight)
+                    HStack(spacing: Spacing.xxs) { Text("today ·"); Text(item.hasKnownQuietPeriod ? "\(TimelinePolicy.duration(item.quietDays)) quiet" : "quiet time unknown").fontWeight(.semibold).foregroundStyle(item.hasKnownQuietPeriod ? item.freshness.label : Palette.textSecondary) }.fixedSize()
+                }.font(.ui(Typography.footnote)).foregroundStyle(Palette.textTertiary).padding(.leading, Spacing.panel)
                 if item.pull.timelineItems?.pageInfo?.hasPreviousPage == true {
-                    Text("Showing the latest 60 events. Full history is available on GitHub.").font(.caption2).foregroundStyle(TimelineStyle.muted)
+                    Text("Showing the latest 60 events. Full history is available on GitHub.").font(.caption2).foregroundStyle(Palette.textSecondary)
                 }
             }
-            if let message { Text(message).font(.caption).foregroundStyle(TimelineStyle.muted).textSelection(.enabled) }
+            if let message { Text(message).font(.caption).foregroundStyle(Palette.textSecondary).textSelection(.enabled) }
         }
-        .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 12)
-        .background(TimelineStyle.panel, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(TimelineStyle.strong))
+        .padding(.horizontal, Spacing.xxxl).padding(.top, Spacing.xxl).padding(.bottom, Spacing.xl)
+        .background(Palette.panel, in: RoundedRectangle(cornerRadius: Radius.card))
+        .overlay(RoundedRectangle(cornerRadius: Radius.card).strokeBorder(Palette.strong))
         .alert("Rebase this stack?", isPresented: $confirmRebase) {
             Button("Cancel", role: .cancel) {}
             Button("Rebase") { rebase() }
@@ -72,46 +72,46 @@ struct TimelineDetailView: View {
             Text(verbatim: "#\(item.pull.number)" + (item.isMine ? "" : " · \(item.pull.author?.login ?? "ghost")")).fixedSize()
             if !item.pull.headRefName.isEmpty {
             separator
-            HStack(spacing: 4) {
-                Image(systemName: "arrow.triangle.branch").font(.system(size: 11)).foregroundStyle(TimelineStyle.faint)
-                Text(item.pull.headRefName).font(.system(size: 11, weight: .medium, design: .monospaced)).lineLimit(1).truncationMode(.tail)
+            HStack(spacing: Spacing.xs) {
+                Image(systemName: "arrow.triangle.branch").font(.ui(Typography.footnote)).foregroundStyle(Palette.textTertiary)
+                Text(item.pull.headRefName).font(.ui(Typography.footnote, .medium, design: .monospaced)).lineLimit(1).truncationMode(.tail)
                 Button {
                     NSPasteboard.general.clearContents(); NSPasteboard.general.setString(item.pull.headRefName, forType: .string); copied = true
-                } label: { Image(systemName: copied ? "checkmark" : "doc.on.doc").font(.system(size: 11)).frame(width: 18, height: 18).foregroundStyle(TimelineStyle.faint) }
+                } label: { Image(systemName: copied ? "checkmark" : "doc.on.doc").font(.ui(Typography.footnote)).frame(width: Size.smallButton, height: Size.smallButton).foregroundStyle(Palette.textTertiary) }
                     .buttonStyle(.plain).help("Copy branch name").accessibilityLabel("Copy branch name")
                     .task(id: copied) { guard copied else { return }; try? await Task.sleep(for: .seconds(2)); if !Task.isCancelled { copied = false } }
-            }.frame(minWidth: 90, maxWidth: 160)
+            }.frame(minWidth: Layout.branchMinWidth, maxWidth: Layout.branchMaxWidth)
             }
             separator
             Text(detailStatus).lineLimit(1)
             if !item.checks.isEmpty || item.ci != nil { separator; checksSummary }
             if let target = item.pull.baseRefName ?? item.pull.stack?.baseRefName {
                 separator
-                Text("→ \(target)").font(.system(size: 11.5, weight: .medium, design: .monospaced)).lineLimit(1)
+                Text("→ \(target)").font(.ui(Typography.subheadline, .medium, design: .monospaced)).lineLimit(1)
             }
-        }.font(.system(size: 11.5)).foregroundStyle(TimelineStyle.muted).frame(height: 18).clipped()
+        }.font(.ui(Typography.subheadline)).foregroundStyle(Palette.textSecondary).frame(height: Layout.detailLineHeight).clipped()
     }
-    private var separator: some View { Text("·").foregroundStyle(TimelineStyle.faint).padding(.horizontal, 7) }
+    private var separator: some View { Text("·").foregroundStyle(Palette.textTertiary).padding(.horizontal, Spacing.s) }
     private var detailTools: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: Spacing.xxxs) {
             tool("clock", label: showHistory ? "Hide history" : "Show history") { showHistory.toggle() }
             tool("arrow.up.right.square", label: "Open on GitHub (O)") { openURL(item.pull.url) }
             if item.pull.stack == nil || item.pull.stack?.size == 1 {
                 Menu {
                     if item.snoozedUntil != nil { Button("Wake up") { wake() } }
                     else { Button("Tomorrow") { snooze(days: 1) }; Button("In 3 days") { snooze(days: 3) }; Button("Next week") { snooze(days: 7) } }
-                } label: { Image(systemName: "moon").font(.system(size: 15)).foregroundStyle(TimelineStyle.muted).frame(width: 28, height: 28) }
-                .tint(TimelineStyle.muted).menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("Snooze (S)").accessibilityLabel("Snooze")
+                } label: { Image(systemName: "moon").font(.ui(Typography.icon)).foregroundStyle(Palette.textSecondary).frame(width: Size.iconButton, height: Size.iconButton) }
+                .tint(Palette.textSecondary).menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("Snooze (S)").accessibilityLabel("Snooze")
             }
             if item.isMine { tool("xmark", label: "Close on GitHub") { openURL(item.pull.url) } }
             Button(action: primary) {
-                HStack(spacing: 5) { Text(primaryLabel); Text("⏎").opacity(0.7) }
-                    .font(.system(size: 13, weight: .medium)).foregroundStyle(.white)
-                    .padding(.horizontal, 14).frame(height: 30)
-                    .background(TimelineStyle.accent, in: RoundedRectangle(cornerRadius: 8))
-                    .overlay(alignment: .top) { RoundedRectangle(cornerRadius: 8).strokeBorder(.white.opacity(0.2), lineWidth: 0.5) }
-                    .shadow(color: .black.opacity(0.2), radius: 0.5, y: 0.5)
-            }.buttonStyle(.plain).disabled(rebasing).padding(.leading, 8)
+                HStack(spacing: Spacing.xs) { Text(primaryLabel); Text("⏎").opacity(Opacity.deemphasized) }
+                    .font(.ui(Typography.body, .medium)).foregroundStyle(Palette.onAccent)
+                    .padding(.horizontal, Spacing.xxl).frame(height: Size.button)
+                    .background(Palette.accentFill, in: RoundedRectangle(cornerRadius: Radius.m))
+                    .overlay(alignment: .top) { RoundedRectangle(cornerRadius: Radius.m).strokeBorder(Palette.onAccent.opacity(Opacity.outline), lineWidth: 0.5) }
+                    .shadow(color: Palette.shadow.opacity(Opacity.shadow), radius: 0.5, y: 0.5)
+            }.buttonStyle(.plain).disabled(rebasing).padding(.leading, Spacing.m)
                 .help(!item.isBlocked ? "Continue on GitHub (Return)" : "Select the base pull request (Return)")
                 .contextMenu {
                     if item.pull.stack != nil { Button("Rebase stack…") { confirmRebase = true }.disabled(rebasing) }
@@ -119,26 +119,26 @@ struct TimelineDetailView: View {
         }.fixedSize()
     }
     private func tool(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Image(systemName: symbol).font(.system(size: 15)).foregroundStyle(TimelineStyle.muted).frame(width: 28, height: 28) }
+        Button(action: action) { Image(systemName: symbol).font(.ui(Typography.icon)).foregroundStyle(Palette.textSecondary).frame(width: Size.iconButton, height: Size.iconButton) }
             .buttonStyle(.plain).help(label).accessibilityLabel(label)
     }
     @ViewBuilder private var checksSummary: some View {
         let failures = item.checks.filter { ciStatusKind($0.status) == .failure }
         if let check = failures.first {
-            HStack(spacing: 4) {
-                Image(systemName: "xmark.circle").foregroundStyle(Freshness.rotting.color)
-                Text(check.name + (failures.count > 1 ? " +\(failures.count - 1)" : "")).lineLimit(1).foregroundStyle(Freshness.rotting.color)
-                if let url = check.url { Link("Open log ↗", destination: url).foregroundStyle(TimelineStyle.text) }
+            HStack(spacing: Spacing.xs) {
+                Image(systemName: "xmark.circle").foregroundStyle(Palette.failure)
+                Text(check.name + (failures.count > 1 ? " +\(failures.count - 1)" : "")).lineLimit(1).foregroundStyle(Palette.failure)
+                if let url = check.url { Link("Open log ↗", destination: url).foregroundStyle(Palette.textPrimary) }
             }
         } else if item.ci == .failure {
-            SwiftUI.Label("Checks failed", systemImage: "xmark.circle").foregroundStyle(Freshness.rotting.color)
+            SwiftUI.Label("Checks failed", systemImage: "xmark.circle").foregroundStyle(Palette.failure)
                 .help("A failing check is outside the loaded details. Open GitHub for all checks.")
         } else if item.ci == .pending {
-            SwiftUI.Label("Checks running", systemImage: "clock").foregroundStyle(Freshness.aging.color)
+            SwiftUI.Label("Checks running", systemImage: "clock").foregroundStyle(Palette.warning)
         } else if item.ci == .success {
-            SwiftUI.Label("Checks passed", systemImage: "checkmark.circle").foregroundStyle(Freshness.fresh.color)
+            SwiftUI.Label("Checks passed", systemImage: "checkmark.circle").foregroundStyle(Palette.success)
         } else {
-            SwiftUI.Label("Check status unknown", systemImage: "questionmark.circle").foregroundStyle(TimelineStyle.muted)
+            SwiftUI.Label("Check status unknown", systemImage: "questionmark.circle").foregroundStyle(Palette.textSecondary)
         }
     }
     private func primary() {

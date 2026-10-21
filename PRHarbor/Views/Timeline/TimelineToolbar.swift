@@ -10,18 +10,18 @@ struct TimelineSegment<Value: Hashable>: View {
             ForEach(options.indices, id: \.self) { index in
                 let option = options[index]
                 Button { selection = option.value } label: {
-                    HStack(spacing: 4) {
+                    HStack(spacing: Spacing.xs) {
                         Text(option.title)
-                        if let count = option.count { Text("\(count)").fontWeight(.medium).foregroundStyle(TimelineStyle.faint) }
+                        if let count = option.count { Text("\(count)").fontWeight(.medium).foregroundStyle(Palette.textTertiary) }
                     }
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(selection == option.value ? TimelineStyle.text : TimelineStyle.muted)
-                    .padding(.horizontal, 10).padding(.vertical, 4).frame(height: 24)
+                    .font(.ui(Typography.callout, .medium))
+                    .foregroundStyle(selection == option.value ? Palette.textPrimary : Palette.textSecondary)
+                    .padding(.horizontal, Spacing.l).padding(.vertical, Spacing.xs).frame(height: Size.control)
                     .background {
                         if selection == option.value {
-                            RoundedRectangle(cornerRadius: 7).fill(TimelineStyle.panel)
-                                .shadow(color: .black.opacity(0.08), radius: 1, y: 1)
-                                .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(TimelineStyle.strong, lineWidth: 1))
+                            RoundedRectangle(cornerRadius: Radius.s).fill(Palette.panel)
+                                .shadow(color: Palette.shadow.opacity(Opacity.shadowSoft), radius: 1, y: 1)
+                                .overlay(RoundedRectangle(cornerRadius: Radius.s).strokeBorder(Palette.strong, lineWidth: 1))
                         }
                     }
                     .contentShape(Rectangle())
@@ -30,8 +30,8 @@ struct TimelineSegment<Value: Hashable>: View {
                     .accessibilityAddTraits(selection == option.value ? [.isSelected] : [])
             }
         }
-        .padding(3).background(TimelineStyle.track, in: RoundedRectangle(cornerRadius: 9))
-        .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(TimelineStyle.line))
+        .padding(Spacing.xxs).background(Palette.track, in: RoundedRectangle(cornerRadius: Radius.control))
+        .overlay(RoundedRectangle(cornerRadius: Radius.control).strokeBorder(Palette.line))
         .accessibilityElement(children: .contain).accessibilityLabel(label)
         .fixedSize()
     }
@@ -46,26 +46,26 @@ struct TimelineSearchBar: View {
     var searchMessage: String? = nil
     var naturalLanguageEnabled = false
     var body: some View {
-        HStack(spacing: 14) {
-            PullRequestGlyph().fill(TimelineStyle.accent, style: FillStyle(eoFill: true)).frame(width: 18, height: 18)
-                .frame(width: 38, height: 38).background(TimelineStyle.accentSoft, in: RoundedRectangle(cornerRadius: 11))
-                .overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(TimelineStyle.accent.opacity(0.2)))
+        HStack(spacing: Spacing.xxl) {
+            PullRequestGlyph().fill(Palette.accent, style: FillStyle(eoFill: true)).frame(width: Size.glyph, height: Size.glyph)
+                .frame(width: Size.glyphTile, height: Size.glyphTile).background(Palette.accentSoft, in: RoundedRectangle(cornerRadius: Radius.tile))
+                .overlay(RoundedRectangle(cornerRadius: Radius.tile).strokeBorder(Palette.accent.opacity(Opacity.outline)))
                 .accessibilityHidden(true)
-            TimelineQueryField(query: $query, focus: focus, onNavigate: onNavigate, naturalLanguageEnabled: naturalLanguageEnabled).frame(height: 28)
-            if isUnderstanding { ProgressView().controlSize(.small).frame(width: 20).help("Understanding your search…").accessibilityLabel("Understanding your search") }
+            TimelineQueryField(query: $query, focus: focus, onNavigate: onNavigate, naturalLanguageEnabled: naturalLanguageEnabled).frame(height: Size.field)
+            if isUnderstanding { ProgressView().controlSize(.small).frame(width: Size.statusIcon).help("Understanding your search…").accessibilityLabel("Understanding your search") }
             else if let searchMessage {
-                Image(systemName: "exclamationmark.circle").foregroundStyle(TimelineStyle.muted).frame(width: 20)
+                Image(systemName: "exclamationmark.circle").foregroundStyle(Palette.textSecondary).frame(width: Size.statusIcon)
                     .help(searchMessage).accessibilityLabel(searchMessage)
             } else if understood {
-                Image(systemName: "sparkles").foregroundStyle(TimelineStyle.accent).frame(width: 20)
+                Image(systemName: "sparkles").foregroundStyle(Palette.accent).frame(width: Size.statusIcon)
                     .help("Search understood with Apple Intelligence").accessibilityLabel("Search understood with Apple Intelligence")
             }
             Button { focus.wrappedValue = true } label: {
-                Text("/").font(.system(size: 13, weight: .semibold)).frame(width: 30, height: 30)
-                    .foregroundStyle(TimelineStyle.accent).background(TimelineStyle.accentSoft, in: RoundedRectangle(cornerRadius: 9))
+                Text("/").font(.ui(Typography.body, .semibold)).frame(width: Size.button, height: Size.button)
+                    .foregroundStyle(Palette.accent).background(Palette.accentSoft, in: RoundedRectangle(cornerRadius: Radius.control))
             }.buttonStyle(.plain).help("Focus filter (/)").accessibilityLabel("Focus filter")
-        }.padding(.horizontal, 18).padding(.vertical, 16)
-        .overlay(alignment: .bottom) { Rectangle().fill(TimelineStyle.line).frame(height: 1) }
+        }.padding(.horizontal, Spacing.panel).padding(.vertical, Spacing.xxxl)
+        .overlay(alignment: .bottom) { Rectangle().fill(Palette.line).frame(height: Size.hairline) }
     }
 }
 
@@ -78,16 +78,16 @@ struct TimelineQueryField: NSViewRepresentable {
     func makeNSView(context: Context) -> NSTextField {
         let field = NSTextField()
         field.isBordered = false; field.drawsBackground = false; field.focusRingType = .none
-        field.font = .systemFont(ofSize: 18, weight: .medium)
+        field.font = .systemFont(ofSize: Typography.display, weight: .medium)
         field.cell?.isScrollable = true; field.cell?.wraps = false
-        field.placeholderAttributedString = NSAttributedString(string: "Filter… try “mine stale” or “noona-api >2w”", attributes: [.font: NSFont.systemFont(ofSize: 18, weight: .medium), .foregroundColor: NSColor(TimelineStyle.faint)])
+        field.placeholderAttributedString = NSAttributedString(string: "Filter… try “mine stale” or “noona-api >2w”", attributes: [.font: NSFont.systemFont(ofSize: Typography.display, weight: .medium), .foregroundColor: NSColor(Palette.textTertiary)])
         field.delegate = context.coordinator
         field.setAccessibilityLabel("Filter pull requests")
         return field
     }
     func updateNSView(_ field: NSTextField, context: Context) {
         context.coordinator.parent = self
-        field.placeholderAttributedString = NSAttributedString(string: naturalLanguageEnabled ? "Search… try “my PRs older than two weeks”" : "Filter… try “mine stale” or “noona-api >2w”", attributes: [.font: NSFont.systemFont(ofSize: 18, weight: .medium), .foregroundColor: NSColor(TimelineStyle.faint)])
+        field.placeholderAttributedString = NSAttributedString(string: naturalLanguageEnabled ? "Search… try “my PRs older than two weeks”" : "Filter… try “mine stale” or “noona-api >2w”", attributes: [.font: NSFont.systemFont(ofSize: Typography.display, weight: .medium), .foregroundColor: NSColor(Palette.textTertiary)])
         field.setAccessibilityLabel(naturalLanguageEnabled ? "Search pull requests" : "Filter pull requests")
         if let editor = field.currentEditor() as? NSTextView {
             if !editor.hasMarkedText(), editor.string != query { editor.string = query }
@@ -129,12 +129,12 @@ struct TimelineQueryField: NSViewRepresentable {
             let appearance = field.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua])?.rawValue
             guard text != styledText || appearance != styledAppearance else { return }
             styledText = text; styledAppearance = appearance
-            let styled = NSMutableAttributedString(string: text, attributes: [.font: NSFont.systemFont(ofSize: 18, weight: .medium), .foregroundColor: NSColor(TimelineStyle.text), .kern: -0.18])
+            let styled = NSMutableAttributedString(string: text, attributes: [.font: NSFont.systemFont(ofSize: Typography.display, weight: .medium), .foregroundColor: NSColor(Palette.textPrimary), .kern: -0.18])
             let tokens = ["mine", "my", "review", "reviews", "reviewing", "draft", "snoozed", "blocked", "fresh", "aging", "stale", "rotting", "smelly", "bot", "bots", "failing", "red", "approved", "conflict", "stack", "stacks", "team", "decide", "dead", "unreviewed"]
             for match in Self.words?.matches(in: text, range: NSRange(location: 0, length: (text as NSString).length)) ?? [] {
                 let word = (text as NSString).substring(with: match.range)
                 if tokens.contains(word.lowercased()) || word.hasPrefix(">") || word.hasPrefix("<") || word.hasPrefix("idle:") {
-                    styled.addAttributes([.foregroundColor: NSColor(TimelineStyle.accent), .backgroundColor: NSColor(TimelineStyle.accentSoft)], range: match.range)
+                    styled.addAttributes([.foregroundColor: NSColor(Palette.accent), .backgroundColor: NSColor(Palette.accentSoft)], range: match.range)
                 }
             }
             if let editor = field.currentEditor() as? NSTextView, let storage = editor.textStorage {
@@ -148,8 +148,8 @@ struct TimelineQueryField: NSViewRepresentable {
                     let start = min(value.rangeValue.location, styled.length)
                     return NSValue(range: NSRange(location: start, length: min(value.rangeValue.length, styled.length - start)))
                 }
-                editor.insertionPointColor = NSColor(TimelineStyle.accent)
-                editor.typingAttributes = [.font: NSFont.systemFont(ofSize: 18, weight: .medium), .foregroundColor: NSColor(TimelineStyle.text)]
+                editor.insertionPointColor = NSColor(Palette.accent)
+                editor.typingAttributes = [.font: NSFont.systemFont(ofSize: Typography.display, weight: .medium), .foregroundColor: NSColor(Palette.textPrimary)]
             } else { field.attributedStringValue = styled }
         }
     }
@@ -170,33 +170,33 @@ struct TimelineHeading: View {
         Binding(get: { sortOrder == .createdNewest || sortOrder == .createdOldest }, set: { sortOrder = $0 ? .createdNewest : .updatedNewest })
     }
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Spacing.l) {
             TimelineSegment(label: "Pull requests", selection: $tab, options: TimelineTab.allCases.map { tab in
                 (tab, tab.rawValue, items.filter { tab == .all || (tab == .mine ? $0.isMine : !$0.isMine) }.count)
             })
-            HStack(spacing: 6) {
-                Circle().fill(syncColor).frame(width: 6, height: 6)
-                Text(isPreview ? "Mock data" : syncLabel).font(.system(size: 11.5, weight: .semibold))
+            HStack(spacing: Spacing.s) {
+                Circle().fill(syncColor).frame(width: Size.statusDot, height: Size.statusDot)
+                Text(isPreview ? "Mock data" : syncLabel).font(.ui(Typography.subheadline, .semibold))
             }
             .foregroundStyle(syncColor)
-            .padding(.horizontal, 9).padding(.vertical, 3)
-            .background(isPreview ? TimelineStyle.track : syncColor.opacity(0.12), in: Capsule())
+            .padding(.horizontal, Spacing.m).padding(.vertical, Spacing.xxs)
+            .background(isPreview ? Palette.track : syncColor.opacity(Opacity.badge), in: Capsule())
             .help("Refresh from GitHub (⌘R)").onTapGesture { if !isPreview { store.refresh() } }
             Spacer(minLength: 0)
             TimelineSegment(label: "Sort", selection: created, options: [(false, "Updated", nil), (true, "Created", nil)])
             TimelineSegment(label: "Timeline range", selection: $range, options: [(14, "2W", nil), (30, "1M", nil), (90, "3M", nil), (182, "6M", nil)])
-            Button(action: onSettings) { Image(systemName: "gearshape").font(.system(size: 17)).frame(width: 28, height: 28).foregroundStyle(TimelineStyle.muted) }
+            Button(action: onSettings) { Image(systemName: "gearshape").font(.ui(Typography.iconLarge)).frame(width: Size.iconButton, height: Size.iconButton).foregroundStyle(Palette.textSecondary) }
                 .buttonStyle(.plain).help("Settings (⌘,)").accessibilityLabel("Settings").keyboardShortcut(",")
                 .contextMenu { Button("Refresh") { store.refresh() }; Button("About PR Harbor", action: onAbout); Button("Quit PR Harbor", action: onQuit) }
-        }.padding(.horizontal, 18).padding(.top, 16).padding(.bottom, 6)
+        }.padding(.horizontal, Spacing.panel).padding(.top, Spacing.xxxl).padding(.bottom, Spacing.s)
         .background {
             Button("Refresh") { store.refresh() }.keyboardShortcut("r").hidden().accessibilityHidden(true)
         }
     }
     private var syncColor: Color {
-        if isPreview || store.isLoading { return TimelineStyle.muted }
-        if store.error != nil { return Theme.failure }
-        return Freshness.fresh.color
+        if isPreview || store.isLoading { return Palette.textSecondary }
+        if store.error != nil { return Palette.failure }
+        return Freshness.fresh.label
     }
     private var syncLabel: String {
         if store.isLoading { return "Syncing…" }

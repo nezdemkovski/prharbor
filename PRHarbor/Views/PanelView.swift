@@ -16,13 +16,13 @@ struct PanelView: View {
                         Text("PR Harbor").font(.headline)
                         Spacer()
                         Button("Settings…", action: settings)
-                    }.padding(18)
+                    }.padding(Spacing.panel)
                     Divider()
                     OnboardingView(onConnect: settings)
                 }
             }
         }
-        .frame(width: Theme.panelWidth)
+        .frame(width: TimelineMetrics.panelWidth)
         .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -37,7 +37,7 @@ struct PanelView: View {
 @MainActor func showAboutPanel() {
     let paragraph = NSMutableParagraphStyle()
     paragraph.alignment = .center
-    let base: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor,
+    let base: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: Typography.footnote), .foregroundColor: NSColor.secondaryLabelColor,
                                                 .paragraphStyle: paragraph]
     let credits = NSMutableAttributedString(string: "GitHub pull requests in your menu bar.\nby Yuri Nezdemkovski\n\n", attributes: base)
     for (index, (title, address)) in [("GitHub", "https://github.com/nezdemkovski/prharbor"), ("nezdemkovski.com", "https://nezdemkovski.com")].enumerated() {

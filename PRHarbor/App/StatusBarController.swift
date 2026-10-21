@@ -19,7 +19,7 @@ final class StatusBarController: NSObject {
         statusItem.autosaveName = "PRHarbor"
         if let button = statusItem.button {
             button.image = NSImage(named: "git-pull-request")
-            button.image?.size = NSSize(width: 18, height: 18)
+            button.image?.size = NSSize(width: Size.glyph, height: Size.glyph)
             button.imagePosition = .imageLeading
             button.toolTip = "PR Harbor"
             button.setAccessibilityLabel("PR Harbor")
@@ -66,7 +66,7 @@ final class StatusBarController: NSObject {
     private func paintPopoverFrame() {
         guard let frame = popover.contentViewController?.view.superview,
               let glass = frame.subviews.lazy.compactMap({ $0 as? NSGlassEffectView }).first else { return }
-        glass.tintColor = NSColor(TimelineStyle.panel)
+        glass.tintColor = NSColor(Palette.panel)
     }
 
     var isPanelShown: Bool { popover.isShown }

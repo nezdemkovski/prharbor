@@ -8,6 +8,18 @@ import Testing
 
 @Suite(.serialized)
 struct GitHubClientTests {
+    @Test func schemaFallbackAndPagingDependOnStructuredErrorsOnly() throws {
+        func error(_ json: String) throws -> GraphQLAPIError {
+            GraphQLAPIError(errors: try JSONDecoder().decode([GraphQLError].self, from: Data(json.utf8)))
+        }
+        #expect(try error(#"[{"message":"No such type PullRequestStack","extensions":{"code":"undefinedType","typeName":"PullRequestStack"}}]"#).isMissingStackSchema)
+        // Ordinary failures that mention a stack or a field must not disable stacks for the session.
+        #expect(try !error(#"[{"type":"NOT_FOUND","message":"Could not resolve to a node with the global id of 'stack'"}]"#).isMissingStackSchema)
+        #expect(try !error(#"[{"message":"Field 'title' doesn't exist on type 'PullRequest'","extensions":{"code":"undefinedField","typeName":"PullRequest","fieldName":"title"}}]"#).isMissingStackSchema)
+        #expect(try error(#"[{"type":"RESOURCE_LIMITS_EXCEEDED","message":"Resource limits for this query exceeded."}]"#).isResourceLimit)
+        #expect(try !error(#"[{"type":"FORBIDDEN","message":"Resource limits for this query exceeded."}]"#).isResourceLimit)
+    }
+
     @Test func repeatedPaginationCursorFailsInsteadOfLooping() async throws {
         let recorder = RequestRecorder()
         MockURLProtocol.requestHandler = { request in
@@ -55,7 +67,7 @@ struct GitHubClientTests {
             let number = recorder.record(body: requestBody(from: request))
             let data: Data
             if number == 2 {
-                data = Data(#"{"errors":[{"message":"Resource limits for this query exceeded."}]}"#.utf8)
+                data = Data(#"{"errors":[{"type":"RESOURCE_LIMITS_EXCEEDED","message":"Resource limits for this query exceeded."}]}"#.utf8)
             } else {
                 let pageInfo = number == 1 ? #"{"hasNextPage":true,"endCursor":"next-page"}"# : #"{"hasNextPage":false,"endCursor":null}"#
                 data = Data(#"{"data":{"search":{"edges":[],"issueCount":0,"pageInfo":\#(pageInfo)}}}"#.utf8)
@@ -158,7 +170,7 @@ struct GitHubClientTests {
             let data: Data
 
             if requestNumber == 1 {
-                data = Data(#"{"errors":[{"message":"Field 'stack' doesn't exist on type 'PullRequest'"}]}"#.utf8)
+                data = Data(#"{"errors":[{"message":"Field 'stack' doesn't exist on type 'PullRequest'","extensions":{"code":"undefinedField","typeName":"PullRequest","fieldName":"stack"}}]}"#.utf8)
             } else {
                 data = Data(
                     #"{"data":{"search":{"edges":[],"issueCount":0,"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#.utf8

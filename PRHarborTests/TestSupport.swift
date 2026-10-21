@@ -100,7 +100,7 @@ nonisolated struct CLIExecutableFixture: Sendable {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try response.write(to: directory.appendingPathComponent("response"))
         try stderr.write(to: directory.appendingPathComponent("error"))
-        try Data(#"{"errors":[{"message":"Field 'stack' doesn't exist on type 'PullRequest'"}]}"#.utf8).write(to: directory.appendingPathComponent("missing-stack"))
+        try Data(#"{"errors":[{"message":"Field 'stack' doesn't exist on type 'PullRequest'","extensions":{"code":"undefinedField","typeName":"PullRequest","fieldName":"stack"}}]}"#.utf8).write(to: directory.appendingPathComponent("missing-stack"))
         let quotedDirectory = "'" + directory.path.replacingOccurrences(of: "'", with: "'\"'\"'") + "'"
         let script = """
         #!/bin/sh

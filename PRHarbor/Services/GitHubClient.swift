@@ -186,7 +186,7 @@ nonisolated struct GitHubClient: Sendable {
         decoder.dateDecodingStrategy = .iso8601
         if let errorResponse = try? decoder.decode(GraphQLErrorResponse.self, from: data),
            !errorResponse.errors.isEmpty {
-            throw GraphQLAPIError(messages: errorResponse.errors.map(\.message))
+            throw GraphQLAPIError(errors: errorResponse.errors)
         }
         return try decoder.decode(T.self, from: data)
     }
@@ -397,27 +397,37 @@ private nonisolated struct GraphQLErrorResponse: Decodable, Sendable {
     let errors: [GraphQLError]
 }
 
-private nonisolated struct GraphQLError: Decodable, Sendable {
+nonisolated struct GraphQLError: Decodable, Sendable {
     let message: String
+    var type: String?
+    var extensions: Extensions?
+
+    /// Query validation errors identify the missing schema element; execution errors have a `type`.
+    struct Extensions: Decodable, Sendable {
+        var code: String?
+        var typeName: String?
+        var fieldName: String?
+    }
 }
 
-private nonisolated struct GraphQLAPIError: LocalizedError, Sendable {
-    let messages: [String]
+nonisolated struct GraphQLAPIError: LocalizedError, Sendable {
+    let errors: [GraphQLError]
 
     var errorDescription: String? {
         var seen: Set<String> = []
-        return messages.filter { seen.insert($0).inserted }.joined(separator: "\n")
+        return errors.map(\.message).filter { seen.insert($0).inserted }.joined(separator: "\n")
     }
 
     var isResourceLimit: Bool {
-        messages.contains { $0.lowercased().contains("resource limits for this query exceeded") }
+        errors.contains { $0.type == "RESOURCE_LIMITS_EXCEEDED" }
     }
 
+    /// GitHub Enterprise versions without stacks reject the `stack` fields or the stack type.
     var isMissingStackSchema: Bool {
-        messages.contains { message in
-            let lowercased = message.lowercased()
-            return lowercased.contains("stack")
-                && (lowercased.contains("field") || lowercased.contains("type"))
+        errors.contains { error in
+            guard let extensions = error.extensions,
+                  extensions.code == "undefinedField" || extensions.code == "undefinedType" else { return false }
+            return [extensions.fieldName, extensions.typeName].contains { $0?.lowercased().contains("stack") == true }
         }
     }
 }

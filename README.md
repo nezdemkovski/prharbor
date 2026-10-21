@@ -39,7 +39,7 @@ brew install prharbor
 
 Grab the latest `.dmg` from [GitHub Releases](https://github.com/nezdemkovski/prharbor/releases).
 
-> **First launch:** this personal build is ad hoc signed and not notarized. If macOS blocks the downloaded app, open System Settings → Privacy & Security and approve PR Harbor with **Open Anyway**.
+Releases are signed with a Developer ID and notarized by Apple, so the app opens without extra approval.
 
 ## Setup
 
@@ -64,6 +64,8 @@ See [architecture](docs/architecture.md) for component responsibilities and data
 - Xcode 27 or newer
 - Swift 6.4 compiler in Swift 6 language mode, with Approachable Concurrency and complete concurrency checking
 - macOS 26 deployment target
+
+Releases are packaged by `Scripts/package-release.sh`. With `SIGNING_IDENTITY` set to the Developer ID Application identity it signs the app, notarizes and staples it, then signs, notarizes and staples the DMG; notarization uses `NOTARY_KEYCHAIN_PROFILE` (a profile saved with `xcrun notarytool store-credentials`) or an App Store Connect API key (`NOTARY_KEY_PATH`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`). Without `SIGNING_IDENTITY` it signs ad hoc for local testing. The release workflow needs the secrets `DEVELOPER_ID_CERTIFICATE_P12` (base64 .p12), `DEVELOPER_ID_CERTIFICATE_PASSWORD`, `NOTARY_API_KEY` (base64 .p8), `NOTARY_API_KEY_ID` and `NOTARY_API_ISSUER_ID`.
 
 Build from the command line:
 

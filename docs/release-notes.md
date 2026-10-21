@@ -5,11 +5,12 @@ PR Harbor now connects with a personal access token and no longer needs GitHub C
 - **App Sandbox.** PR Harbor runs sandboxed again, with only outgoing network access.
 - **Sturdier sync.** Every field GitHub may return as null, such as a check run without a details link, is handled instead of failing the whole page. GitHub errors are recognized by their codes. Rejected tokens and rate limits are reported with the step to fix them or the time to retry.
 - **Panel.** The panel sizes itself to its content, and the menu bar count and the timeline share one up-to-date view of your pull requests.
+- **Notifications.** Settings → Notifications shows whether macOS allows them, with a shortcut to System Settings and a test notification. Clicking a summary opens the panel.
 
 **Updating from 0.2:** settings start from their defaults once, because sandboxed preferences live in the app's container. Add a personal access token in Settings → Account and re-apply your preferences.
 
 **Requirements:** macOS 26 or later on Apple silicon, and a GitHub personal access token with the `repo` and `read:org` scopes. For organizations with SAML single sign-on, authorize the token for them on GitHub.
 
-**Signing:** the DMG contains an ad hoc signed, sandboxed app with Hardened Runtime. This personal build has no Developer ID signature or Apple notarization; macOS can require manual approval under Privacy & Security when opening a downloaded copy, and can ask once for Keychain access after an update.
+**Signing:** the app and the DMG are signed with a Developer ID, notarized by Apple and stapled, so macOS opens them without a Privacy & Security approval. The app runs sandboxed with Hardened Runtime.
 
 `SHA256SUMS` is provided for download integrity verification.

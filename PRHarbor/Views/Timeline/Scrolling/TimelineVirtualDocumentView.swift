@@ -43,6 +43,7 @@ nonisolated enum TimelineViewportLimits {
     private var content: (String) -> Content
     private var placeholder: (String) -> TimelineRowPlaceholder = { _ in TimelineRowPlaceholder(title: "", subtitle: "") }
     private var activate: (String) -> Void = { _ in }
+    private var clickEmptySpace: () -> Void = {}
     /// Every attached row host, near the viewport or retained from earlier scrolling.
     private var hosts: [String: NSHostingView<Content>] = [:]
     /// Hosts whose row content changed since they were built.
@@ -71,7 +72,8 @@ nonisolated enum TimelineViewportLimits {
         height: CGFloat, rowIDs: [String], ranges: [String: Range<CGFloat>],
         content: @escaping (String) -> Content,
         placeholder: @escaping (String) -> TimelineRowPlaceholder = { _ in TimelineRowPlaceholder(title: "", subtitle: "") },
-        activate: @escaping (String) -> Void = { _ in }, appearance: NSAppearance?
+        activate: @escaping (String) -> Void = { _ in },
+        clickEmptySpace: @escaping () -> Void = {}, appearance: NSAppearance?
     ) {
         #if DEBUG || PRHARBOR_TEST_FIXTURES
             configurationCount += 1
@@ -84,6 +86,7 @@ nonisolated enum TimelineViewportLimits {
         self.content = content
         self.placeholder = placeholder
         self.activate = activate
+        self.clickEmptySpace = clickEmptySpace
         self.appearance = appearance
         frame.size = NSSize(width: TimelineMetrics.panelWidth, height: max(1, height))
         for id in Array(hosts.keys) where ranges[id] == nil { recycle(id) }
@@ -264,10 +267,10 @@ nonisolated enum TimelineViewportLimits {
     }
     override func mouseDown(with event: NSEvent) {
         let y = convert(event.locationInWindow, from: nil).y
-        if let id = needed.first(where: { ranges[$0]?.contains(y) == true }), hosts[id] == nil {
-            activate(id)
+        if let id = needed.first(where: { ranges[$0]?.contains(y) == true }) {
+            if hosts[id] == nil { activate(id) } else { super.mouseDown(with: event) }
         } else {
-            super.mouseDown(with: event)
+            clickEmptySpace()
         }
     }
 }

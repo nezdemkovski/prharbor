@@ -100,7 +100,8 @@ struct TimelinePanel: View {
                 )
                 .frame(maxWidth: .infinity).frame(height: Layout.axisHeight + rowAreaHeight)
             } else {
-                TimelineInteractiveAxis(scale: scale, now: now, interaction: interaction, brush: brush, clearBrush: { writeIdle(nil) })
+                TimelineInteractiveAxis(scale: scale, now: now, interaction: interaction, brush: brush, clearBrush: clearBrush)
+                    .contentShape(Rectangle()).onTapGesture(perform: clearBrush)
                     .padding(.horizontal, Spacing.panel)
                 rows.frame(height: rowAreaHeight)
             }
@@ -133,7 +134,8 @@ struct TimelinePanel: View {
             ranges: presentation.rowRanges, selection: selection, interaction: interaction,
             content: { id in rowDocument(row: rowsByID[id]).id(id) },
             placeholder: { id in placeholder(for: rowsByID[id]) },
-            activate: { id in activate(rowsByID[id]) }
+            activate: { id in activate(rowsByID[id]) },
+            clickEmptySpace: clearBrush
         )
         .background(alignment: .trailing) {
             TimelineInteractiveGrid(scale: scale, now: now, interaction: interaction, brush: brush)
@@ -162,7 +164,16 @@ struct TimelinePanel: View {
                 }.onEnded { _ in
                     if interaction.brushing { writeIdle(interaction.dragging) }
                     interaction.endDrag()
-                })
+                }
+            )
+            // A click on empty timeline clears the selected range, as charts do. Rows and their
+            // buttons take their own clicks first, so selecting a pull request keeps the range.
+            .onTapGesture(coordinateSpace: .local) { location in
+                if location.x >= TimelineMetrics.trackOrigin { clearBrush() }
+            }
+    }
+    private func clearBrush() {
+        if brush != nil { writeIdle(nil) }
     }
     private func rowView(_ row: TimelinePresentation.Row) -> some View {
         TimelinePresentedRow(

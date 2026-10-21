@@ -12,6 +12,8 @@ struct TimelineNativeScrollView<Content: View>: NSViewRepresentable {
     let content: (String) -> Content
     var placeholder: (String) -> TimelineRowPlaceholder = { _ in TimelineRowPlaceholder(title: "", subtitle: "") }
     var activate: (String) -> Void = { _ in }
+    /// A click below the last row or between rows.
+    var clickEmptySpace: () -> Void = {}
     @Environment(\.colorScheme) private var colorScheme
 
     func makeCoordinator() -> Coordinator { Coordinator(content: content) }
@@ -45,7 +47,8 @@ struct TimelineNativeScrollView<Content: View>: NSViewRepresentable {
         coordinator.selection = selection
         coordinator.document.configure(
             height: height, rowIDs: rowIDs, ranges: ranges, content: content,
-            placeholder: placeholder, activate: activate, appearance: NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua))
+            placeholder: placeholder, activate: activate, clickEmptySpace: clickEmptySpace,
+            appearance: NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua))
         coordinator.rowIDs = rowIDs
         coordinator.ranges = ranges
         // Replace the visible content in this update, before AppKit can draw a frame of

@@ -374,6 +374,36 @@ struct NativeScrollingTests {
         #expect(!interaction.isScrolling)
     }
 
+    @Test @MainActor func aClickBelowTheRowsReportsEmptySpace() throws {
+        let ids = ["row:0", "row:1", "row:2"]
+        let ranges = Dictionary(
+            uniqueKeysWithValues: ids.enumerated().map { index, id in (id, CGFloat(index * 50)..<CGFloat((index + 1) * 50)) })
+        var emptyClicks = 0
+        let document = TimelineVirtualDocumentView { id in Text(id).frame(height: 50) }
+        defer { document.removeRows() }
+        document.configure(
+            height: 456, rowIDs: ids, ranges: ranges, content: { id in Text(id).frame(height: 50) },
+            clickEmptySpace: { emptyClicks += 1 }, appearance: nil)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 780, height: 456), styleMask: [.borderless], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        window.contentView = document
+        document.refreshViewport(NSRect(x: 0, y: 0, width: 780, height: 456))
+        func click(atY y: CGFloat) throws {
+            let point = document.convert(NSPoint(x: 600, y: y), to: nil)
+            let event = try #require(
+                NSEvent.mouseEvent(
+                    with: .leftMouseDown, location: point, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber,
+                    context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
+            document.mouseDown(with: event)
+        }
+        try click(atY: 400)
+        #expect(emptyClicks == 1)
+        try click(atY: 75)
+        #expect(emptyClicks == 1)
+    }
+
     @MainActor private func findScrollView(in view: NSView) -> NSScrollView? {
         if let scroll = view as? NSScrollView { return scroll }
         for child in view.subviews { if let scroll = findScrollView(in: child) { return scroll } }

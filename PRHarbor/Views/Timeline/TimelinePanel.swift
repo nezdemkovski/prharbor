@@ -77,8 +77,13 @@ struct TimelinePanel: View {
                     Spacer(); Button("Retry") { store.refresh() }
                 }.font(.caption).foregroundStyle(Palette.failure).padding(.horizontal, Spacing.panel).padding(.bottom, Spacing.m)
             }
-            TimelineInteractiveAxis(scale: scale, now: now, interaction: interaction, brush: brush, clearBrush: { writeIdle(nil) }).padding(.horizontal, Spacing.panel)
-            rows.frame(height: rowAreaHeight)
+            if presentation.visibleIDs.isEmpty {
+                // Without rows the axis has nothing to measure; the empty state takes its place.
+                emptyState.frame(maxWidth: .infinity).frame(height: Layout.axisHeight + rowAreaHeight)
+            } else {
+                TimelineInteractiveAxis(scale: scale, now: now, interaction: interaction, brush: brush, clearBrush: { writeIdle(nil) }).padding(.horizontal, Spacing.panel)
+                rows.frame(height: rowAreaHeight)
+            }
             if let selected {
                 TimelineDetailView(item: selected, now: now, store: store, select: select, availableURLs: Set(presentation.itemsByID.keys))
                     .id(selected.id)
@@ -98,7 +103,7 @@ struct TimelinePanel: View {
     }
     private var rows: some View {
         Group {
-            if rendering == .native, !presentation.visibleIDs.isEmpty {
+            if rendering == .native {
                 let rowsByID = Dictionary(uniqueKeysWithValues: presentation.rows.map { ($0.id, $0) })
                 TimelineNativeScrollView(height: presentation.contentHeight, rowIDs: presentation.rows.map(\.id),
                     ranges: presentation.rowRanges, selection: selection, interaction: interaction,
@@ -110,10 +115,8 @@ struct TimelinePanel: View {
             }
         }
         .background(alignment: .trailing) {
-            if !presentation.visibleIDs.isEmpty {
-                TimelineInteractiveGrid(scale: scale, now: now, interaction: interaction, brush: brush)
-                    .frame(width: TimelineMetrics.trackWidth).padding(.trailing, TimelineMetrics.inset)
-            }
+            TimelineInteractiveGrid(scale: scale, now: now, interaction: interaction, brush: brush)
+                .frame(width: TimelineMetrics.trackWidth).padding(.trailing, TimelineMetrics.inset)
         }
         .onChange(of: scale.days, initial: true) { _, _ in interaction.scale = scale }
     }
@@ -140,32 +143,24 @@ struct TimelinePanel: View {
     private var swiftUIScrollView: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                if store.isLoading && items.isEmpty {
-                    ProgressView("Fetching pull requests…").frame(maxWidth: .infinity).padding(.top, Spacing.section)
-                } else if presentation.visibleIDs.isEmpty {
-                    Text(emptyMessage)
-                        .font(.ui(Typography.body)).foregroundStyle(Palette.textSecondary)
-                        .frame(maxWidth: .infinity).padding(.vertical, Spacing.roomy)
-                } else {
-                    Group {
-                        if rendering == .eager { VStack(spacing: 0) { rowContent } }
-                        else { LazyVStack(spacing: 0) { rowContent } }
-                    }
-                    .padding(.bottom, TimelineRowGeometry.documentBottomPadding).padding(.horizontal, Spacing.panel)
-                    .onContinuousHover { phase in
-                        guard !interaction.isScrolling else { return }
-                        switch phase {
-                        case .active(let point): interaction.hover(at: point.x)
-                        case .ended: interaction.cursorAge = nil
-                        }
-                    }
-                    .simultaneousGesture(DragGesture(minimumDistance: 8).onChanged { value in
-                        interaction.drag(from: value.startLocation.x, to: value.location.x, scale: scale)
-                    }.onEnded { _ in
-                        if interaction.brushing { writeIdle(interaction.dragging) }
-                        interaction.endDrag()
-                    })
+                Group {
+                    if rendering == .eager { VStack(spacing: 0) { rowContent } }
+                    else { LazyVStack(spacing: 0) { rowContent } }
                 }
+                .padding(.bottom, TimelineRowGeometry.documentBottomPadding).padding(.horizontal, Spacing.panel)
+                .onContinuousHover { phase in
+                    guard !interaction.isScrolling else { return }
+                    switch phase {
+                    case .active(let point): interaction.hover(at: point.x)
+                    case .ended: interaction.cursorAge = nil
+                    }
+                }
+                .simultaneousGesture(DragGesture(minimumDistance: 8).onChanged { value in
+                    interaction.drag(from: value.startLocation.x, to: value.location.x, scale: scale)
+                }.onEnded { _ in
+                    if interaction.brushing { writeIdle(interaction.dragging) }
+                    interaction.endDrag()
+                })
             }
             .scrollIndicators(.automatic)
             .onScrollPhaseChange { _, phase in
@@ -231,11 +226,28 @@ struct TimelinePanel: View {
         return .handled
     }
 
-    private var emptyMessage: String {
+    @ViewBuilder private var emptyState: some View {
         let request = snapshot.searchRequest
-        if request.needsInterpretation, snapshot.isSearching { return "Searching…" }
-        if request.needsInterpretation, let message = snapshot.searchMessage { return message }
-        return query.isEmpty && snapshot.zone == nil && brush == nil ? "All clear. No open pull requests." : "Nothing matches. Nice and clean."
+        if store.isLoading && items.isEmpty {
+            ProgressView("Fetching pull requests…")
+        } else if request.needsInterpretation, snapshot.isSearching {
+            ProgressView("Searching…")
+        } else if query.isEmpty && snapshot.zone == nil && brush == nil {
+            ContentUnavailableView {
+                SwiftUI.Label("All Clear", systemImage: "checkmark.circle")
+            } description: {
+                Text("No open pull requests.").foregroundStyle(Palette.textSecondary)
+            }
+        } else {
+            ContentUnavailableView {
+                SwiftUI.Label("No Matches", systemImage: "line.3.horizontal.decrease.circle")
+            } description: {
+                Text(request.needsInterpretation ? snapshot.searchMessage ?? "No pull request fits this search." : "No pull request fits these filters.")
+                    .foregroundStyle(Palette.textSecondary)
+            } actions: {
+                Button("Clear Filters") { screen.clearQuery() }
+            }
+        }
     }
     private func writeIdle(_ value: ClosedRange<Double>?) { screen.writeIdle(value) }
     private func select(_ id: String) {

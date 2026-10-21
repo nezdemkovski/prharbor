@@ -1,5 +1,7 @@
 import Foundation
+import Synchronization
 import Testing
+import UserNotifications
 @testable import PRHarbor
 
 @Suite("Store components")
@@ -29,5 +31,25 @@ struct StoreComponentsTests {
         #expect(CounterType.assigned.count(items: [], assigned: 3, created: 5, requested: 7) == 3)
         #expect(CounterType.reviewRequested.count(items: [], assigned: 3, created: 5, requested: 7) == 7)
         #expect(CounterType.none.count(items: [], assigned: 3, created: 5, requested: 7) == 0)
+    }
+}
+
+@Suite("Notification delivery")
+struct NotificationDeliveryTests {
+    @Test func announcesOnlyTheKindsTheSettingsEnable() {
+        let posted = Mutex<[(category: String, url: String?)]>([])
+        let delivery = NotificationDelivery(post: { request in
+            let entry = (request.content.categoryIdentifier, request.content.userInfo["url"] as? String)
+            posted.withLock { $0.append(entry) }
+        })
+        let pull = TimelinePreviewData.items(now: .now)[0].pull
+        var settings = PullRequestSettings()
+        settings.notifyReviewRequested = true
+        settings.notifyAssigned = false
+        settings.notifyCreated = true
+        delivery.announceNew(requested: [pull], assigned: [pull], created: [pull], settings: settings)
+        let requests = posted.withLock { $0 }
+        #expect(requests.map(\.category) == ["review", "created"])
+        #expect(requests.first?.url == pull.url.absoluteString)
     }
 }

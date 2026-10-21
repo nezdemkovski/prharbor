@@ -24,30 +24,8 @@ final class NotificationPermission {
     }
 
     func sendTest() {
-        sendTimelineNotification(title: "PR Harbor notifications work",
-                                 body: "Review requests, assignments and quiet pull requests will appear like this.",
-                                 identifier: "timeline-test")
+        NotificationDelivery().message(title: "PR Harbor notifications work",
+                                       body: "Review requests, assignments and quiet pull requests will appear like this.",
+                                       identifier: "timeline-test")
     }
-}
-
-func requestNotificationAuthorization() {
-    let center = UNUserNotificationCenter.current()
-    center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
-
-    let openAction = UNNotificationAction(
-        identifier: "OPEN_PR",
-        title: "Open PR",
-        options: [.foreground]
-    )
-
-    let categories: Set<UNNotificationCategory> = Set(
-        ["review", "assigned", "created", "rotting"].map { categoryId in
-            UNNotificationCategory(
-                identifier: categoryId,
-                actions: [openAction],
-                intentIdentifiers: []
-            )
-        }
-    )
-    center.setNotificationCategories(categories)
 }

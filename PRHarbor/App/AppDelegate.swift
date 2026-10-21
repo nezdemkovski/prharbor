@@ -24,7 +24,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let session = store.session
         Task { await session.restoreFromSavedToken(baseURL: Defaults[.githubApiBaseUrl]) }
         statusBar = StatusBarController(store: store)
-        requestNotificationAuthorization()
+        NotificationDelivery.register()
     }
 
     func applicationWillTerminate(_ notification: Notification) { statusBar?.invalidate() }
@@ -42,7 +42,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
-        let opens = response.actionIdentifier == UNNotificationDefaultActionIdentifier || response.actionIdentifier == "OPEN_PR"
+        let opens = response.actionIdentifier == UNNotificationDefaultActionIdentifier || response.actionIdentifier == NotificationDelivery.openAction
         let url = (userInfo["url"] as? String).flatMap(URL.init(string:))
         DispatchQueue.main.async { [weak self] in
             guard opens else { return }

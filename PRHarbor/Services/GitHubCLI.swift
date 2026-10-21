@@ -105,17 +105,6 @@ private nonisolated final class GitHubCLIExecution: @unchecked Sendable {
     }
 
     func run(executable: URL, arguments: [String], input: Data?, environment: [String: String], timeout: TimeInterval) async throws -> Data {
-        try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    continuation.resume(returning: try self.runSynchronously(executable: executable, arguments: arguments,
-                                                                           input: input, environment: environment, timeout: timeout))
-                } catch { continuation.resume(throwing: error) }
-            }
-        }
-    }
-
-    private func runSynchronously(executable: URL, arguments: [String], input: Data?, environment: [String: String], timeout: TimeInterval) throws -> Data {
         let stdout = Pipe(), stderr = Pipe(), stdin = Pipe()
         process.executableURL = executable
         process.arguments = arguments
@@ -124,6 +113,11 @@ private nonisolated final class GitHubCLIExecution: @unchecked Sendable {
         process.standardOutput = stdout
         process.standardError = stderr
         process.standardInput = stdin
+        // Exit and both end-of-file events complete the request. They arrive from system
+        // dispatch sources, so no thread waits for gh.
+        let completion = DispatchGroup()
+        completion.enter()
+        process.terminationHandler = { _ in completion.leave() }
         try lock.withLock {
             guard !cancelled else { throw CancellationError() }
             do { try process.run() } catch { throw GitHubCLIError.notInstalled }
@@ -132,19 +126,20 @@ private nonisolated final class GitHubCLIExecution: @unchecked Sendable {
         DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: deadline)
         defer { deadline.cancel() }
         // Drain both streams while gh runs: a full pipe must never block a large PR response.
-        let readers = DispatchGroup()
-        let output = CLIStreamReader(handle: stdout.fileHandleForReading)
-        let errors = CLIStreamReader(handle: stderr.fileHandleForReading)
-        DispatchQueue.global().async(group: readers) { output.read() }
-        DispatchQueue.global().async(group: readers) { errors.read() }
-        do {
-            if let input { try stdin.fileHandleForWriting.write(contentsOf: input) }
-        } catch {
-            stop(timedOut: false)
+        let output = CLIStreamReader(), errors = CLIStreamReader()
+        output.start(stdout.fileHandleForReading, group: completion)
+        errors.start(stderr.fileHandleForReading, group: completion)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            do {
+                if let input { try stdin.fileHandleForWriting.write(contentsOf: input) }
+            } catch {
+                self?.stop(timedOut: false)
+            }
+            try? stdin.fileHandleForWriting.close()
         }
-        try? stdin.fileHandleForWriting.close()
-        process.waitUntilExit()
-        readers.wait()
+        await withCheckedContinuation { continuation in
+            completion.notify(queue: .global()) { continuation.resume() }
+        }
         let termination = lock.withLock { () -> (Bool, Bool, Int32) in
             finished = true
             return (cancelled, timedOut, process.terminationStatus)
@@ -152,7 +147,7 @@ private nonisolated final class GitHubCLIExecution: @unchecked Sendable {
         if termination.1 { throw GitHubCLIError.timedOut }
         if termination.0 { throw CancellationError() }
         if termination.2 == 4 { throw GitHubCLIError.signInRequired }
-        let data = try output.result()
+        let data = output.result
         if termination.2 != 0 {
             // gh reports GraphQL errors with exit code 1. Let the client interpret the JSON
             // so schema fallbacks and mutation failures behave exactly as with URLSession.
@@ -167,20 +162,29 @@ private nonisolated final class GitHubCLIExecution: @unchecked Sendable {
     }
 }
 
-// One worker drains each pipe; readers finish before their results are consumed.
+// Collects one pipe until end of file. Each handle delivers its callbacks serially.
 private nonisolated final class CLIStreamReader: @unchecked Sendable {
-    private let handle: FileHandle
     private let lock = NSLock()
-    private var value: Result<Data, Error>?
-    init(handle: FileHandle) { self.handle = handle }
-    func read() {
-        let result = Result { try handle.readToEnd() ?? Data() }
-        lock.withLock { value = result }
-        try? handle.close()
+    private var data = Data()
+    private var ended = false
+
+    func start(_ handle: FileHandle, group: DispatchGroup) {
+        group.enter()
+        handle.readabilityHandler = { [self] handle in
+            let chunk = handle.availableData
+            let reachedEnd = lock.withLock { () -> Bool in
+                guard !ended else { return false }
+                if chunk.isEmpty { ended = true } else { data.append(chunk) }
+                return ended
+            }
+            guard reachedEnd else { return }
+            handle.readabilityHandler = nil
+            try? handle.close()
+            group.leave()
+        }
     }
-    func result() throws -> Data {
-        try lock.withLock { try value?.get() ?? Data() }
-    }
+
+    var result: Data { lock.withLock { data } }
 }
 
 @MainActor

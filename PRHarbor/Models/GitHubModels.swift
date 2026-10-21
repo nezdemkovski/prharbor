@@ -7,6 +7,8 @@ nonisolated struct GraphQLSearchResponse: Codable, Sendable {
 
 nonisolated struct ResponseData: Codable, Sendable {
     var search: Search
+    /// The account that answered the query, compared with the connected account.
+    var viewer: User? = nil
 }
 
 nonisolated struct Search: Codable, Sendable {

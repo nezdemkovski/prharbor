@@ -7,12 +7,15 @@ nonisolated protocol GitHubAPITransport: Sendable {
 nonisolated struct GitHubClient: Sendable {
     let baseURL: URL
     let buildType: BuildType
+    /// When set, every search page and mutation must be answered by this account.
+    let expectedLogin: String?
     private let transport: any GitHubAPITransport
 
     init(
         baseURL: String,
         buildType: BuildType,
-        transport: any GitHubAPITransport
+        transport: any GitHubAPITransport,
+        expectedLogin: String? = nil
     ) throws {
         guard let url = URL(string: baseURL),
               url.scheme == "https",
@@ -26,6 +29,7 @@ nonisolated struct GitHubClient: Sendable {
 
         self.baseURL = url
         self.buildType = buildType
+        self.expectedLogin = expectedLogin
         self.transport = transport
     }
 
@@ -68,6 +72,7 @@ nonisolated struct GitHubClient: Sendable {
                 pageSize = max(1, pageSize / 2)
                 continue
             }
+            try verifyAccount(response.data.viewer?.login)
             edges.append(contentsOf: response.data.search.edges)
 
             guard response.data.search.pageInfo.hasNextPage else { break }
@@ -124,6 +129,7 @@ nonisolated struct GitHubClient: Sendable {
         if let conflicting = openEntries.compactMap(\.pullRequest).first(where: { $0.mergeable == "CONFLICTING" }) {
             throw StackRebaseError.conflictingBranch(conflicting.headRefName)
         }
+        if expectedLogin != nil { try verifyAccount(try await fetchUser().login) }
 
         let mutation = """
         mutation RebasePullRequestBranch($input: UpdatePullRequestBranchInput!) {
@@ -173,6 +179,11 @@ nonisolated struct GitHubClient: Sendable {
     func fetchUser() async throws -> User {
         let data = try await transport.api("user", body: nil)
         return try JSONDecoder().decode(User.self, from: data)
+    }
+
+    private func verifyAccount(_ login: String?) throws {
+        guard let expectedLogin, login != expectedLogin else { return }
+        throw GitHubCLIError.accountChanged
     }
 
     private func postGraphQL<T: Decodable, Variables: Encodable>(
@@ -280,6 +291,7 @@ nonisolated struct GitHubClient: Sendable {
 
         return """
         query PullRequests($query: String!, $cursor: String, $pageSize: Int!) {
+            viewer { login }
             search(query: $query, type: ISSUE, first: $pageSize, after: $cursor) {
                 issueCount
                 pageInfo {

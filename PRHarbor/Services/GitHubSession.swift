@@ -68,14 +68,10 @@ final class GitHubSession: ObservableObject {
         guard let connection = cliConnection, connection.apiBaseURL == baseURL else {
             throw GitHubCLIError.signInRequired
         }
-        let epoch = generation
+        // The client verifies the answering account within each search and before mutations,
+        // so a changed gh account is detected without a separate request.
         let cli = try GitHubCLI(executablePath: connection.executablePath, apiBaseURL: baseURL)
-        let client = try GitHubClient(baseURL: baseURL, buildType: buildType, transport: cli)
-        let user = try await client.fetchUser()
-        try Task.checkCancellation()
-        guard epoch == generation else { throw CancellationError() }
-        guard user.login == connection.username else { throw GitHubCLIError.accountChanged }
-        return client
+        return try GitHubClient(baseURL: baseURL, buildType: buildType, transport: cli, expectedLogin: connection.username)
     }
 
     func cleanupLegacyCredentials() {

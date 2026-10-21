@@ -90,16 +90,19 @@ struct GitHubCLITransportTests {
     }
 
     @Test @MainActor func changedCLIAccountRequiresAnExplicitReconnect() async throws {
-        let fixture = try CLIExecutableFixture(response: Data())
+        let fixture = try CLIExecutableFixture(response: Data(#"{"data":{"viewer":{"login":"octocat"},"search":{"edges":[],"issueCount":0,"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#.utf8))
         defer { fixture.remove() }
         let session = GitHubSession(connection: nil)
         session.useCLI(.init(executablePath: fixture.executable.path, username: "different-user", apiBaseURL: "https://api.github.com"))
-        do {
-            _ = try await session.client(baseURL: "https://api.github.com", buildType: .none)
-            Issue.record("A changed account must require reconnecting")
-        } catch let error as GitHubCLIError {
-            guard case .accountChanged = error else { Issue.record("Expected an account change error"); return }
-        }
+        let client = try await session.client(baseURL: "https://api.github.com", buildType: .none)
+        await #expect(throws: GitHubCLIError.accountChanged) { try await client.fetchPulls(filter: "author:different-user") }
+        // Mutations check the account before changing any branch.
+        let stack = PullRequestStack(id: "stack", number: 1, baseRefName: "main", size: 1, entries: .init(nodes: [
+            .init(position: 1, pullRequest: .init(id: "PR_1", number: 1, title: "One", url: URL(string: "https://github.com/o/r/pull/1")!,
+                state: "OPEN", isDraft: false, headRefName: "one", headRefOid: "oid", reviewDecision: nil, mergeable: "MERGEABLE"))]))
+        await #expect(throws: GitHubCLIError.accountChanged) { try await client.rebaseStack(stack) }
+        let arguments = try String(contentsOf: fixture.arguments, encoding: .utf8).split(separator: "\n").map(String.init)
+        #expect(arguments.prefix(2) == ["api", "user"])
     }
 
     @Test func enterpriseHostIsExplicitAndInvalidHostsAreRejected() throws {

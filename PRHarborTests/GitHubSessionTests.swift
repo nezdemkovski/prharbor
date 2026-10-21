@@ -51,34 +51,15 @@ struct GitHubSessionTests {
         await #expect(throws: GitHubCLIError.self) { try await session.client(baseURL: "https://other.example/api/v3", buildType: .none) }
     }
 
-    @Test func disconnectInvalidatesAnAccountCheckAlreadyInFlight() async throws {
-        let fixture = try CLIExecutableFixture(response: Data(), delay: 0.15)
+    @Test func clientsVerifyTheConnectedAccountWithoutASeparateRequest() async throws {
+        let fixture = try CLIExecutableFixture(response: Data(#"{"data":{"viewer":{"login":"octocat"},"search":{"edges":[],"issueCount":0,"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#.utf8))
         defer { fixture.remove() }
         let session = GitHubSession(connection: .init(executablePath: fixture.executable.path, username: "octocat", apiBaseURL: "https://api.github.com"))
-        let pending = Task { try await session.client(baseURL: "https://api.github.com", buildType: .none) }
-        for _ in 0..<200 {
-            if FileManager.default.fileExists(atPath: fixture.arguments.path) { break }
-            try await Task.sleep(for: .milliseconds(5))
-        }
-        #expect(FileManager.default.fileExists(atPath: fixture.arguments.path))
-        session.disconnect()
-        await #expect(throws: CancellationError.self) { try await pending.value }
-        #expect(session.cliConnection == nil)
-    }
-
-    @Test func reconnectCannotReuseThePreviousAccountCheck() async throws {
-        let fixture = try CLIExecutableFixture(response: Data(), delay: 0.15)
-        defer { fixture.remove() }
-        let initial = GitHubCLIConnection(executablePath: fixture.executable.path, username: "octocat", apiBaseURL: "https://api.github.com")
-        let session = GitHubSession(connection: initial)
-        let pending = Task { try await session.client(baseURL: "https://api.github.com", buildType: .none) }
-        for _ in 0..<200 {
-            if FileManager.default.fileExists(atPath: fixture.arguments.path) { break }
-            try await Task.sleep(for: .milliseconds(5))
-        }
-        #expect(FileManager.default.fileExists(atPath: fixture.arguments.path))
-        session.useCLI(.init(executablePath: fixture.executable.path, username: "other-user", apiBaseURL: "https://api.github.com"))
-        await #expect(throws: CancellationError.self) { try await pending.value }
-        #expect(session.cliConnection?.username == "other-user")
+        let client = try await session.client(baseURL: "https://api.github.com", buildType: .none)
+        #expect(client.expectedLogin == "octocat")
+        #expect(!FileManager.default.fileExists(atPath: fixture.arguments.path))
+        #expect(try await client.fetchPulls(filter: "author:octocat").isEmpty)
+        let arguments = try String(contentsOf: fixture.arguments, encoding: .utf8)
+        #expect(arguments.hasPrefix("api\ngraphql\n"))
     }
 }

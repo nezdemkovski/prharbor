@@ -25,6 +25,8 @@ enum TimelineMetrics {
     static let inset: CGFloat = 18
     static let trackWidth = panelWidth - 2 * inset - labelWidth
     static let maxRowAreaHeight: CGFloat = 456
+    /// Keeps the panel from collapsing while loading or showing only a few pull requests.
+    static let minRowAreaHeight: CGFloat = 260
 }
 
 /// Axis labels and grid lines follow the prototype's log and Monday-aligned scales.

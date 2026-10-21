@@ -49,11 +49,11 @@ struct TimelinePanel: View {
     private var queryBinding: Binding<String> { Binding(get: { snapshot.query }, set: screen.setQuery) }
     private var tabBinding: Binding<TimelineTab> { Binding(get: { snapshot.tab }, set: screen.setTab) }
     private var zoneBinding: Binding<Freshness?> { Binding(get: { snapshot.zone }, set: screen.setZone) }
-    /// The scroll region is the only part without an intrinsic height. It shrinks with
-    /// filtered content and shares its maximum with the morning brief; the rest of the
-    /// panel takes its natural size.
+    /// The scroll region is the only part without an intrinsic height. It follows the
+    /// filtered content between a minimum, so loading and short lists keep a stable panel,
+    /// and a maximum shared with the morning brief; the rest of the panel takes its natural size.
     private var rowAreaHeight: CGFloat {
-        presentation.visibleIDs.isEmpty ? 80 : min(max(100, TimelineMetrics.maxRowAreaHeight - briefHeight), presentation.contentHeight)
+        max(TimelineMetrics.minRowAreaHeight, min(TimelineMetrics.maxRowAreaHeight - briefHeight, presentation.contentHeight))
     }
     var body: some View {
         let request = snapshot.searchRequest

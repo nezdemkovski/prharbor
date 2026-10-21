@@ -9,52 +9,53 @@ struct TimelineRow: View {
     var layer: Bool = false
     let select: () -> Void
     var body: some View {
-        Button(action: select) {
-            HStack(spacing: 0) {
-                HStack(spacing: Spacing.l) {
-                    TimelineAvatar(person: item.pull.author, size: Size.avatar)
-                        .accessibilityHidden(true)
-                        .overlay(alignment: .bottomTrailing) {
-                            if layer, let position = item.pull.stackEntry?.position {
-                                Text("\(position)").font(.ui(Typography.micro, .bold)).foregroundStyle(Palette.textSecondary)
-                                    .frame(minWidth: Size.positionBadge).frame(height: Size.positionBadge).background(
-                                        Palette.raised, in: Capsule()
-                                    )
-                                    .overlay(Capsule().strokeBorder(Palette.strong)).offset(Layout.positionBadgeOffset)
-                            }
+        // A tap selects the row. It is not a Button: a button captures the mouse press, and the
+        // panel's range drag across the timeline must be able to start on any row.
+        HStack(spacing: 0) {
+            HStack(spacing: Spacing.l) {
+                TimelineAvatar(person: item.pull.author, size: Size.avatar)
+                    .accessibilityHidden(true)
+                    .overlay(alignment: .bottomTrailing) {
+                        if layer, let position = item.pull.stackEntry?.position {
+                            Text("\(position)").font(.ui(Typography.micro, .bold)).foregroundStyle(Palette.textSecondary)
+                                .frame(minWidth: Size.positionBadge).frame(height: Size.positionBadge).background(
+                                    Palette.raised, in: Capsule()
+                                )
+                                .overlay(Capsule().strokeBorder(Palette.strong)).offset(Layout.positionBadgeOffset)
                         }
-                    VStack(alignment: .leading, spacing: Spacing.xxxs) {
-                        Text(item.title).font(.ui(Typography.body, .medium)).lineLimit(1)
-                        HStack(spacing: Spacing.xs) {
-                            Text(verbatim: "#\(item.pull.number)")
-                            if let detail = item.isMine ? item.ticket : item.pull.author?.login {
-                                Text("·")
-                                Text(detail).lineLimit(1)
-                            }
-                            if item.pull.isDraft { Text("· draft") }
-                            if item.snoozedUntil != nil { Image(systemName: "moon.zzz") }
-                        }
-                        .font(.ui(Typography.subheadline)).foregroundStyle(Palette.textSecondary)
                     }
-                    Spacer(minLength: 0)
+                VStack(alignment: .leading, spacing: Spacing.xxxs) {
+                    Text(item.title).font(.ui(Typography.body, .medium)).lineLimit(1)
+                    HStack(spacing: Spacing.xs) {
+                        Text(verbatim: "#\(item.pull.number)")
+                        if let detail = item.isMine ? item.ticket : item.pull.author?.login {
+                            Text("·")
+                            Text(detail).lineLimit(1)
+                        }
+                        if item.pull.isDraft { Text("· draft") }
+                        if item.snoozedUntil != nil { Image(systemName: "moon.zzz") }
+                    }
+                    .font(.ui(Typography.subheadline)).foregroundStyle(Palette.textSecondary)
                 }
-                .padding(.trailing, Spacing.xxl)
-                .frame(width: TimelineMetrics.labelWidth, alignment: .leading)
-                TimelineTrack(item: item, scale: scale, now: now, fixedWidth: TimelineMetrics.trackWidth)
+                Spacer(minLength: 0)
             }
-            .frame(height: layer ? TimelineRowGeometry.layerHeight : TimelineRowGeometry.pullHeight)
-            .modifier(TimelineRowHighlight(selected: selected))
-            .opacity(item.snoozedUntil == nil ? 1 : 0.5)
-            .contentShape(Rectangle())
+            .padding(.trailing, Spacing.xxl)
+            .frame(width: TimelineMetrics.labelWidth, alignment: .leading)
+            TimelineTrack(item: item, scale: scale, now: now, fixedWidth: TimelineMetrics.trackWidth)
         }
-        .buttonStyle(.plain)
+        .frame(height: layer ? TimelineRowGeometry.layerHeight : TimelineRowGeometry.pullHeight)
+        .modifier(TimelineRowHighlight(selected: selected))
+        .opacity(item.snoozedUntil == nil ? 1 : 0.5)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: select)
         .help(item.pull.title + "\n" + item.standing)
         .accessibilityAction(named: Text("Show history")) {
             Defaults[.detailHistory] = true
             select()
         }
         .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(selected ? [.isSelected] : [])
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : [.isButton])
+        .accessibilityAction(.default, select)
         .contextMenu {
             Link("Open on GitHub", destination: item.pull.url)
             Button("Copy branch name") {

@@ -1,13 +1,11 @@
-PR Harbor now connects with a personal access token and no longer needs GitHub CLI.
+PR Harbor 0.4.0 looks at home on macOS 26 and makes the timeline easier to work with.
 
-- **Personal access token.** Settings → Account opens GitHub's new-token form with the `repo` and `read:org` scopes preselected; paste the token and choose Connect. One classic token covers all your organizations without approving an OAuth or GitHub App in each of them. The token is kept in your login Keychain and sent only to the configured GitHub host.
-- **Faster refresh.** A refresh first lists your pull requests with their change markers, then fetches full details only for new or changed ones, in parallel. A typical refresh takes about 3 seconds instead of about 14.
-- **App Sandbox.** PR Harbor runs sandboxed again, with only outgoing network access.
-- **Sturdier sync.** Every field GitHub may return as null, such as a check run without a details link, is handled instead of failing the whole page. GitHub errors are recognized by their codes. Rejected tokens and rate limits are reported with the step to fix them or the time to retry.
-- **Panel.** The panel sizes itself to its content, and the menu bar count and the timeline share one up-to-date view of your pull requests.
-- **Notifications.** Settings → Notifications shows whether macOS allows them, with a shortcut to System Settings and a test notification. Clicking a summary opens the panel.
-
-**Updating from 0.2:** settings start from their defaults once, because sandboxed preferences live in the app's container. Add a personal access token in Settings → Account and re-apply your preferences.
+- **Liquid Glass panel.** The panel sits on the popover's system glass, arrow included. Text and surfaces are tuned to stay readable over it in both light and dark appearance.
+- **Native settings.** Settings open in a standard macOS settings window with a sidebar, grouped by purpose, and About uses the standard About window.
+- **Timeline selection.** Drag across the timeline from any row to filter by quiet time; the range now ends on any day instead of jumping to fixed stops. Click empty timeline, the axis or the range chip to clear it. Clicking beside a repository or stack header no longer collapses it.
+- **Smoother scrolling.** Scrolling back and forth through long lists keeps rows drawn instead of rebuilding them.
+- **Steadier panel.** The panel keeps one height while loading, filtering or showing a short list. When nothing matches, it says so and offers Clear Filters.
+- **Readability.** Every text color meets WCAG AA contrast against the surface it sits on.
 
 **Requirements:** macOS 26 or later on Apple silicon, and a GitHub personal access token with the `repo` and `read:org` scopes. For organizations with SAML single sign-on, authorize the token for them on GitHub.
 

@@ -1,5 +1,18 @@
 # PR Harbor architecture
 
+## Source layout
+
+The Xcode project uses synchronized folders: a file joins its target by being in the folder.
+
+- `App/`: app lifetime, the status item and popover, runtime and preferences domain.
+- `Models/GitHub/`: GraphQL payload types, one file per area (pull request, stack, checks, history, responses), and `GitHubEnums` for schema enums that decode unknown values as `unknown`.
+- `Models/Timeline/`: what the panel derives from a pull request: `TimelineItem`, `NextAction`, freshness, scale, history events, search matching and `TimelinePresentation`.
+- `Services/GitHub/`: transport, token storage and connection, the client, and `GitHubQueries`, every GraphQL document it sends.
+- `Services/`: the store, snapshot cache, screen controller and intelligence.
+- `Views/Timeline/`: the panel, with `Drawing/` for the axis, grid, track and avatars and `Rows/` for row types.
+- `Views/Settings/`: the settings window, one file per pane.
+- `Helpers/`: design tokens, preference keys, notifications.
+
 ## Responsibilities
 
 - `AppDelegate` owns menu bar and settings window lifetime. `StatusBarController` owns the status item and popover. `AppRuntime` prevents hosted tests from starting production services; `AppPreferences` supplies either the existing preference domain or a fresh test suite.

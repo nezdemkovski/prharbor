@@ -79,7 +79,7 @@ nonisolated struct GitHubClient: Sendable {
 
     /// Phase one: every page of the search with only identity and change markers.
     private func fetchSummaries(queryString: String, includeStacks: Bool) async throws -> [PullSummary] {
-        let graphQLQuery = buildSummaryQuery(includeStacks: includeStacks)
+        let graphQLQuery = GitHubQueries.summary(buildType: buildType, includeStacks: includeStacks)
         var summaries: [PullSummary] = []
         var cursor: String?
         var pageSize = 100
@@ -154,7 +154,7 @@ nonisolated struct GitHubClient: Sendable {
         let started = ContinuousClock.now
         do {
             let response: GraphQLDetailsResponse = try await postGraphQL(
-                query: buildDetailsQuery(), variables: GraphQLStackVariables(ids: ids))
+                query: GitHubQueries.details(buildType: buildType), variables: GraphQLStackVariables(ids: ids))
             syncLog.notice("Details for \(ids.count) PRs in \(started.duration(to: .now), privacy: .public)")
             return response.data.nodes
         } catch let error as GraphQLAPIError where error.isResourceLimit && ids.count > 1 {
@@ -176,7 +176,7 @@ nonisolated struct GitHubClient: Sendable {
         for startIndex in stride(from: 0, to: stackIDs.count, by: 100) {
             let endIndex = min(startIndex + 100, stackIDs.count)
             let response: GraphQLStackResponse = try await postGraphQL(
-                query: buildStackDetailsQuery(),
+                query: GitHubQueries.stackDetails(),
                 variables: GraphQLStackVariables(ids: Array(stackIDs[startIndex..<endIndex]))
             )
             for stack in response.data.nodes.compactMap({ $0 }) {
@@ -211,24 +211,13 @@ nonisolated struct GitHubClient: Sendable {
             throw StackRebaseError.conflictingBranch(conflicting.headRefName)
         }
 
-        let mutation = """
-        mutation RebasePullRequestBranch($input: UpdatePullRequestBranchInput!) {
-            updatePullRequestBranch(input: $input) {
-                pullRequest {
-                    id
-                    headRefOid
-                }
-            }
-        }
-        """
-
         var completed = 0
         for entry in openEntries {
             try Task.checkCancellation()
             guard let pullRequest = entry.pullRequest else { continue }
             do {
                 let _: GraphQLRebaseResponse = try await postGraphQL(
-                    query: mutation,
+                    query: GitHubQueries.rebaseBranch,
                     variables: GraphQLRebaseVariables(input: .init(
                         pullRequestId: pullRequest.id,
                         expectedHeadOid: pullRequest.headRefOid,
@@ -296,218 +285,6 @@ nonisolated struct GitHubClient: Sendable {
             .deletingLastPathComponent()
             .appendingPathComponent("graphql")
     }
-
-    private func buildDetailsQuery() -> String {
-        let buildFields: String
-
-        switch buildType {
-        case .checks:
-            buildFields = """
-        commits(last: 1) {
-            nodes {
-                commit {
-                    statusCheckRollup { state }
-                    checkSuites(first: 10) {
-                        nodes {
-                            app {
-                                name
-                            }
-                            checkRuns(first: 10) {
-                                nodes {
-                                    name
-                                    conclusion
-                                    detailsUrl
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        """
-        case .commitStatus:
-            buildFields = """
-        commits(last: 1) {
-            nodes {
-                commit {
-                    statusCheckRollup {
-                        state
-                        contexts(first: 20) {
-                            nodes {
-                                ... on StatusContext {
-                                    context
-                                    description
-                                    state
-                                    targetUrl
-                                }
-                                ... on CheckRun {
-                                    name
-                                    conclusion
-                                    detailsUrl
-                                    title
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        """
-        case .none:
-            buildFields = ""
-        }
-
-        return """
-        query PullRequestDetails($ids: [ID!]!) {
-            nodes(ids: $ids) {
-                ... on PullRequest {
-                    number
-                    createdAt
-                    updatedAt
-                    title
-                    headRefName
-                    baseRefName
-                    timelineItems(last: 60, itemTypes: [ISSUE_COMMENT, PULL_REQUEST_COMMIT, PULL_REQUEST_REVIEW, REVIEW_REQUESTED_EVENT]) {
-                        pageInfo { hasPreviousPage }
-                        nodes {
-                            __typename
-                            ... on IssueComment { createdAt author { login avatarUrl } }
-                            ... on PullRequestCommit { commit { committedDate } }
-                            ... on PullRequestReview { submittedAt state author { login avatarUrl } }
-                            ... on ReviewRequestedEvent {
-                                createdAt
-                                requestedReviewer {
-                                    __typename
-                                    ... on User { login avatarUrl }
-                                }
-                            }
-                        }
-                    }
-                    reviewRequests(first: 30) {
-                        nodes {
-                            requestedReviewer {
-                                __typename
-                                ... on User { login avatarUrl }
-                            }
-                        }
-                    }
-                    url
-                    isDraft
-                    reviewDecision
-                    mergeable
-                    author {
-                        login
-                        avatarUrl
-                    }
-                    repository {
-                        name
-                        nameWithOwner
-                    }
-                    \(buildFields)
-                }
-            }
-        }
-        """
-    }
-
-    /// Identity and the change markers `isCurrent` compares, without history or check details.
-    private func buildSummaryQuery(includeStacks: Bool) -> String {
-        let stackFields = includeStacks ? "stack { id number baseRefName size }\n stackEntry { position }" : ""
-        let ciFields = buildType == .none ? "" : "commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }"
-        return """
-        query PullRequestSummaries($query: String!, $cursor: String, $pageSize: Int!) {
-            viewer { login }
-            search(query: $query, type: ISSUE, first: $pageSize, after: $cursor) {
-                pageInfo {
-                    hasNextPage
-                    endCursor
-                }
-                nodes {
-                    ... on PullRequest {
-                        id
-                        url
-                        updatedAt
-                        isDraft
-                        mergeable
-                        \(stackFields)
-                        \(ciFields)
-                    }
-                }
-            }
-        }
-        """
-    }
-
-    private func buildStackDetailsQuery() -> String {
-        """
-        query PullRequestStacks($ids: [ID!]!) {
-            nodes(ids: $ids) {
-                ... on PullRequestStack {
-                    id
-                    number
-                    baseRefName
-                    size
-                    entries(first: 100) {
-                        nodes {
-                            position
-                            pullRequest {
-                                id
-                                number
-                                title
-                                url
-                                state
-                                isDraft
-                                headRefName
-                                headRefOid
-                                reviewDecision
-                                mergeable
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        """
-    }
-}
-
-private nonisolated struct GraphQLErrorResponse: Decodable, Sendable {
-    let errors: [GraphQLError]
-}
-
-nonisolated struct GraphQLError: Decodable, Sendable {
-    let message: String
-    var type: String?
-    var extensions: Extensions?
-
-    /// Query validation errors identify the missing schema element; execution errors have a `type`.
-    struct Extensions: Decodable, Sendable {
-        var code: String?
-        var typeName: String?
-        var fieldName: String?
-    }
-}
-
-nonisolated struct GraphQLAPIError: LocalizedError, Sendable {
-    let errors: [GraphQLError]
-
-    var errorDescription: String? {
-        var seen: Set<String> = []
-        return errors.map(\.message).filter { seen.insert($0).inserted }.joined(separator: "\n")
-    }
-
-    var isResourceLimit: Bool {
-        errors.contains { $0.type == "RESOURCE_LIMITS_EXCEEDED" }
-    }
-
-    /// GitHub Enterprise versions without stacks reject the `stack` fields or the stack type.
-    var isMissingStackSchema: Bool {
-        errors.contains { error in
-            guard let extensions = error.extensions,
-                  extensions.code == "undefinedField" || extensions.code == "undefinedType" else { return false }
-            return [extensions.fieldName, extensions.typeName].contains { $0?.lowercased().contains("stack") == true }
-        }
-    }
 }
 
 private actor StackCapabilityCache {
@@ -521,53 +298,5 @@ private actor StackCapabilityCache {
 
     func set(_ value: Bool, for key: String) {
         values[key] = value
-    }
-}
-
-private nonisolated struct GraphQLRequest<Variables: Encodable>: Encodable {
-    let query: String
-    let variables: Variables
-}
-
-nonisolated struct GraphQLVariables: Encodable, Sendable {
-    let searchQuery: String
-    let cursor: String?
-    var pageSize: Int = 20
-
-    enum CodingKeys: String, CodingKey {
-        case searchQuery = "query"
-        case cursor
-        case pageSize
-    }
-}
-
-private nonisolated struct GraphQLStackVariables: Encodable, Sendable {
-    let ids: [String]
-}
-
-private nonisolated struct GraphQLRebaseVariables: Encodable, Sendable {
-    let input: Input
-
-    struct Input: Encodable, Sendable {
-        let pullRequestId: String
-        let expectedHeadOid: String
-        let updateMethod: String
-    }
-}
-
-private nonisolated struct GraphQLRebaseResponse: Decodable, Sendable {
-    let data: Data
-
-    struct Data: Decodable, Sendable {
-        let updatePullRequestBranch: Payload?
-    }
-
-    struct Payload: Decodable, Sendable {
-        let pullRequest: UpdatedPullRequest?
-    }
-
-    struct UpdatedPullRequest: Decodable, Sendable {
-        let id: String
-        let headRefOid: String
     }
 }

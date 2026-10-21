@@ -5,7 +5,6 @@ struct PanelView: View {
     let store: PullRequestStore
     var onQuit: () -> Void
     var onSettings: (() -> Void)? = nil
-    var onSizeChange: ((CGSize) -> Void)? = nil
     @Environment(\.openSettings) private var openSettings
     @State private var showingAbout = false
 
@@ -27,9 +26,6 @@ struct PanelView: View {
         }
         .frame(width: Theme.panelWidth)
         .fixedSize(horizontal: false, vertical: true)
-        .onGeometryChange(for: CGSize.self, of: { $0.size }) { size in
-            onSizeChange?(size)
-        }
         .background(TimelineStyle.panel)
         .sheet(isPresented: $showingAbout) {
             VStack { AboutView(); Button("Done") { showingAbout = false }.keyboardShortcut(.defaultAction).padding() }.frame(width: 420, height: 380)

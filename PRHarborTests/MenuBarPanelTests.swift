@@ -32,12 +32,16 @@ struct MenuBarPanelTests {
         bar.showPanel(relativeTo: try #require(anchor.contentView))
         try await Task.sleep(for: .milliseconds(500))
         #expect(bar.isPanelShown)
+        let popover = try #require(NSApp.windows.last { $0.className.contains("Popover") && $0.isVisible })
+        let initialHeight = popover.frame.height
 
         // Growing the data grows the panel, which resizes the popover again.
-        await cache.save(PullSnapshot(scope: store.snapshotScope, syncedAt: .now.addingTimeInterval(1), assigned: [], created: edges, requested: []))
         store.clear()
+        try await Task.sleep(for: .milliseconds(100))
+        await cache.save(PullSnapshot(scope: store.snapshotScope, syncedAt: .now, assigned: [], created: edges, requested: []))
         await store.loadCachedSnapshot()
         try await Task.sleep(for: .milliseconds(500))
+        #expect(popover.frame.height > initialHeight)
 
         // AppKit logs a layout recursion once per process, so this catches the first occurrence.
         let recursion = try OSLogStore(scope: .currentProcessIdentifier).getEntries()

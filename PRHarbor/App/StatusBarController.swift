@@ -34,30 +34,16 @@ final class StatusBarController: NSObject {
         menu.addItem(quit)
 
         let hosting = NSHostingController(rootView: PanelView(store: store,
-            onQuit: { [weak self] in self?.quit() }, onSettings: onSettings,
-            onSizeChange: { [weak self] size in self?.resizePanel(to: size) }))
-        // The SwiftUI panel reports its explicit bounds only when they change.
-        // Ideal-size tracking would measure the lazy scroll content during scrolling.
-        hosting.sizingOptions = []
-        hosting.view.frame.size = NSSize(width: Theme.panelWidth, height: 274)
-        popover.contentSize = hosting.view.frame.size
+            onQuit: { [weak self] in self?.quit() }, onSettings: onSettings))
+        // The panel has a fixed width and a natural height; the row area has an explicit
+        // height, so tracking the preferred size never measures scrolling content.
+        hosting.sizingOptions = [.preferredContentSize]
         popover.contentViewController = hosting
         popover.behavior = .transient
         popover.animates = false
 
         countObservation = Task { [weak self, store] in
             for await count in Observations({ store.totalCount }) { self?.updateCount(count) }
-        }
-    }
-
-    /// Geometry callbacks arrive during SwiftUI's layout. Resizing the popover there lays out
-    /// its window recursively, which AppKit reports as illegal, so it waits for the next turn.
-    private func resizePanel(to size: CGSize) {
-        guard size.width > 0, size.height > 0 else { return }
-        let rounded = CGSize(width: size.width.rounded(.up), height: size.height.rounded(.up))
-        DispatchQueue.main.async { [weak self] in
-            guard let self, popover.contentSize != rounded else { return }
-            popover.contentSize = rounded
         }
     }
 

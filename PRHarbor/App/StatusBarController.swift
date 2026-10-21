@@ -58,6 +58,15 @@ final class StatusBarController: NSObject {
         NSApp.activate()
         popover.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()
+        paintPopoverFrame()
+    }
+
+    /// NSPopover has no background color of its own. Its frame draws the outline, arrow included,
+    /// with system glass; tinting that glass with the panel color makes the arrow match the panel.
+    private func paintPopoverFrame() {
+        guard let frame = popover.contentViewController?.view.superview,
+              let glass = frame.subviews.lazy.compactMap({ $0 as? NSGlassEffectView }).first else { return }
+        glass.tintColor = NSColor(TimelineStyle.panel)
     }
 
     var isPanelShown: Bool { popover.isShown }

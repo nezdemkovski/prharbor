@@ -2,7 +2,9 @@
 """Check the WCAG 2.2 contrast of every Palette color pair in PRHarbor/Helpers/DesignTokens.swift.
 
 Reads the light and dark values straight from the Swift source, prints a table per theme and
-exits with status 1 when a pair is below its minimum. `--markdown` prints the tables used in
+exits with status 1 when a pair is below its minimum. Translucent colors are blended over the
+background they sit on, and the panel itself over BACKDROP, the base tone of the popover's
+system glass (the window background color of each appearance). `--markdown` prints the tables used in
 docs/design-tokens.md.
 """
 import pathlib
@@ -11,47 +13,56 @@ import sys
 
 SOURCE = pathlib.Path(__file__).resolve().parent.parent / "PRHarbor/Helpers/DesignTokens.swift"
 
-# Opacities the views apply to surfaces before text is drawn on them (see Opacity in the source).
-TINT, ROW_SELECTED, ROW_HOVER = 0.15, 0.55, 0.7
+BACKDROP = {"light": 0xECECEC, "dark": 0x1E1E1E}
+# Opacity the views apply to a freshness fill behind its label (Opacity.tintFill in the source).
+TINT = 0.15
 
 # (foreground, background, minimum, role). Backgrounds may be "a@opacity" blended over the panel.
 PAIRS = [
-    ("textPrimary", "panel", 4.5, "titles, counts"),
+    ("textPrimary", "backdrop", 4.5, "titles, counts"),
     ("textPrimary", "track", 4.5, "titles in segmented controls"),
-    ("textSecondary", "panel", 4.5, "subtitles, facts, headers"),
+    ("inverseText", "textPrimary", 4.5, "the Today marker"),
+    ("textSecondary", "raised", 4.5, "facts in the details card"),
+    ("textSecondary", "backdrop", 4.5, "subtitles, facts, headers"),
     ("textSecondary", "track", 4.5, "segment labels"),
-    ("textSecondary", f"hover@{ROW_HOVER}", 4.5, "subtitles of a hovered row"),
-    ("textSecondary", f"accentSoft@{ROW_SELECTED}", 4.5, "subtitles of the selected row"),
-    ("textTertiary", "panel", 4.5, "axis labels, counts, separators"),
+    ("textSecondary", "hover", 4.5, "subtitles of a hovered row"),
+    ("textSecondary", "accentSoft", 4.5, "subtitles of the selected row"),
+    ("textTertiary", "backdrop", 4.5, "axis labels, counts, separators"),
     ("textTertiary", "track", 4.5, "tertiary text on the track"),
-    ("textTertiary", f"hover@{ROW_HOVER}", 4.5, "tertiary text on a hovered row"),
-    ("accent", "panel", 4.5, "links, accent icons"),
+    ("textTertiary", "hover", 4.5, "tertiary text on a hovered row"),
+    ("accent", "backdrop", 4.5, "links, accent icons"),
     ("accent", "accentSoft", 4.5, "search tokens, the / key"),
     ("onAccent", "accentFill", 4.5, "primary button, brush and cursor chips"),
 ]
 for name in ("fresh", "aging", "stale", "rotting"):
     PAIRS += [
-        (f"{name}Fill", "panel", 3.0, f"{name} bars, dots, hatching"),
-        (f"{name}Label", "panel", 4.5, f"{name} quiet-time label"),
+        (f"{name}Fill", "backdrop", 3.0, f"{name} bars, dots, hatching"),
+        (f"{name}Label", "backdrop", 4.5, f"{name} quiet-time label"),
         (f"{name}Label", f"{name}Fill@{TINT}", 4.5, f"{name} label on its tint"),
+        (f"{name}Label", "raised", 4.5, f"{name} label on its backing in the track"),
     ]
 PAIRS += [
-    ("success", "panel", 4.5, "checks passed"),
-    ("warning", "panel", 4.5, "checks running"),
-    ("failure", "panel", 4.5, "checks failed"),
+    ("success", "backdrop", 4.5, "checks passed"),
+    ("warning", "backdrop", 4.5, "checks running"),
+    ("failure", "backdrop", 4.5, "checks failed"),
 ]
 # Below 3:1 on purpose: lines separate areas that are also separated by spacing or labels.
-DECORATIVE = [("line", "panel"), ("strong", "panel"), ("active", "panel")]
+DECORATIVE = [("line", "backdrop"), ("strong", "backdrop"), ("active", "backdrop")]
 
 
 def palette():
+    """Each token as (rgb, alpha) per appearance."""
     text = SOURCE.read_text()
     constants = {m[1]: int(m[2], 16) for m in re.finditer(r"static let (\w+) = (0x[0-9a-fA-F]{6})\b", text)}
     value = lambda token: int(token, 16) if token.startswith("0x") else constants[token]
-    themes = {"light": {"onAccent": 0xFFFFFF}, "dark": {"onAccent": 0xFFFFFF}}
-    for m in re.finditer(r"static let (\w+) = color\((\w+)(?:, (\w+))?\)", text):
-        themes["light"][m[1]] = value(m[2])
-        themes["dark"][m[1]] = value(m[3] or m[2])
+    themes = {name: {"onAccent": (0xFFFFFF, 1.0), "backdrop": (color, 1.0)} for name, color in BACKDROP.items()}
+    for m in re.finditer(r"static let (\w+) = color\((\w+)(?:, (\w+))?(?:, alpha: ([\d.]+))?(?:, darkAlpha: ([\d.]+))?\)", text):
+        alpha = float(m[4] or 1)
+        themes["light"][m[1]] = (value(m[2]), alpha)
+        themes["dark"][m[1]] = (value(m[3] or m[2]), float(m[5] or alpha))
+    for m in re.finditer(r"static let (\w+) = overlay\(([\d.]+), ([\d.]+)\)", text):
+        themes["light"][m[1]] = (0x000000, float(m[2]))
+        themes["dark"][m[1]] = (0xFFFFFF, float(m[3]))
     for m in re.finditer(r"static let (\w+) = (\w+)$", text, re.M):
         if m[2] in themes["light"]:
             for theme in themes.values():
@@ -76,9 +87,12 @@ def blend(fg, bg, alpha):
     return sum(round(((fg >> s) & 255) * alpha + ((bg >> s) & 255) * (1 - alpha)) << s for s in (16, 8, 0))
 
 
-def resolve(theme, name):
-    base, _, alpha = name.partition("@")
-    return blend(theme[base], theme["panel"], float(alpha)) if alpha else theme[base]
+def resolve(theme, name, over=None):
+    """The opaque color of `name` drawn over `over`, or over the backdrop."""
+    base, _, extra = name.partition("@")
+    color, alpha = theme[base]
+    alpha *= float(extra) if extra else 1
+    return blend(color, theme["backdrop"][0] if over is None else over, alpha)
 
 
 def main():
@@ -90,7 +104,8 @@ def main():
         else:
             print(f"== {name}")
         for fg, bg, minimum, role in PAIRS + [(f, b, 0, "decorative") for f, b in DECORATIVE]:
-            ratio = contrast(resolve(theme, fg), resolve(theme, bg))
+            background = resolve(theme, bg)
+            ratio = contrast(resolve(theme, fg, background), background)
             ok = ratio >= minimum
             failures += not ok
             if markdown:

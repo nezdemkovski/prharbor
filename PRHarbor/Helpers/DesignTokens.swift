@@ -5,50 +5,57 @@ import SwiftUI
 // uses. Views refer to these names instead of literals. docs/design-tokens.md lists the
 // contrast of each color pair; Scripts/design-contrast.py recomputes it.
 
-/// Colors with a light and a dark value. Text colors meet WCAG 2.2 AA (4.5:1) on every
-/// surface they appear on; fills and borders that identify state meet 3:1.
+/// Colors with a light and a dark value. The panel has no background of its own: it sits on
+/// the popover's system glass, so surfaces, lines and text are translucent black in the light
+/// appearance and white in the dark one, and take on the glass behind them. Text meets WCAG 2.2
+/// AA (4.5:1) against the glass's base tone; fills and borders that identify state meet 3:1.
 nonisolated enum Palette {
-    static func color(_ light: Int, _ dark: Int? = nil) -> Color {
+    static func color(_ light: Int, _ dark: Int? = nil, alpha: Double = 1, darkAlpha: Double? = nil) -> Color {
         Color(nsColor: NSColor(name: nil) { appearance in
-            let value = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? (dark ?? light) : light
+            let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            let value = isDark ? (dark ?? light) : light
             return NSColor(srgbRed: Double((value >> 16) & 255) / 255, green: Double((value >> 8) & 255) / 255,
-                           blue: Double(value & 255) / 255, alpha: 1)
+                           blue: Double(value & 255) / 255, alpha: isDark ? (darkAlpha ?? alpha) : alpha)
         })
     }
+    /// Black over the light glass, white over the dark one.
+    static func overlay(_ light: Double, _ dark: Double) -> Color { color(0x000000, 0xffffff, alpha: light, darkAlpha: dark) }
 
-    // Surfaces
-    static let panel = color(0xffffff, 0x1a1b1f)
-    static let track = color(0xf8f9fa, 0x1f2125)
-    static let hover = color(0xf6f7f9, 0x222428)
-    static let active = color(0xe3e6eb, 0x33363c)
-    static let accentSoft = color(0xe9f1fe, 0x1d2a40)
+    // Surfaces. `raised` holds cards, chips and badges above the glass.
+    static let raised = color(0xffffff, 0x3a3b40, alpha: 0.72, darkAlpha: 0.55)
+    static let track = overlay(0.035, 0.05)
+    static let hover = overlay(0.045, 0.07)
+    static let active = overlay(0.09, 0.13)
+    static let accentSoft = color(0x0c62f4, 0x5b9cff, alpha: 0.1, darkAlpha: 0.15)
 
     // Lines. Decorative: every bordered control also has a label.
-    static let line = color(0xeef0f3, 0x26282d)
-    static let strong = color(0xe3e6eb, 0x2f3237)
+    static let line = overlay(0.07, 0.09)
+    static let strong = overlay(0.11, 0.15)
 
-    // Text: primary ≥ 13:1, secondary ≥ 5.4:1, tertiary ≥ 4.6:1 on panel, track and hover.
+    // Text: primary ≥ 12:1, secondary ≥ 6:1, tertiary ≥ 4.5:1 on the glass and on track.
     static let ink = 0x16181c
-    static let textPrimary = color(ink, 0xeceef1)
-    static let textSecondary = color(0x595f68, 0x9399a1)
-    static let textTertiary = color(0x677181, 0x878c96)
+    static let textPrimary = overlay(0.88, 0.92)
+    static let textSecondary = overlay(0.66, 0.66)
+    static let textTertiary = overlay(0.56, 0.54)
+    /// Text on a `textPrimary` fill, such as the "Today" marker.
+    static let inverseText = color(0xffffff, ink)
 
     // Accent: text and icons (≥ 4.5:1 on panel and accentSoft), and button fills under
     // white labels (≥ 4.5:1).
-    static let accent = color(0x0c62f4, 0x5b9cff)
+    static let accent = color(0x0a56d9, 0x5b9cff)
     static let accentFill = color(0x0c62f4, 0x0d6dff)
     static let onAccent = Color.white
 
     // Freshness. Fills (bars, dots, hatching) ≥ 3:1; labels ≥ 4.5:1 on the panel and on
     // their own 15% tint.
-    static let freshFill = color(0x1fa454, 0x22b25b)
-    static let agingFill = color(0xb48905, 0xd4a106)
-    static let staleFill = color(0xe36e0f, 0xf07a1a)
+    static let freshFill = color(0x1d974d, 0x22b25b)
+    static let agingFill = color(0xa67e05, 0xd4a106)
+    static let staleFill = color(0xd1650e, 0xf07a1a)
     static let rottingFill = color(0xe5484d, 0xe5484d)
-    static let freshLabel = color(0x17773d, 0x22b25b)
-    static let agingLabel = color(0x846404, 0xd4a106)
-    static let staleLabel = color(0xa5500b, 0xf07a1a)
-    static let rottingLabel = color(0xc81c22, 0xea6c70)
+    static let freshLabel = color(0x156d38, 0x22b25b)
+    static let agingLabel = color(0x785b04, 0xd4a106)
+    static let staleLabel = color(0x97490a, 0xf07a1a)
+    static let rottingLabel = color(0xb81a1f, 0xeb7175)
 
     // Status, drawn from the same scale.
     static let success = freshLabel
@@ -172,8 +179,6 @@ nonisolated enum Opacity {
     static let brushFill = 0.09       // selected time range
     static let brushEdge = 0.55       // edges of the selected time range
     static let eventTick = 0.38       // commit and own-comment ticks
-    static let rowSelected = 0.55     // selected row highlight
-    static let rowHover = 0.7         // hovered row highlight
     static let badge = 0.12           // tinted badge backgrounds
     static let deemphasized = 0.7     // secondary marks next to text
     static let decorativeGlyph = 0.5  // onboarding illustration

@@ -45,7 +45,7 @@ struct TimelineAxis: View {
                         .position(x: tick.age == Double(scale.days) ? 12 : scale.position(age: tick.age) * geometry.size.width, y: 16)
                 }
                 Text("Today").font(.ui(Typography.caption, .semibold))
-                    .foregroundStyle(Palette.panel).padding(.horizontal, Spacing.s).padding(.vertical, Spacing.xxxs)
+                    .foregroundStyle(Palette.inverseText).padding(.horizontal, Spacing.s).padding(.vertical, Spacing.xxxs)
                     .background(Palette.textPrimary, in: Capsule()).fixedSize()
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing).padding(.bottom, Spacing.xxs)
                 if let brush {

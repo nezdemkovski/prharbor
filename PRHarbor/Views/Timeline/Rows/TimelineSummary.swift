@@ -18,7 +18,7 @@ struct TimelineSummary: View {
                         }
                         .font(.ui(Typography.callout)).foregroundStyle(Palette.textSecondary)
                         .padding(.horizontal, Spacing.m).padding(.vertical, Spacing.xxs).frame(height: Size.chip)
-                        .background(zone == freshness ? Palette.panel : .clear, in: RoundedRectangle(cornerRadius: Radius.s))
+                        .background(zone == freshness ? Palette.raised : .clear, in: RoundedRectangle(cornerRadius: Radius.s))
                         .overlay { if zone == freshness { RoundedRectangle(cornerRadius: Radius.s).strokeBorder(Palette.strong) } }
                     }
                     .buttonStyle(.plain)

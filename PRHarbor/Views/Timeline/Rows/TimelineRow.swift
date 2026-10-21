@@ -17,7 +17,7 @@ struct TimelineRow: View {
                         .overlay(alignment: .bottomTrailing) {
                             if layer, let position = item.pull.stackEntry?.position {
                                 Text("\(position)").font(.ui(Typography.micro, .bold)).foregroundStyle(Palette.textSecondary)
-                                    .frame(minWidth: Size.positionBadge).frame(height: Size.positionBadge).background(Palette.panel, in: Capsule())
+                                    .frame(minWidth: Size.positionBadge).frame(height: Size.positionBadge).background(Palette.raised, in: Capsule())
                                     .overlay(Capsule().strokeBorder(Palette.strong)).offset(x: 5, y: 4)
                             }
                         }
@@ -70,7 +70,7 @@ private struct TimelineRowHighlight: ViewModifier {
     func body(content: Content) -> some View {
         content.background {
             RoundedRectangle(cornerRadius: Radius.xl)
-                .fill(selected ? Palette.accentSoft.opacity(Opacity.rowSelected) : hovering ? Palette.hover.opacity(Opacity.rowHover) : .clear)
+                .fill(selected ? Palette.accentSoft : hovering ? Palette.hover : .clear)
                 .padding(.vertical, Spacing.xxxs).padding(.horizontal, -Spacing.m)
         }
         .onHover { if hovering != $0 { hovering = $0 } }

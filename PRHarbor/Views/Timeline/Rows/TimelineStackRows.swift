@@ -39,7 +39,7 @@ struct TimelineStackRows: View {
             Button(action: toggle) {
                 HStack(spacing: Spacing.l) {
                     Image(systemName: "arrow.triangle.branch").font(.ui(Typography.footnote)).frame(width: Size.chip, height: Size.chip)
-                        .background(Palette.panel, in: Circle()).overlay(Circle().strokeBorder(Palette.strong))
+                        .background(Palette.raised, in: Circle()).overlay(Circle().strokeBorder(Palette.strong))
                         .padding(.horizontal, Spacing.xs)
                     HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
                         Text(group.stack?.baseRefName ?? "base").font(.ui(Typography.subheadline, .semibold, design: .monospaced))

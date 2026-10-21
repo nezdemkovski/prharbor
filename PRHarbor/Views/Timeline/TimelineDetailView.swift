@@ -40,7 +40,7 @@ struct TimelineDetailView: View {
             if let message { Text(message).font(.caption).foregroundStyle(Palette.textSecondary).textSelection(.enabled) }
         }
         .padding(.horizontal, Spacing.xxxl).padding(.top, Spacing.xxl).padding(.bottom, Spacing.xl)
-        .background(Palette.panel, in: RoundedRectangle(cornerRadius: Radius.card))
+        .background(Palette.raised, in: RoundedRectangle(cornerRadius: Radius.card))
         .overlay(RoundedRectangle(cornerRadius: Radius.card).strokeBorder(Palette.strong))
         .alert("Rebase this stack?", isPresented: $confirmRebase) {
             Button("Cancel", role: .cancel) {}

@@ -91,7 +91,7 @@ struct TimelinePanel: View {
             }
         }
         .frame(width: TimelineMetrics.panelWidth, alignment: .top)
-        // No background or frame of its own: the popover draws them, including its arrow.
+        // No background of its own: the panel sits on the popover's system glass.
         .foregroundStyle(Palette.textPrimary)
         .tint(Palette.accent)
         .monospacedDigit()

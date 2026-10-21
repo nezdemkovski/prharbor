@@ -58,7 +58,7 @@ struct TimelineTrack: View {
                     }
                     if cluster.events.count > 3 {
                         Text("+\(cluster.events.count - 3)").font(.ui(Typography.nano, .semibold))
-                            .padding(Spacing.xxs).background(Palette.panel, in: Circle())
+                            .padding(Spacing.xxs).background(Palette.raised, in: Circle())
                     }
                 }
                 .position(x: max(12, min(width - 12, cluster.position)), y: 17)
@@ -79,7 +79,7 @@ struct TimelineTrack: View {
                 // A solid backing keeps the label's contrast independent of the hatching behind it.
                 Text(TimelinePolicy.duration(item.quietDays)).font(.ui(Typography.footnote, .bold))
                     .foregroundStyle(label).padding(.horizontal, Spacing.xxs)
-                    .background(Palette.panel, in: RoundedRectangle(cornerRadius: Radius.xs))
+                    .background(Palette.raised, in: RoundedRectangle(cornerRadius: Radius.xs))
                     .frame(maxWidth: .infinity, alignment: .trailing).padding(.trailing, Spacing.s)
             }
         }
@@ -111,7 +111,7 @@ struct TimelineEventMark: View {
     let event: TimelineEvent
     var body: some View {
         TimelineAvatar(person: event.person, size: Size.eventAvatar, miniature: true)
-            .background(Circle().fill(Palette.panel).padding(-Spacing.xxs))
+            .background(Circle().fill(Palette.raised).padding(-Spacing.xxs))
             .overlay(Circle().stroke(color, lineWidth: 1.5).padding(-0.75))
             .accessibilityLabel(event.label)
     }

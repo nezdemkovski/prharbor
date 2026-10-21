@@ -19,7 +19,7 @@ struct TimelineSegment<Value: Hashable>: View {
                     .padding(.horizontal, Spacing.l).padding(.vertical, Spacing.xs).frame(height: Size.control)
                     .background {
                         if selection == option.value {
-                            RoundedRectangle(cornerRadius: Radius.s).fill(Palette.panel)
+                            RoundedRectangle(cornerRadius: Radius.s).fill(Palette.raised)
                                 .shadow(color: Palette.shadow.opacity(Opacity.shadowSoft), radius: 1, y: 1)
                                 .overlay(RoundedRectangle(cornerRadius: Radius.s).strokeBorder(Palette.strong, lineWidth: 1))
                         }

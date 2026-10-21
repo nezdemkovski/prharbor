@@ -17,6 +17,12 @@ The Xcode project uses synchronized folders: a file joins its target by being in
 - `Views/Timeline/`: the panel. `Header/` (search and controls), `Rows/`, `Drawing/` (axis, grid, track, hatching), `Detail/`, `Scrolling/` (the AppKit virtual scroll view), `Screen/` (the screen controller and its state), `Preview/`, plus the morning brief and empty state.
 - `Views/Settings/`: the settings window, one file per pane. `Views/Avatar/`: avatar views.
 
+Code is formatted with `swift format` using `.swift-format`; CI fails on any difference:
+
+```bash
+swift format format --in-place --recursive PRHarbor PRHarborTests
+```
+
 ## Responsibilities
 
 - `AppDelegate` owns menu bar and settings window lifetime. `StatusBarController` owns the status item and popover. `AppRuntime` prevents hosted tests from starting production services; `AppPreferences` supplies either the existing preference domain or a fresh test suite. Debug and Release both run as a menu bar accessory without a Dock icon; the preview window opens only with `PRHARBOR_PREVIEW=1` or `PRHARBOR_DEBUG_WINDOW=1`.

@@ -18,6 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Check formatting
+        run: swift format lint --strict --recursive PRHarbor PRHarborTests
+
       - name: Resolve packages
         run: xcodebuild -project PRHarbor.xcodeproj -scheme PRHarbor -resolvePackageDependencies
 

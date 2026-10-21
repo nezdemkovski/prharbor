@@ -157,10 +157,10 @@ struct TimelineStackRows: View {
                         .padding(.horizontal, Spacing.xs)
                     HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
                         Text(group.stack?.baseRefName ?? "base").font(.ui(Typography.subheadline, .semibold, design: .monospaced))
-                        if mergedStyle != 2, let entries = group.stack?.entries?.nodes {
-                            let merged = entries.compactMap(\.pullRequest).filter { $0.state == "MERGED" }
+                        if mergedStyle != .hidden, let entries = group.stack?.entries?.nodes {
+                            let merged = entries.compactMap(\.pullRequest).filter { $0.state == .merged }
                             if !merged.isEmpty {
-                                Text("· " + (mergedStyle == 0 ? "\(merged.count) merged" : merged.map { "#\($0.number)" }.joined(separator: " ")))
+                                Text("· " + (mergedStyle == .count ? "\(merged.count) merged" : merged.map { "#\($0.number)" }.joined(separator: " ")))
                                     .font(.ui(Typography.footnote)).foregroundStyle(Palette.textTertiary).lineLimit(1)
                                     .help(merged.map { "#\($0.number) \($0.title)" }.joined(separator: "\n"))
                             }

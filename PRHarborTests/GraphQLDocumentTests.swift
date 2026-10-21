@@ -23,7 +23,7 @@ struct GraphQLDocumentTests {
         let rebase = DocumentRecorder(edges: [])
         let stack = PullRequestStack(id: "S", number: 1, baseRefName: "main", size: 1, entries: .init(nodes: [
             .init(position: 1, pullRequest: .init(id: "PR_1", number: 1, title: "One", url: URL(string: "https://github.com/o/r/pull/1")!,
-                state: "OPEN", isDraft: false, headRefName: "one", headRefOid: "oid", reviewDecision: nil, mergeable: "MERGEABLE"))]))
+                state: .open, isDraft: false, headRefName: "one", headRefOid: "oid", reviewDecision: nil, mergeable: .mergeable))]))
         _ = try await GitHubClient(baseURL: "https://api.github.com", buildType: .none, transport: rebase).rebaseStack(stack)
         documents.merge(await rebase.documents) { first, _ in first }
 

@@ -89,10 +89,10 @@ nonisolated struct MorningBriefSnapshot: Equatable, Sendable {
         waitingForReview = eligible.filter { $0.reviewRequested && !$0.isMine }.count
         quietOwned = eligible.filter { $0.isMine && !$0.isBlocked && $0.hasKnownQuietPeriod && ($0.freshness == .stale || $0.freshness == .rotting) }.count
         func priority(_ item: TimelineItem) -> Int {
-            if item.isMine && (item.ci == .failure || item.pull.mergeable == "CONFLICTING" || item.pull.reviewDecision == "CHANGES_REQUESTED") { return 4 }
+            if item.isMine && (item.ci == .failure || item.pull.mergeable == .conflicting || item.pull.reviewDecision == .changesRequested) { return 4 }
             if item.reviewRequested && !item.isMine { return 3 }
             if item.isMine && item.hasKnownQuietPeriod && (item.freshness == .stale || item.freshness == .rotting) { return 2 }
-            if item.isMine && item.nextAction == "Merge on GitHub" { return 1 }
+            if item.isMine && item.nextAction == .merge { return 1 }
             return 0
         }
         // Select the lowest eligible layer of each stack before comparing priorities.
@@ -111,13 +111,13 @@ nonisolated struct MorningBriefSnapshot: Equatable, Sendable {
         entries = candidates.prefix(3).map { item in
             var facts: [String] = []
             if item.reviewRequested && !item.isMine { facts.append("Your review is requested") }
-            if item.pull.mergeable == "CONFLICTING" { facts.append("Merge conflict") }
+            if item.pull.mergeable == .conflicting { facts.append("Merge conflict") }
             if item.ci == .failure { facts.append("Checks are failing") }
-            if item.pull.reviewDecision == "CHANGES_REQUESTED" { facts.append("Changes requested") }
-            if item.pull.reviewDecision == "APPROVED" { facts.append("Approved") }
+            if item.pull.reviewDecision == .changesRequested { facts.append("Changes requested") }
+            if item.pull.reviewDecision == .approved { facts.append("Approved") }
             facts.append(item.hasKnownQuietPeriod ? "Quiet for \(Int(item.quietDays)) days" : "Quiet time unknown")
             return Entry(id: item.id, repository: item.pull.repository.nameWithOwner, number: item.pull.number,
-                         title: String(item.title.prefix(120)), reason: facts.joined(separator: " · "), action: item.nextAction)
+                         title: String(item.title.prefix(120)), reason: facts.joined(separator: " · "), action: item.nextAction.title)
         }
     }
 }

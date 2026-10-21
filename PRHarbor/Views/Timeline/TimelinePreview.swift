@@ -13,13 +13,13 @@ enum TimelinePreviewData {
         }
         var pulls = source.map { sample in
             let ci = ["pass": "SUCCESS", "fail": "FAILURE", "pending": "PENDING"][sample.ci] ?? "SUCCESS"
-            let review = ["approved": "APPROVED", "changes": "CHANGES_REQUESTED"][sample.review]
+            let review: ReviewDecision? = ["approved": .approved, "changes": .changesRequested][sample.review]
             let events: [PullTimelineNode?] = sample.events.compactMap { event in
                 let user = event.who.map { User(login: $0) }
                 switch event.type {
                 case "commit": return PullTimelineNode(__typename: "PullRequestCommit", commit: TimelineCommit(committedDate: ago(event.t)))
                 case "comment": return PullTimelineNode(__typename: "IssueComment", createdAt: ago(event.t), author: user)
-                case "approved", "changes": return PullTimelineNode(__typename: "PullRequestReview", submittedAt: ago(event.t), state: event.type == "approved" ? "APPROVED" : "CHANGES_REQUESTED", author: user)
+                case "approved", "changes": return PullTimelineNode(__typename: "PullRequestReview", submittedAt: ago(event.t), state: event.type == "approved" ? .approved : .changesRequested, author: user)
                 case "requested": return PullTimelineNode(__typename: "ReviewRequestedEvent", createdAt: ago(event.t), requestedReviewer: TimelineReviewer(login: event.who))
                 case "ci_fail": return PullTimelineNode(__typename: "IssueComment", createdAt: ago(event.t))
                 default: return nil
@@ -29,13 +29,13 @@ enum TimelinePreviewData {
                         author: User(login: sample.author), repository: Repository(name: sample.repo, nameWithOwner: "acme/\(sample.repo)"),
                         commits: CommitsNodes(nodes: [Commit(commit: CheckSuites(statusCheckRollup: StatusCheckRollup(state: ci, contexts: ContextNodes(nodes: [ContextNode(context: "build", state: ci)]))))]),
                         headRefName: "", isDraft: sample.draft ?? false, reviewDecision: review,
-                        mergeable: sample.conflict == true ? "CONFLICTING" : "MERGEABLE", baseRefName: "main", timelineItems: PullTimelineConnection(nodes: events),
+                        mergeable: sample.conflict == true ? .conflicting : .mergeable, baseRefName: "main", timelineItems: PullTimelineConnection(nodes: events),
                         reviewRequests: PullReviewRequests(nodes: sample.reviewers.map { PullReviewRequest(requestedReviewer: TimelineReviewer(login: $0)) }))
         }
         for id in Set(source.compactMap { $0.stack?.id }) {
             let indexes = source.indices.filter { source[$0].stack?.id == id }
             let entries = indexes.map { index in
-                PullRequestStackEntry(position: source[index].stack!.pos, pullRequest: StackedPullRequest(id: "preview-\(index)", number: pulls[index].number, title: pulls[index].title, url: pulls[index].url, state: "OPEN", isDraft: pulls[index].isDraft, headRefName: pulls[index].headRefName, headRefOid: "preview", reviewDecision: pulls[index].reviewDecision, mergeable: pulls[index].mergeable))
+                PullRequestStackEntry(position: source[index].stack!.pos, pullRequest: StackedPullRequest(id: "preview-\(index)", number: pulls[index].number, title: pulls[index].title, url: pulls[index].url, state: .open, isDraft: pulls[index].isDraft, headRefName: pulls[index].headRefName, headRefOid: "preview", reviewDecision: pulls[index].reviewDecision, mergeable: pulls[index].mergeable))
             }
             for index in indexes {
                 pulls[index].stack = PullRequestStack(id: id, number: source[index].stack!.num, baseRefName: "main", size: indexes.count, entries: PullRequestStackEntries(nodes: entries))

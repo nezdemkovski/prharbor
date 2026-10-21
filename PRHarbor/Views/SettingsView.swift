@@ -147,9 +147,9 @@ private struct TimelineSettings: View {
             }
             Section("Stacks") {
                 Picker(selection: $merged) {
-                    Text("Count").tag(0)
-                    Text("Numbers").tag(1)
-                    Text("Hide").tag(2)
+                    Text("Count").tag(MergedLayersStyle.count)
+                    Text("Numbers").tag(MergedLayersStyle.numbers)
+                    Text("Hide").tag(MergedLayersStyle.hidden)
                 } label: {
                     Text("Merged layers")
                     Text("Shown next to the branch at the bottom of a stack.")

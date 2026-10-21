@@ -21,7 +21,7 @@ extension Defaults.Keys {
     static let snoozedPulls = Key<[String: Double]>("snoozedPulls", default: [:], suite: AppPreferences.storage)
     static let snoozeActivity = Key<[String: Double]>("snoozeActivity", default: [:], suite: AppPreferences.storage)
     static let wakeOnComment = Key<Bool>("wakeOnComment", default: true, suite: AppPreferences.storage)
-    static let mergedLayersStyle = Key<Int>("mergedLayersStyle", default: 0, suite: AppPreferences.storage)
+    static let mergedLayersStyle = Key<MergedLayersStyle>("mergedLayersStyle", default: .count, suite: AppPreferences.storage)
     static let detailHistory = Key<Bool>("detailHistory", default: false, suite: AppPreferences.storage)
     static let notifyRotting = Key<Bool>("notifyRotting", default: false, suite: AppPreferences.storage)
     static let morningSummary = Key<Bool>("morningSummary", default: false, suite: AppPreferences.storage)
@@ -71,6 +71,12 @@ nonisolated enum BuildType: String, Codable, Defaults.Serializable, Defaults.Pre
             return "Hidden"
         }
     }
+}
+
+/// How the footer of a stack lists its merged layers. Stored as its raw value, as before it was an enum.
+nonisolated enum MergedLayersStyle: Int, Defaults.Serializable, CaseIterable, Identifiable, Sendable {
+    case count, numbers, hidden
+    var id: Self { self }
 }
 
 nonisolated enum CounterType: String, Defaults.Serializable, CaseIterable, Identifiable, Sendable {

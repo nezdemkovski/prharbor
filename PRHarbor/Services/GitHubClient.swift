@@ -201,13 +201,13 @@ nonisolated struct GitHubClient: Sendable {
         }
 
         let openEntries = entries
-            .filter { $0.pullRequest?.state == "OPEN" }
+            .filter { $0.pullRequest?.state == .open }
             .sorted { $0.position < $1.position }
         guard !openEntries.isEmpty else {
             throw StackRebaseError.noOpenPullRequests
         }
 
-        if let conflicting = openEntries.compactMap(\.pullRequest).first(where: { $0.mergeable == "CONFLICTING" }) {
+        if let conflicting = openEntries.compactMap(\.pullRequest).first(where: { $0.mergeable == .conflicting }) {
             throw StackRebaseError.conflictingBranch(conflicting.headRefName)
         }
 

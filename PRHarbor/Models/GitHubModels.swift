@@ -24,7 +24,7 @@ nonisolated struct PullSummary: Decodable, Sendable {
     var url: URL
     var updatedAt: Date
     var isDraft: Bool
-    var mergeable: String?
+    var mergeable: MergeableState?
     var stack: PullRequestStack?
     var stackEntry: PullRequestStackPosition?
     var commits: CommitsNodes?
@@ -62,8 +62,8 @@ nonisolated struct Pull: Codable, Sendable, Equatable {
     var commits: CommitsNodes?
     var headRefName: String
     var isDraft: Bool
-    var reviewDecision: String?
-    var mergeable: String?
+    var reviewDecision: ReviewDecision?
+    var mergeable: MergeableState?
     var stack: PullRequestStack? = nil
     var stackEntry: PullRequestStackPosition? = nil
     var baseRefName: String? = nil
@@ -99,12 +99,12 @@ nonisolated struct StackedPullRequest: Codable, Sendable, Equatable {
     var number: Int
     var title: String
     var url: URL
-    var state: String
+    var state: PullRequestState
     var isDraft: Bool
     var headRefName: String
     var headRefOid: String
-    var reviewDecision: String?
-    var mergeable: String?
+    var reviewDecision: ReviewDecision?
+    var mergeable: MergeableState?
 }
 
 nonisolated struct StackRebaseResult: Sendable, Equatable {
@@ -260,7 +260,7 @@ nonisolated struct PullTimelineNode: Codable, Sendable, Equatable {
     var __typename: String
     var createdAt: Date?
     var submittedAt: Date?
-    var state: String?
+    var state: ReviewState?
     var author: User?
     var commit: TimelineCommit?
     var requestedReviewer: TimelineReviewer?

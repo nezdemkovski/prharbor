@@ -43,7 +43,7 @@ struct TimelinePolicyTests {
         ])
         #expect(item(p).quietDays == 1)
         #expect(item(p, ownComments: false).quietDays == 10)
-        p.timelineItems?.nodes.append(PullTimelineNode(__typename: "PullRequestReview", submittedAt: now, state: "CHANGES_REQUESTED", author: User(login: "reviewer")))
+        p.timelineItems?.nodes.append(PullTimelineNode(__typename: "PullRequestReview", submittedAt: now, state: .changesRequested, author: User(login: "reviewer")))
         #expect(item(p, ownComments: false).quietDays == 0)
     }
     @Test func automatedCommentsDoNotRefreshQuietTime() {
@@ -66,20 +66,20 @@ struct TimelinePolicyTests {
         #expect(item(p).quietDays == 3)
     }
     @Test func pendingAndUnknownChecksNeverSuggestMerge() {
-        var p = pull(); p.reviewDecision = "APPROVED"; p.mergeable = "MERGEABLE"
+        var p = pull(); p.reviewDecision = .approved; p.mergeable = .mergeable
         func checks(_ state: String) -> CommitsNodes {
             CommitsNodes(nodes: [Commit(commit: CheckSuites(statusCheckRollup: StatusCheckRollup(state: state, contexts: ContextNodes(nodes: [ContextNode(context: "build", state: state)]))))])
         }
         p.commits = checks("PENDING")
-        #expect(item(p).nextAction != "Merge on GitHub")
+        #expect(item(p).nextAction != .merge)
         p.commits = nil
-        #expect(item(p).nextAction != "Merge on GitHub")
+        #expect(item(p).nextAction != .merge)
         p.commits = checks("SUCCESS")
-        #expect(item(p).nextAction == "Merge on GitHub")
+        #expect(item(p).nextAction == .merge)
         p.isDraft = true
-        #expect(item(p).nextAction == "Continue draft")
-        p.isDraft = false; p.mergeable = "UNKNOWN"
-        #expect(item(p).nextAction != "Merge on GitHub")
+        #expect(item(p).nextAction == .continueDraft)
+        p.isDraft = false; p.mergeable = .unknown
+        #expect(item(p).nextAction != .merge)
     }
     @Test func expiredSnoozesAreVisibleAndActiveSnoozesKeepTheirDate() {
         #expect(item(pull(), snooze: now.addingTimeInterval(-1)).snoozedUntil == nil)
@@ -109,7 +109,7 @@ struct TimelinePolicyTests {
     @Test func assignedPullRequestsDoNotClaimToWaitForReview() {
         var p = pull(); p.author = User(login: "other")
         let value = TimelineItem(pull: p, username: "octocat", now: now, thresholds: [2, 7, 21], bots: [], ownComments: true, snoozedUntil: nil, reviewRequested: false)
-        #expect(value.nextAction == "Open on GitHub")
+        #expect(value.nextAction == .open)
         #expect(value.standing.hasPrefix("Opened"))
     }
     @Test func ignoresUnavailableEventsAndBotOnlyReviewRequests() throws {
@@ -118,19 +118,19 @@ struct TimelinePolicyTests {
         p.timelineItems = connection
         p.reviewRequests = PullReviewRequests(nodes: [PullReviewRequest(requestedReviewer: TimelineReviewer(login: "checks[bot]"))])
         #expect(TimelinePolicy.events(p).count == 1)
-        #expect(item(p).nextAction == "Ask for review")
+        #expect(item(p).nextAction == .askForReview)
         let team = try JSONDecoder().decode(TimelineReviewer.self, from: Data(#"{"__typename":"Team"}"#.utf8))
         p.reviewRequests?.nodes.append(PullReviewRequest(requestedReviewer: team))
-        #expect(item(p).nextAction != "Ask for review")
+        #expect(item(p).nextAction != .askForReview)
     }
     @Test func stackWaitsForLowestOpenLayerIncludingOneOutsideTheList() {
         var p = pull()
-        let base = StackedPullRequest(id: "base", number: 40, title: "Base", url: URL(string: "https://github.com/example/repo/pull/40")!, state: "OPEN", isDraft: false, headRefName: "base", headRefOid: "abc")
+        let base = StackedPullRequest(id: "base", number: 40, title: "Base", url: URL(string: "https://github.com/example/repo/pull/40")!, state: .open, isDraft: false, headRefName: "base", headRefOid: "abc")
         p.stack = PullRequestStack(id: "stack", number: 3, baseRefName: "main", size: 2, entries: PullRequestStackEntries(nodes: [PullRequestStackEntry(position: 1, pullRequest: base)]))
         p.stackEntry = PullRequestStackPosition(position: 2)
         #expect(item(p).blockedBy?.number == 40)
-        #expect(item(p).nextAction == "Go to #40")
-        p.stack?.entries?.nodes[0].pullRequest?.state = "MERGED"
+        #expect(item(p).nextAction == .goToBase(40))
+        p.stack?.entries?.nodes[0].pullRequest?.state = .merged
         #expect(item(p).blockedBy == nil)
     }
 }

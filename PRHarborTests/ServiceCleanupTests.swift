@@ -51,7 +51,7 @@ struct ServiceCleanupTests {
     @Test(arguments: ["FAILURE", "PENDING"])
     func aggregateOverridesASuccessfulBoundedDetailSlice(_ overall: String) {
         var p = pull()
-        p.reviewDecision = "APPROVED"; p.mergeable = "MERGEABLE"
+        p.reviewDecision = .approved; p.mergeable = .mergeable
         p.updatedAt = now
         p.commits = CommitsNodes(nodes: [Commit(commit: CheckSuites(
             checkSuites: CheckSuitsNodes(nodes: [CheckSuit(checkRuns: CheckRun(
@@ -60,10 +60,10 @@ struct ServiceCleanupTests {
         let value = item(p)
         #expect(value.checks.count == 1)
         #expect(value.ci == ciStatusKind(overall))
-        #expect(value.nextAction != "Merge on GitHub")
+        #expect(value.nextAction != .merge)
         p.commits?.nodes[0].commit.statusCheckRollup = nil
         #expect(item(p).ci == nil)
-        #expect(item(p).nextAction != "Merge on GitHub")
+        #expect(item(p).nextAction != .merge)
     }
 
     @Test(arguments: [BuildType.checks, .commitStatus])
@@ -106,8 +106,8 @@ struct ServiceCleanupTests {
         let unknown = item(p, ownComments: false)
         #expect(!unknown.hasKnownQuietPeriod)
         #expect(unknown.freshness != .rotting)
-        #expect(unknown.nextAction != "Revive or close")
-        #expect(unknown.nextAction != "Nudge reviewers")
+        #expect(unknown.nextAction != .reviveOrClose)
+        #expect(unknown.nextAction != .nudgeReviewers)
         #expect(!unknown.matches("dead"))
         #expect(TimelineNotificationPolicy.rottingOwned([unknown]).isEmpty)
         p.timelineItems?.nodes.append(PullTimelineNode(__typename: "PullRequestCommit", commit: TimelineCommit(committedDate: now.addingTimeInterval(-22 * 86_400))))
@@ -177,7 +177,7 @@ struct MutationRevalidationTests {
             entries: PullRequestStackEntries(nodes: (1...2).map { position in
                 PullRequestStackEntry(position: position, pullRequest: StackedPullRequest(id: "p\(position)", number: position,
                     title: "Layer", url: URL(string: "https://github.com/example/repo/pull/\(position)")!,
-                    state: "OPEN", isDraft: false, headRefName: "branch\(position)", headRefOid: "oid\(position)", mergeable: "MERGEABLE"))
+                    state: .open, isDraft: false, headRefName: "branch\(position)", headRefOid: "oid\(position)", mergeable: .mergeable))
             }))
     }
 

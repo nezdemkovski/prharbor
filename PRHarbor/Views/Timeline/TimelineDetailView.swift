@@ -58,15 +58,7 @@ struct TimelineDetailView: View {
         if item.quietDays < 1 { return "active today" }
         return item.isMine ? "\(TimelinePolicy.duration(item.quietDays)) quiet" : "waiting \(TimelinePolicy.duration(item.quietDays)) on you"
     }
-    private var primaryLabel: String {
-        switch item.nextAction {
-        case "Ask for review": "Request review"
-        case "Nudge reviewers": "Nudge"
-        case "Continue draft": "Mark ready"
-        case "Open on GitHub": item.isMine ? "In review" : "Open"
-        default: item.nextAction.replacingOccurrences(of: " on GitHub", with: "")
-        }
-    }
+    private var primaryLabel: String { item.nextAction.buttonTitle(isMine: item.isMine) }
     private var facts: some View {
         HStack(spacing: 0) {
             Text(verbatim: "#\(item.pull.number)" + (item.isMine ? "" : " · \(item.pull.author?.login ?? "ghost")")).fixedSize()

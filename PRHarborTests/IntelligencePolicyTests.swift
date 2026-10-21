@@ -12,7 +12,7 @@ struct IntelligencePolicyTests {
         let pull = Pull(url: URL(string: "https://github.com/example/repo/pull/\(number)")!,
                         updatedAt: now.addingTimeInterval(-quiet * 86_400), createdAt: now.addingTimeInterval(-30 * 86_400),
                         title: "A change \(number)", number: number, author: User(login: author),
-                        repository: Repository(name: "repo", nameWithOwner: "example/repo"), headRefName: "feature", isDraft: draft, mergeable: conflict ? "CONFLICTING" : "MERGEABLE")
+                        repository: Repository(name: "repo", nameWithOwner: "example/repo"), headRefName: "feature", isDraft: draft, mergeable: conflict ? .conflicting : .mergeable)
         return TimelineItem(pull: pull, username: "yuri", now: now, thresholds: [2, 7, 21], bots: ["*[bot]"], ownComments: true,
                             snoozedUntil: snoozed ? now.addingTimeInterval(86_400) : nil, reviewRequested: requested)
     }

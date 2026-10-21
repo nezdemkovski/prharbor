@@ -97,7 +97,7 @@ struct TimelinePresentationTests {
                 select: { _ in }, toggleRepo: { _ in })
         }
         var reviewed = original
-        reviewed.reviewDecision = "APPROVED"
+        reviewed.reviewDecision = .approved
         #expect(original.updatedAt == reviewed.updatedAt)
         #expect(rendered(original) != rendered(reviewed))
         var checked = original

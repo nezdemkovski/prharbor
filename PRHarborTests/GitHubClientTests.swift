@@ -424,12 +424,12 @@ struct GitHubClientTests {
                     number: 100 + position,
                     title: "Layer \(position)",
                     url: try #require(URL(string: "https://github.com/example/repo/pull/\(100 + position)")),
-                    state: "OPEN",
+                    state: .open,
                     isDraft: false,
                     headRefName: "stack/\(position)",
                     headRefOid: "oid-\(position)",
                     reviewDecision: nil,
-                    mergeable: conflictingPosition == position ? "CONFLICTING" : "MERGEABLE"
+                    mergeable: conflictingPosition == position ? .conflicting : .mergeable
                 )
             )
         }

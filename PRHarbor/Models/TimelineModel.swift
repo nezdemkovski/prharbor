@@ -125,7 +125,7 @@ nonisolated enum TimelinePolicy {
             case "PullRequestCommit": kind = .commit; date = node.commit?.committedDate
             case "IssueComment": kind = .comment; date = node.createdAt
             case "PullRequestReview":
-                kind = node.state == "APPROVED" ? .approved : node.state == "CHANGES_REQUESTED" ? .changes : .comment
+                kind = node.state == .approved ? .approved : node.state == .changesRequested ? .changes : .comment
                 date = node.submittedAt
             case "ReviewRequestedEvent":
                 kind = .requested; date = node.createdAt
@@ -161,20 +161,20 @@ nonisolated struct TimelineItem: Identifiable, Equatable, Sendable {
     let ticket: String?
     let ci: CIStatusKind?
     private let hasHumanReviewRequest: Bool
-    var isBlocked: Bool { nextAction.hasPrefix("Go to #") }
-    var nextAction: String {
-        if isBot { return "Triage" }
-        if !isMine { return reviewRequested ? "Review" : "Open on GitHub" }
-        if hasKnownQuietPeriod && quietDays >= 60 { return "Revive or close" }
-        if pull.mergeable == "CONFLICTING" { return "Rebase" }
-        if ci == .failure { return "Fix CI" }
-        if pull.reviewDecision == "CHANGES_REQUESTED" { return "Address feedback" }
-        if let blockedBy { return "Go to #\(blockedBy.number)" }
-        if pull.isDraft { return "Continue draft" }
-        if pull.reviewDecision == "APPROVED", ci == .success, pull.mergeable == "MERGEABLE" { return "Merge on GitHub" }
-        if !hasHumanReviewRequest && pull.reviewDecision != "APPROVED" { return "Ask for review" }
-        if hasKnownQuietPeriod && quietDays >= 2 && pull.reviewDecision != "APPROVED" { return "Nudge reviewers" }
-        return "Open on GitHub"
+    var isBlocked: Bool { if case .goToBase = nextAction { true } else { false } }
+    var nextAction: NextAction {
+        if isBot { return .triage }
+        if !isMine { return reviewRequested ? .review : .open }
+        if hasKnownQuietPeriod && quietDays >= 60 { return .reviveOrClose }
+        if pull.mergeable == .conflicting { return .rebase }
+        if ci == .failure { return .fixCI }
+        if pull.reviewDecision == .changesRequested { return .addressFeedback }
+        if let blockedBy { return .goToBase(blockedBy.number) }
+        if pull.isDraft { return .continueDraft }
+        if pull.reviewDecision == .approved, ci == .success, pull.mergeable == .mergeable { return .merge }
+        if !hasHumanReviewRequest && pull.reviewDecision != .approved { return .askForReview }
+        if hasKnownQuietPeriod && quietDays >= 2 && pull.reviewDecision != .approved { return .nudgeReviewers }
+        return .open
     }
     var standing: String {
         if isBot { return "Opened \(TimelinePolicy.duration(age)) ago" }
@@ -222,7 +222,7 @@ nonisolated struct TimelineItem: Identifiable, Equatable, Sendable {
         let quietDays = TimelinePolicy.days(since: waitingSince, now: now)
         self.quietDays = quietDays
         self.freshness = hasKnownQuietPeriod ? (Freshness.allCases.first { $0.contains(quietDays, thresholds: thresholds) } ?? .rotting) : .fresh
-        let open = (pull.stack?.entries?.nodes ?? []).filter { $0.pullRequest?.state == "OPEN" }.sorted { $0.position < $1.position }
+        let open = (pull.stack?.entries?.nodes ?? []).filter { $0.pullRequest?.state == .open }.sorted { $0.position < $1.position }
         self.blockedBy = open.first.flatMap { entry in
             guard let base = entry.pullRequest, base.url != pull.url, (pull.stackEntry?.position ?? 0) > entry.position else { return nil }
             return base
@@ -247,12 +247,12 @@ nonisolated struct TimelineItem: Identifiable, Equatable, Sendable {
             case "stale", "smelly": return hasKnownQuietPeriod && !isBlocked && (freshness == .stale || freshness == .rotting)
             case "bot", "bots": return isBot
             case "failing", "red": return ci == .failure
-            case "approved": return pull.reviewDecision == "APPROVED"
-            case "conflict": return pull.mergeable == "CONFLICTING"
+            case "approved": return pull.reviewDecision == .approved
+            case "conflict": return pull.mergeable == .conflicting
             case "stack", "stacks": return (pull.stack?.size ?? 0) > 1
             case "team": return !isMine && !isBot && !reviewRequested
             case "decide", "dead": return hasKnownQuietPeriod && isMine && quietDays > 60
-            case "unreviewed": return nextAction == "Ask for review"
+            case "unreviewed": return nextAction == .askForReview
             default:
                 if let idle = TimelinePolicy.idleRange(term) { return hasKnownQuietPeriod && idle.contains(quietDays) }
                 if term.hasPrefix("@") {

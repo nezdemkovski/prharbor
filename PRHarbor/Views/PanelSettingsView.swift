@@ -118,6 +118,7 @@ private struct AccountCard: View {
     @Default(.githubApiBaseUrl) private var apiURL
     @State private var token = ""
     @State private var replacing = false
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         SettingsSection("GITHUB") {
@@ -134,8 +135,14 @@ private struct AccountCard: View {
                 }
                 SettingsHint("Connected with a personal access token stored in your Keychain.")
             } else {
-                Text("Paste a classic personal access token with the repo and read:org scopes.")
-                    .font(.system(size: 12))
+                Text("1. Create a classic token. The repo and read:org scopes are already selected; set an expiration and choose Generate token.")
+                    .font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
+                if let url = GitHubHTTPTransport.newTokenURL(apiBaseURL: apiURL) {
+                    Button { openURL(url) } label: {
+                        SwiftUI.Label("Create Token on GitHub", systemImage: "arrow.up.right.square")
+                    }.controlSize(.small).help(url.absoluteString)
+                }
+                Text("2. Copy the token and paste it here.").font(.system(size: 12)).padding(.top, 4)
                 HStack(spacing: 8) {
                     SecureField("ghp_…", text: $token)
                         .textFieldStyle(.roundedBorder).font(.system(size: 12, design: .monospaced))
@@ -145,7 +152,6 @@ private struct AccountCard: View {
                         .disabled(connector.isConnecting || token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     if replacing { Button("Cancel") { replacing = false; token = "" }.controlSize(.small) }
                 }
-                if let url = newTokenURL { Link("Create a token on GitHub…", destination: url).font(.system(size: 12)) }
                 SettingsHint("For organizations with SAML single sign-on, choose Configure SSO next to the token on GitHub and authorize it.")
             }
             if connector.isConnecting {
@@ -166,15 +172,6 @@ private struct AccountCard: View {
             replacing = false
             store.refresh()
         }
-    }
-
-    /// GitHub's new-token form with the needed scopes preselected, on github.com or the Enterprise host.
-    private var newTokenURL: URL? {
-        guard var components = URLComponents(string: apiURL), let host = components.host else { return nil }
-        components.host = host == "api.github.com" ? "github.com" : host
-        components.path = "/settings/tokens/new"
-        components.queryItems = [.init(name: "scopes", value: "repo,read:org"), .init(name: "description", value: "PR Harbor")]
-        return components.url
     }
 }
 

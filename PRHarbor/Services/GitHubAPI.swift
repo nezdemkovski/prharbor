@@ -62,6 +62,17 @@ nonisolated struct GitHubHTTPTransport: GitHubAPITransport {
         try await send(endpoint, body: body).data
     }
 
+    /// GitHub's new classic token form with the scopes PR Harbor needs already checked,
+    /// on github.com or the Enterprise host.
+    static func newTokenURL(apiBaseURL: String) -> URL? {
+        guard var components = URLComponents(string: apiBaseURL), components.scheme == "https",
+              let host = components.host else { return nil }
+        components.host = host == "api.github.com" ? "github.com" : host
+        components.path = "/settings/tokens/new"
+        components.queryItems = [.init(name: "scopes", value: "repo,read:org"), .init(name: "description", value: "PR Harbor")]
+        return components.url
+    }
+
     /// The token's account and, for classic tokens, its OAuth scopes. Fine-grained tokens report no scopes.
     func account() async throws -> (user: User, scopes: Set<String>?) {
         let (data, response) = try await send("user", body: nil)

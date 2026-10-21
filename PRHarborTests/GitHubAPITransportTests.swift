@@ -67,6 +67,14 @@ struct GitHubAPITransportTests {
         #expect(try await unchecked.fetchPulls(filter: "author:octocat").isEmpty)
     }
 
+    @Test func newTokenLinksPreselectTheNeededScopesOnTheRightHost() {
+        #expect(GitHubHTTPTransport.newTokenURL(apiBaseURL: "https://api.github.com")?.absoluteString
+                == "https://github.com/settings/tokens/new?scopes=repo,read:org&description=PR%20Harbor")
+        #expect(GitHubHTTPTransport.newTokenURL(apiBaseURL: "https://github.example.com/api/v3")?.absoluteString
+                == "https://github.example.com/settings/tokens/new?scopes=repo,read:org&description=PR%20Harbor")
+        #expect(GitHubHTTPTransport.newTokenURL(apiBaseURL: "not a url") == nil)
+    }
+
     @Test func enterpriseHostIsExplicitAndInvalidHostsAreRejected() throws {
         #expect(try GitHubHTTPTransport(apiBaseURL: "https://github.example.com/api/v3", token: "t").graphQLURL.absoluteString
                 == "https://github.example.com/api/graphql")

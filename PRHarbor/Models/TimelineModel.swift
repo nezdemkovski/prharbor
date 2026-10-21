@@ -1,5 +1,13 @@
 import Foundation
 
+nonisolated struct PullSources: OptionSet, Hashable, Sendable {
+    let rawValue: UInt8
+    static let assigned = PullSources(rawValue: 1 << 0)
+    static let created = PullSources(rawValue: 1 << 1)
+    static let requested = PullSources(rawValue: 1 << 2)
+    static let all: PullSources = [.assigned, .created, .requested]
+}
+
 nonisolated enum TimelineTab: String, CaseIterable, Identifiable, Sendable {
     case all = "All", mine = "Mine", reviewing = "Reviewing"
     var id: Self { self }
@@ -146,6 +154,8 @@ nonisolated struct TimelineItem: Identifiable, Equatable, Sendable {
     let checks: [CICheck]
     let blockedBy: StackedPullRequest?
     let snoozedUntil: Date?
+    /// The searches that returned this PR. Fixtures without a source belong to every category.
+    let sources: PullSources
     var id: String { pull.url.absoluteString }
     let title: String
     let ticket: String?
@@ -176,7 +186,7 @@ nonisolated struct TimelineItem: Identifiable, Equatable, Sendable {
         return quietDays < 1 ? "Active today" : "\(TimelinePolicy.duration(quietDays)) quiet"
     }
 
-    init(pull: Pull, username: String, now: Date, thresholds: [Int], bots: [String], ownComments: Bool, snoozedUntil: Date?, reviewRequested: Bool = true, botMatcher: TimelineBotMatcher? = nil) {
+    init(pull: Pull, username: String, now: Date, thresholds: [Int], bots: [String], ownComments: Bool, snoozedUntil: Date?, reviewRequested: Bool = true, sources: PullSources = .all, botMatcher: TimelineBotMatcher? = nil) {
         let matcher = botMatcher ?? TimelineBotMatcher(patterns: bots)
         let cleaned = pull.title.replacingOccurrences(of: #"^(\s*\[?[A-Z]{2,}-\d+\]?\s*[:,\-–]?\s*)+"#, with: "", options: .regularExpression).trimmingCharacters(in: .whitespaces)
         self.title = cleaned.isEmpty ? pull.title : cleaned
@@ -188,6 +198,7 @@ nonisolated struct TimelineItem: Identifiable, Equatable, Sendable {
         }
         self.botPatterns = bots
         self.reviewRequested = reviewRequested
+        self.sources = sources
         self.pull = pull
         self.isMine = pull.author?.login.caseInsensitiveCompare(username) == .orderedSame
         self.isBot = matcher.matches(pull.author?.login)
@@ -271,6 +282,7 @@ nonisolated struct TimelineInput: Equatable, Sendable {
     var bots: [String]
     var ownComments: Bool
     var snoozed: [String: Double]
+    var sources: [URL: PullSources] = [:]
 
     init(edges: [Edge], reviewURLs: Set<URL>, username: String, now: Date,
          thresholds: [Int], bots: [String], ownComments: Bool, snoozed: [String: Double]) {
@@ -291,6 +303,9 @@ nonisolated struct TimelineInput: Equatable, Sendable {
         self.init(edges: (includeRequested ? requested : []) + (includeAssigned ? assigned : []) + (includeCreated ? created : []),
                   reviewURLs: Set(requested.map { $0.node.url }), username: username, now: now,
                   thresholds: thresholds, bots: bots, ownComments: ownComments, snoozed: snoozed)
+        for (source, edges) in [(PullSources.assigned, assigned), (.created, created), (.requested, requested)] {
+            for edge in edges { sources[edge.node.url, default: []].insert(source) }
+        }
     }
     func makeItems() -> [TimelineItem] {
         var seen = Set<String>()
@@ -299,7 +314,8 @@ nonisolated struct TimelineInput: Equatable, Sendable {
             TimelineItem(pull: edge.node, username: username, now: now, thresholds: thresholds,
                          bots: bots, ownComments: ownComments,
                          snoozedUntil: snoozed[edge.node.url.absoluteString].map { Date(timeIntervalSince1970: $0) },
-                         reviewRequested: reviewURLs.contains(edge.node.url), botMatcher: matcher)
+                         reviewRequested: reviewURLs.contains(edge.node.url),
+                         sources: sources[edge.node.url] ?? .all, botMatcher: matcher)
         }
     }
 }

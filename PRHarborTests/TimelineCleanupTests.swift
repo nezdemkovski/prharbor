@@ -18,8 +18,7 @@ struct TimelineCleanupTests {
             ownComments: true, snoozedUntil: nil, reviewRequested: author != "yuri")
     }
     private func input(_ items: [TimelineItem], collapsed: [String] = [], intelligentSearch: Bool = false) -> TimelineScreenInput {
-        TimelineScreenInput(data: TimelineInput(edges: [], reviewURLs: [], username: "yuri", now: now,
-            thresholds: [2, 7, 21], bots: [], ownComments: true, snoozed: [:]), previewItems: items,
+        TimelineScreenInput(items: items, now: now, thresholds: [2, 7, 21],
             sortOrder: .updatedNewest, collapsed: collapsed, intelligentSearch: intelligentSearch)
     }
 
@@ -56,6 +55,20 @@ struct TimelineCleanupTests {
         controller.writeIdle(nil)
         #expect(controller.snapshot.query == "mine")
         #expect(controller.snapshot.brush == nil && controller.snapshot.zone == nil)
+    }
+
+    @Test @MainActor func hiddenCategoriesAreFilteredFromTheSharedProjection() {
+        let items = TimelineInput(assigned: [], created: [Edge(node: item(1).pull)],
+            requested: [Edge(node: item(2, author: "reviewer").pull)], username: "yuri", now: now,
+            thresholds: [2, 7, 21], bots: [], ownComments: true, snoozed: [:]).makeItems()
+        let controller = TimelineScreenController()
+        var value = input(items)
+        value.sources = [.created]
+        controller.update(value)
+        #expect(controller.snapshot.items.map(\.pull.number) == [1])
+        value.sources = .all
+        controller.update(value)
+        #expect(controller.snapshot.items.map(\.pull.number) == [2, 1])
     }
 
     @Test @MainActor func selectingAHiddenBriefEntryRevealsItsRepositoryAndStackTogether() {

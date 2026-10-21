@@ -62,6 +62,8 @@ struct PullSnapshotCacheTests {
         await cache.save(PullSnapshot(scope: store.snapshotScope, syncedAt: date, assigned: edges, created: [], requested: []))
         await store.loadCachedSnapshot()
         #expect(store.assignedPulls == edges)
+        #expect(store.timelineItems.map(\.id) == edges.map(\.node.url.absoluteString))
+        #expect(store.timelineItems.allSatisfy { $0.sources == .assigned })
         #expect(store.isShowingCache)
         store.refresh(respectFreshness: true)
         #expect(store.isLoading)

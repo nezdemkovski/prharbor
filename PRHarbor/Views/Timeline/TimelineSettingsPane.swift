@@ -4,7 +4,7 @@ import LaunchAtLogin
 
 struct TimelineSettingsPane: View {
     let destination: SettingsDestination
-    @ObservedObject var store: PullRequestStore
+    let store: PullRequestStore
     var usernameOverride: String? = nil
     @Default(.showRequested) private var requested
     @Default(.showAssigned) private var assigned
@@ -99,7 +99,7 @@ struct TimelineSwitchStyle: ToggleStyle {
 }
 
 struct FreshnessSettings: View {
-    @ObservedObject var store: PullRequestStore
+    let store: PullRequestStore
     var usernameOverride: String? = nil
     @Default(.freshnessThresholds) private var thresholds
     @Default(.githubUsername) private var username
@@ -187,7 +187,7 @@ struct TimelineHatching: View {
 }
 
 struct BotAccountSettings: View {
-    @ObservedObject var store: PullRequestStore
+    let store: PullRequestStore
     @Default(.botAccounts) private var bots
     @State private var login = ""
     private let defaults = ["dependabot", "github-actions", "renovate", "greptile-apps", "*[bot]"]

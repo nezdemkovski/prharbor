@@ -161,7 +161,7 @@ struct TimelineHeading: View {
     @Binding var tab: TimelineTab
     @Binding var range: Int
     @Binding var sortOrder: SortOrder
-    @ObservedObject var store: PullRequestStore
+    let store: PullRequestStore
     var isPreview = false
     let onSettings: () -> Void
     let onAbout: () -> Void

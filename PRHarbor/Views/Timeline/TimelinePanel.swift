@@ -2,7 +2,7 @@ import SwiftUI
 import Defaults
 
 struct TimelinePanel: View {
-    @ObservedObject var store: PullRequestStore
+    let store: PullRequestStore
     let now: Date
     let onSettings: () -> Void
     let onAbout: () -> Void
@@ -15,9 +15,6 @@ struct TimelinePanel: View {
     @Default(.timelineRange) private var range
     @Default(.detailHistory) private var history
     @Default(.freshnessThresholds) private var thresholds
-    @Default(.botAccounts) private var bots
-    @Default(.ownCommentsCount) private var ownComments
-    @Default(.githubUsername) private var username
     @Default(.showRequested) private var showRequested
     @Default(.showAssigned) private var showAssigned
     @Default(.showCreated) private var showCreated
@@ -27,17 +24,19 @@ struct TimelinePanel: View {
     @Default(.intelligentSearch) private var intelligentSearch
     @Default(.intelligentMorningBrief) private var intelligentMorningBrief
     @State private var briefExpanded = false
-    @StateObject private var screen = TimelineScreenController()
+    @State private var screen = TimelineScreenController()
     @State private var interaction = TimelineInteraction()
     @FocusState private var searching: Bool
     @FocusState private var navigating: Bool
     @Environment(\.openURL) private var openURL
     private var scale: TimelineScale { TimelineScale(days: [14, 30, 90, 182].contains(range) ? range : 182) }
     private var screenInput: TimelineScreenInput {
-        TimelineScreenInput(data: store.timelineInput(now: now, thresholds: thresholds, bots: bots,
-            ownComments: ownComments, snoozed: snoozed, includeAssigned: showAssigned,
-            includeCreated: showCreated, includeRequested: showRequested, username: username),
-            previewItems: previewItems, sortOrder: sortOrder, collapsed: collapsed, intelligentSearch: intelligentSearch)
+        var sources: PullSources = []
+        if showAssigned { sources.insert(.assigned) }
+        if showCreated { sources.insert(.created) }
+        if showRequested { sources.insert(.requested) }
+        return TimelineScreenInput(items: previewItems ?? store.timelineItems, sources: previewItems == nil ? sources : .all,
+            now: now, thresholds: thresholds, sortOrder: sortOrder, collapsed: collapsed, intelligentSearch: intelligentSearch)
     }
     private var snapshot: TimelineScreenSnapshot { screen.snapshot }
     private var items: [TimelineItem] { snapshot.items }

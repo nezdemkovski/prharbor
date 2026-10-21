@@ -2,6 +2,7 @@
 import Combine
 import Foundation
 import Defaults
+import Observation
 
 nonisolated struct PullRefreshTracker: Sendable {
     private var knownURLs: Set<String> = []
@@ -36,19 +37,23 @@ private nonisolated struct PullCategoryResult: Sendable {
     let result: Result<[Edge], Error>
 }
 
-@MainActor
-final class PullRequestStore: ObservableObject {
+@MainActor @Observable
+final class PullRequestStore {
 
-    @Published var assignedPulls: [Edge] = []
-    @Published var createdPulls: [Edge] = []
-    @Published var reviewRequestedPulls: [Edge] = []
-    @Published var isLoading = false
-    @Published var error: String?
-    @Published var lastSyncedAt: Date?
-    @Published private(set) var isShowingCache = false
-    @Published private(set) var hasIncompleteData = false
-    @Published var minutesUntilRefresh: Int = 0
-
+    var assignedPulls: [Edge] = []
+    var createdPulls: [Edge] = []
+    var reviewRequestedPulls: [Edge] = []
+    var isLoading = false
+    var error: String?
+    var lastSyncedAt: Date?
+    private(set) var isShowingCache = false
+    private(set) var hasIncompleteData = false
+    var minutesUntilRefresh: Int = 0
+    /// Every fetched PR projected once, for the menu bar count, notifications and the panel.
+    private(set) var timelineItems: [TimelineItem] = []
+    /// The time `timelineItems` describes; ages and the panel axis share it.
+    private(set) var now = Date.now
+    private(set) var totalCount = 0
 
     private var countdownTimer: Timer?
     private var refreshTimer: Timer?
@@ -61,7 +66,6 @@ final class PullRequestStore: ObservableObject {
     private var hasLoadedOnce = false
     private var knownRotting: Set<String>?
     private var previousThresholds: [Int]?
-    private var cachedTimelineItems: [TimelineItem] = []
     private var refreshGeneration = 0
     private let session: GitHubSession
     private let cache: PullSnapshotCache
@@ -107,7 +111,7 @@ final class PullRequestStore: ObservableObject {
         settingsRefreshTask?.cancel()
     }
 
-    var totalCount: Int {
+    private var currentCount: Int {
         switch Defaults[.counterType] {
         case .rotting:
             timelineItems.filter { $0.hasKnownQuietPeriod && $0.freshness == .rotting && $0.snoozedUntil == nil }.count
@@ -157,7 +161,7 @@ final class PullRequestStore: ObservableObject {
         hasLoadedOnce = false
         knownRotting = nil
         previousThresholds = nil
-        cachedTimelineItems = []
+        rebuildTimelineItems()
         reviewRequestedTracker.reset()
         assignedTracker.reset()
         createdTracker.reset()
@@ -193,7 +197,7 @@ final class PullRequestStore: ObservableObject {
         counterTypeObservation = Defaults.observe(.counterType) { [weak self] change in
             guard change.oldValue != change.newValue else { return }
             Task { @MainActor in
-                self?.objectWillChange.send()
+                self?.rebuildTimelineItems()
                 self?.scheduleSettingsRefresh()
             }
         }
@@ -223,10 +227,7 @@ final class PullRequestStore: ObservableObject {
         func watchLocal<T: Defaults.Serializable & Equatable>(_ key: Defaults.Key<T>) {
             settingsObservations.append(Defaults.observe(key) { [weak self] change in
                 guard change.oldValue != change.newValue else { return }
-                Task { @MainActor in
-                    self?.rebuildTimelineItems()
-                    self?.objectWillChange.send()
-                }
+                Task { @MainActor in self?.rebuildTimelineItems() }
             })
         }
         watchLocal(.morningSummaryMinutes)
@@ -532,10 +533,11 @@ final class PullRequestStore: ObservableObject {
         if changed { rebuildTimelineItems() }
     }
 
-    private var timelineItems: [TimelineItem] { cachedTimelineItems }
-
     private func rebuildTimelineItems() {
-        cachedTimelineItems = timelineInput().makeItems()
+        now = .now
+        timelineItems = timelineInput(now: now).makeItems()
+        let count = currentCount
+        if totalCount != count { totalCount = count }
     }
 
     func timelineInput(now: Date = .now, thresholds: [Int]? = nil, bots: [String]? = nil,

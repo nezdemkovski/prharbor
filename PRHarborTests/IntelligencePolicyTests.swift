@@ -47,9 +47,7 @@ struct IntelligencePolicyTests {
         #expect(!context.shouldInterpret("A title with natural words", hasLiteralMatches: true))
     }
     @MainActor private func screenInput(enabled: Bool = true) -> TimelineScreenInput {
-        TimelineScreenInput(data: TimelineInput(edges: [], reviewURLs: [], username: "yuri", now: now,
-            thresholds: [2, 7, 21], bots: [], ownComments: true, snoozed: [:]),
-            previewItems: [item(number: 42)], sortOrder: .updatedNewest, collapsed: [], intelligentSearch: enabled)
+        TimelineScreenInput(items: [item(number: 42)], now: now, thresholds: [2, 7, 21], sortOrder: .updatedNewest, collapsed: [], intelligentSearch: enabled)
     }
     @Test @MainActor func naturalSearchKeepsEnteredTextAndAppliesInterpretationInternally() async {
         let controller = TimelineScreenController()

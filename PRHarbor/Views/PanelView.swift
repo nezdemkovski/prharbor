@@ -2,7 +2,7 @@ import SwiftUI
 import Defaults
 
 struct PanelView: View {
-    @ObservedObject var store: PullRequestStore
+    let store: PullRequestStore
     var onQuit: () -> Void
     var onSettings: (() -> Void)? = nil
     var onSizeChange: ((CGSize) -> Void)? = nil
@@ -12,9 +12,7 @@ struct PanelView: View {
     var body: some View {
         Group {
             if store.isConfigured {
-                TimelineView(.periodic(from: .now, by: 60)) { context in
-                    TimelinePanel(store: store, now: context.date, onSettings: settings, onAbout: { showingAbout = true }, onQuit: onQuit)
-                }
+                TimelinePanel(store: store, now: store.now, onSettings: settings, onAbout: { showingAbout = true }, onQuit: onQuit)
             } else {
                 VStack(spacing: 0) {
                     HStack {

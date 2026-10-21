@@ -1,12 +1,15 @@
 import Foundation
-import Combine
+import Observation
 
 nonisolated struct TimelineScreenInput: Equatable {
-    let data: TimelineInput
-    let previewItems: [TimelineItem]?
-    let sortOrder: SortOrder
-    let collapsed: [String]
-    let intelligentSearch: Bool
+    /// Already projected items, usually the store's own array, so unchanged data compares by identity.
+    var items: [TimelineItem]
+    var sources: PullSources = .all
+    var now: Date
+    var thresholds: [Int]
+    var sortOrder: SortOrder
+    var collapsed: [String]
+    var intelligentSearch: Bool
 }
 
 /// All derived screen values are replaced in a single publication. Focus and
@@ -30,8 +33,8 @@ nonisolated struct TimelineScreenSnapshot: Sendable {
     var selected: TimelineItem? { selection.flatMap { presentation.itemsByID[$0] } }
 }
 
-@MainActor final class TimelineScreenController: ObservableObject {
-    @Published private(set) var snapshot: TimelineScreenSnapshot
+@MainActor @Observable final class TimelineScreenController {
+    private(set) var snapshot: TimelineScreenSnapshot
     private var input: TimelineScreenInput?
     private var items: [TimelineItem] = []
     private var context = IntelligenceSearchContext(items: [])
@@ -63,10 +66,10 @@ nonisolated struct TimelineScreenSnapshot: Sendable {
 
     func update(_ value: TimelineScreenInput) {
         guard value != input else { return }
-        if input?.data != value.data || input?.previewItems != value.previewItems {
-            items = value.previewItems ?? value.data.makeItems()
+        if input?.items != value.items || input?.sources != value.sources || input?.now != value.now {
+            items = value.sources == .all ? value.items : value.items.filter { !$0.sources.isDisjoint(with: value.sources) }
             context = IntelligenceSearchContext(items: items)
-            brief = MorningBriefSnapshot(items: items, now: value.data.now)
+            brief = MorningBriefSnapshot(items: items, now: value.now)
             presentationKey = nil
         }
         input = value
@@ -79,7 +82,7 @@ nonisolated struct TimelineScreenSnapshot: Sendable {
     func clearQuery() { setQuery("") }
 
     func zoneRange(_ zone: Freshness) -> ClosedRange<Double> {
-        let thresholds = TimelinePolicy.validThresholds(input?.data.thresholds ?? [2, 7, 21]).map(Double.init)
+        let thresholds = TimelinePolicy.validThresholds(input?.thresholds ?? [2, 7, 21]).map(Double.init)
         switch zone {
         case .fresh: return 0...thresholds[0]
         case .aging: return thresholds[0]...thresholds[1]

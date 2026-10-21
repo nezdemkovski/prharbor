@@ -51,7 +51,7 @@ extension SettingsDestination {
 }
 
 struct PanelSettingsView: View {
-    @ObservedObject var store: PullRequestStore
+    let store: PullRequestStore
     var usernameOverride: String? = nil
     @State private var destination: SettingsDestination? = GitHubSession.shared.isConfigured ? .timeline : .account
     @Default(.githubUsername) private var username
@@ -112,7 +112,7 @@ private struct EnterpriseSettings: View {
 }
 
 private struct AccountCard: View {
-    @ObservedObject var store: PullRequestStore
+    let store: PullRequestStore
     @ObservedObject private var session = GitHubSession.shared
     @StateObject private var connector = GitHubCLIConnector()
 

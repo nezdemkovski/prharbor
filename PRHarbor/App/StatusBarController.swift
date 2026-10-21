@@ -1,5 +1,5 @@
 import AppKit
-import Combine
+import Observation
 import SwiftUI
 
 /// Own the public AppKit status item so primary and secondary clicks have
@@ -10,7 +10,7 @@ final class StatusBarController: NSObject {
     private let popover = NSPopover()
     private let menu = NSMenu()
     private let store: PullRequestStore
-    private var countObservation: AnyCancellable?
+    private var countObservation: Task<Void, Never>?
 
     init(store: PullRequestStore, onSettings: @escaping () -> Void) {
         self.store = store
@@ -45,10 +45,8 @@ final class StatusBarController: NSObject {
         popover.behavior = .transient
         popover.animates = false
 
-        updateCount()
-        // Deliver after @Published has changed so the count reflects the new data.
-        countObservation = store.objectWillChange.receive(on: RunLoop.main).sink { [weak self] in
-            self?.updateCount()
+        countObservation = Task { [weak self, store] in
+            for await count in Observations({ store.totalCount }) { self?.updateCount(count) }
         }
     }
 
@@ -70,12 +68,12 @@ final class StatusBarController: NSObject {
 
     func invalidate() {
         closePanel()
+        countObservation?.cancel()
         countObservation = nil
         NSStatusBar.system.removeStatusItem(statusItem)
     }
 
-    private func updateCount() {
-        let count = store.totalCount
+    private func updateCount(_ count: Int) {
         let title = count > 0 ? " \(count)" : ""
         if statusItem.button?.title != title { statusItem.button?.title = title }
         statusItem.button?.setAccessibilityValue("\(count) pull requests")

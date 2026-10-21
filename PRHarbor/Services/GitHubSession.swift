@@ -14,12 +14,7 @@ final class GitHubSession {
 
     /// The saved account, with its token in the login Keychain.
     static func live() -> GitHubSession {
-        let connection = Defaults[.githubConnection]
-        Defaults[.githubUsername] = connection?.username ?? ""
-        return GitHubSession(connection: connection, tokens: .keychain, persist: { value in
-            Defaults[.githubConnection] = value
-            Defaults[.githubUsername] = value?.username ?? ""
-        })
+        GitHubSession(connection: Defaults[.githubConnection], tokens: .keychain, persist: { Defaults[.githubConnection] = $0 })
     }
 
     init(connection: GitHubConnection? = nil, tokens: GitHubTokenStorage = .memory(),

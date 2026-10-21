@@ -10,7 +10,6 @@ struct AppRuntimeTests {
         #expect(AppPreferences.storage !== UserDefaults.standard)
         #expect(Defaults.Keys.githubConnection.suite === AppPreferences.storage)
         #expect(Defaults[.githubConnection] == nil)
-        #expect(Defaults[.githubUsername].isEmpty)
         let delegate = AppDelegate()
         #expect(!delegate.store.isConfigured)
         #expect(!delegate.store.isLoading)

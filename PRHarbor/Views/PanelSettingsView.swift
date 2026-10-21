@@ -54,7 +54,7 @@ struct PanelSettingsView: View {
     let store: PullRequestStore
     var usernameOverride: String? = nil
     @State private var destination: SettingsDestination?
-    @Default(.githubUsername) private var username
+    private var username: String { store.session.connection?.username ?? "" }
 
     init(store: PullRequestStore, usernameOverride: String? = nil) {
         self.store = store

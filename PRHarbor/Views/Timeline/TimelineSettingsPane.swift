@@ -102,7 +102,7 @@ struct FreshnessSettings: View {
     let store: PullRequestStore
     var usernameOverride: String? = nil
     @Default(.freshnessThresholds) private var thresholds
-    @Default(.githubUsername) private var username
+    private var username: String { store.session.connection?.username ?? "" }
     @Default(.botAccounts) private var bots
     @Default(.ownCommentsCount) private var comments
     private var values: [Int] { TimelinePolicy.validThresholds(thresholds) }

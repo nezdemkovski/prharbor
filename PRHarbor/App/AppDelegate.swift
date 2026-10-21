@@ -14,6 +14,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusBar: StatusBarController?
     private var settingsWindow: NSWindow?
 
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // Set before launch completes, so a notification click that launched the app is delivered.
+        if runtime == .production { UNUserNotificationCenter.current().delegate = self }
+    }
+
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         NSApp.setActivationPolicy(runtime.showsDevelopmentWindow ? .regular : .accessory)
         guard runtime == .production else { return }
@@ -21,7 +26,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         Task { await session.restoreFromSavedToken(baseURL: Defaults[.githubApiBaseUrl]) }
         statusBar = StatusBarController(store: store, onSettings: { [weak self] in self?.showSettings() })
         requestNotificationAuthorization()
-        UNUserNotificationCenter.current().delegate = self
     }
 
     func showSettings() {
@@ -57,13 +61,12 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
-        if response.actionIdentifier == UNNotificationDefaultActionIdentifier ||
-           response.actionIdentifier == "OPEN_PR",
-           let urlString = userInfo["url"] as? String,
-           let url = URL(string: urlString) {
-            DispatchQueue.main.async {
-                NSWorkspace.shared.open(url)
-            }
+        let opens = response.actionIdentifier == UNNotificationDefaultActionIdentifier || response.actionIdentifier == "OPEN_PR"
+        let url = (userInfo["url"] as? String).flatMap(URL.init(string:))
+        DispatchQueue.main.async { [weak self] in
+            guard opens else { return }
+            // A pull request opens on GitHub; summaries and the test notification open the panel.
+            if let url { NSWorkspace.shared.open(url) } else { self?.statusBar?.showPanel() }
         }
         completionHandler()
     }

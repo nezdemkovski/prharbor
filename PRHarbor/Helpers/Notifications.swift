@@ -1,11 +1,41 @@
 
-import Foundation
-import UserNotifications
+import AppKit
 import Defaults
+import Foundation
+import Observation
+import UserNotifications
+
+/// Whether macOS lets PR Harbor show notifications, for the Notifications settings.
+@MainActor @Observable
+final class NotificationPermission {
+    private(set) var status: UNAuthorizationStatus?
+
+    func refresh() async {
+        status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+    }
+
+    func request() async {
+        _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+        await refresh()
+    }
+
+    func openSystemSettings() {
+        let id = Bundle.main.bundleIdentifier ?? "com.nezdemkovski.prharbor"
+        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    func sendTest() {
+        sendTimelineNotification(title: "PR Harbor notifications work",
+                                 body: "Review requests, assignments and quiet pull requests will appear like this.",
+                                 identifier: "timeline-test")
+    }
+}
 
 func requestNotificationAuthorization() {
     let center = UNUserNotificationCenter.current()
-    center.requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+    center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
 
     let openAction = UNNotificationAction(
         identifier: "OPEN_PR",
@@ -161,10 +191,11 @@ func sendPRNotification(title: String, pr: Pull, category: String) {
     UNUserNotificationCenter.current().add(request)
 }
 
-func sendTimelineNotification(title: String, body: String) {
+/// Notifications without a pull request open the panel when clicked.
+func sendTimelineNotification(title: String, body: String, identifier: String = "timeline-morning") {
     let content = UNMutableNotificationContent()
     content.title = title
     content.body = body
     content.sound = .default
-    UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "timeline-morning", content: content, trigger: nil))
+    UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
 }

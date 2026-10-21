@@ -1,6 +1,7 @@
 import SwiftUI
 import Defaults
 import LaunchAtLogin
+import UserNotifications
 
 struct TimelineSettingsPane: View {
     let destination: SettingsDestination
@@ -53,6 +54,7 @@ struct TimelineSettingsPane: View {
                     TimelineSettingsRow("Refresh every") { Picker("Refresh every", selection: $refresh) { ForEach([1, 5, 10, 15, 30], id: \.self) { Text("\($0) min").tag($0) } }.labelsHidden().fixedSize() }
                     TimelineSettingsRow("Open at login") { LaunchAtLogin.Toggle("").labelsHidden().toggleStyle(TimelineSwitchStyle()) }
                 case .notifications:
+                    NotificationPermissionRow()
                     settingsToggle("Someone requests your review", value: $notifyReview)
                     settingsToggle("You are assigned", value: $notifyAssigned)
                     settingsToggle("A new pull request of yours appears", value: $notifyCreated)
@@ -245,3 +247,31 @@ struct TimelineNotificationSettings: View {
 
     }
 }
+
+/// macOS decides whether notifications appear at all; show that and how to change it.
+struct NotificationPermissionRow: View {
+    @State private var permission = NotificationPermission()
+    var body: some View {
+        TimelineSettingsRow("Notifications", hint: hint) {
+            switch permission.status {
+            case .notDetermined: Button("Allow…") { Task { await permission.request() } }
+            case .denied: Button("Open System Settings") { permission.openSystemSettings() }
+            case .authorized, .provisional: Button("Send Test") { permission.sendTest() }
+            default: EmptyView()
+            }
+        }
+        .task { await permission.refresh() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task { await permission.refresh() }
+        }
+    }
+    private var hint: String {
+        switch permission.status {
+        case .notDetermined: "PR Harbor has not asked yet."
+        case .denied: "Turned off in System Settings. PR Harbor cannot show any notification."
+        case .authorized, .provisional: "Allowed. Shown while PR Harbor is running."
+        default: "Checking…"
+        }
+    }
+}
+

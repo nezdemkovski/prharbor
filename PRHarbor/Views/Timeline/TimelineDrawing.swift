@@ -266,7 +266,7 @@ struct TimelineAvatar: View {
                 let login = person?.login ?? "ghost"
                 ZStack {
                     Circle().fill(miniature ? AnyShapeStyle(TimelineStyle.track) : AnyShapeStyle(gradient(login)))
-                    Text(String((login == "yuri" ? "You" : login).prefix(1)).uppercased())
+                    Text(String(login.prefix(1)).uppercased())
                         .font(.system(size: miniature ? 8.5 : 12, weight: .semibold))
                         .foregroundStyle(miniature ? TimelineStyle.muted : .white)
                 }
@@ -274,10 +274,6 @@ struct TimelineAvatar: View {
         }.frame(width: size, height: size).clipShape(Circle())
     }
     private func gradient(_ login: String) -> LinearGradient {
-        let mockColors: [String: (Int, Int)] = ["yuri": (0xf59e0b, 0xef4444), "anna": (0x8b5cf6, 0x6366f1), "marek": (0x06b6d4, 0x3b82f6), "tomas": (0x10b981, 0x059669), "lena": (0xec4899, 0xf43f5e)]
-        if let colors = mockColors[login] {
-            return LinearGradient(colors: [TimelineStyle.color(colors.0), TimelineStyle.color(colors.1)], startPoint: .topLeading, endPoint: .bottomTrailing)
-        }
         let hue = login.utf16.reduce(0) { ($0 * 31 + Int($1)) % 360 }
         return LinearGradient(colors: [Color(hue: Double(hue) / 360, saturation: 0.7, brightness: 0.9), Color(hue: Double((hue + 40) % 360) / 360, saturation: 0.7, brightness: 0.8)], startPoint: .topLeading, endPoint: .bottomTrailing)
     }

@@ -21,7 +21,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusBar?.closePanel()
         if settingsWindow == nil {
             let hosting = NSHostingController(rootView: PanelSettingsView(store: store,
-                usernameOverride: isTimelinePreview ? "yuri" : nil).frame(width: 780, height: 568))
+                usernameOverride: previewUsername).frame(width: 780, height: 568))
             hosting.sizingOptions = []
             let window = NSWindow(contentViewController: hosting)
             window.title = "PR Harbor Settings"

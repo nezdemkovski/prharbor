@@ -4,6 +4,7 @@ import Defaults
 
 @MainActor
 enum TimelinePreviewData {
+    static let username = "yuri"
     static func items(now: Date) -> [TimelineItem] {
         func ago(_ days: Double) -> Date { now.addingTimeInterval(-days * 86_400) }
         guard let source = try? JSONDecoder().decode([PrototypePull].self, from: Data(prototypeJSON.utf8)) else {
@@ -42,8 +43,8 @@ enum TimelinePreviewData {
             }
         }
         return pulls.enumerated().map { index, pull in
-            TimelineItem(pull: pull, username: "yuri", now: now, thresholds: [2, 7, 21], bots: ["dependabot", "*[bot]"], ownComments: true,
-                         snoozedUntil: source[index].snooze.map { ago($0) }, reviewRequested: source[index].reviewers.contains("yuri"))
+            TimelineItem(pull: pull, username: username, now: now, thresholds: [2, 7, 21], bots: ["dependabot", "*[bot]"], ownComments: true,
+                         snoozedUntil: source[index].snooze.map { ago($0) }, reviewRequested: source[index].reviewers.contains(username))
         }
 
     }
@@ -103,7 +104,7 @@ struct TimelinePreviewHost: View {
     @Default(.showRequested) private var showRequested
     private var items: [TimelineItem] {
         TimelinePreviewData.items(now: now).filter { ($0.isMine ? showCreated : showRequested) && (!hideDrafts || !$0.pull.isDraft) }.map { item in
-            TimelineItem(pull: item.pull, username: "yuri", now: now, thresholds: thresholds,
+            TimelineItem(pull: item.pull, username: TimelinePreviewData.username, now: now, thresholds: thresholds,
                          bots: bots, ownComments: comments,
                          snoozedUntil: snoozed[item.id].map { Date(timeIntervalSince1970: $0) } ?? item.snoozedUntil, reviewRequested: item.reviewRequested)
         }

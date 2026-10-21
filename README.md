@@ -83,8 +83,8 @@ Made by [Yuri Nezdemkovski](https://nezdemkovski.com)
 
 ## Interface preview
 
-Open `PRHarbor/Views/Timeline/TimelinePreview.swift` in Xcode for a SwiftUI preview with sample data. A Debug build launched with `PULLBAR_PREVIEW=1` presents the sample interface and skips automatic GitHub refresh and notification authorization. Use a separate bundle identifier when launching a standalone preview app to isolate its preferences from the main app.
+Open `PRHarbor/Views/Timeline/TimelinePreview.swift` in Xcode for a SwiftUI preview with sample data. A Debug build launched with `PRHARBOR_PREVIEW=1` presents the sample interface and skips automatic GitHub refresh and notification authorization. Use a separate bundle identifier when launching a standalone preview app to isolate its preferences from the main app.
 
-Ordinary Debug and Release runs both stay in the menu bar, without a Dock icon or a separate timeline window. For an explicit live-data development window, set `PULLBAR_DEBUG_WINDOW=1` in the Xcode scheme's Run environment. Development windows are not restored on the next launch.
+Ordinary Debug and Release runs both stay in the menu bar, without a Dock icon or a separate timeline window. For an explicit live-data development window, set `PRHARBOR_DEBUG_WINDOW=1` in the Xcode scheme's Run environment. Development windows are not restored on the next launch.
 
 The Test action sets `PRHARBOR_TESTING=1`. Hosted tests skip production startup, notifications and credential migrations, use a fresh preferences suite and temporary cache, and supply fixture GitHub transports. Tests are organized by suite in `PRHarborTests/`; shared transports and gates live in `TestSupport.swift`.

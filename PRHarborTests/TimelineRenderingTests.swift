@@ -33,7 +33,7 @@ struct TimelineRenderingTests {
             let bitmap = try #require(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
             hosting.cacheDisplay(in: hosting.bounds, to: bitmap)
             let png = try #require(bitmap.representation(using: .png, properties: [:]))
-            try png.write(to: URL(fileURLWithPath: "/tmp/pullbar-preview-\(scheme == .light ? "light" : "dark").png"))
+            try png.write(to: URL(fileURLWithPath: "/tmp/prharbor-preview-\(scheme == .light ? "light" : "dark").png"))
             #expect(bitmap.pixelsWide >= 780)
             window.close()
         }
@@ -64,7 +64,7 @@ struct TimelineRenderingTests {
         let bitmap = try #require(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
         hosting.cacheDisplay(in: hosting.bounds, to: bitmap)
         let png = try #require(bitmap.representation(using: .png, properties: [:]))
-        try png.write(to: URL(fileURLWithPath: "/tmp/pullbar-preview-" + name + ".png"))
+        try png.write(to: URL(fileURLWithPath: "/tmp/prharbor-preview-" + name + ".png"))
         window.close()
     }
 

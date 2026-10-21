@@ -6,7 +6,7 @@
 
 - Debug и Release по умолчанию используют `.accessory`: без Dock icon.
 - Окно разработки не открывается автоматически и не восстанавливается после перезапуска. Settings scene тоже не открывается и не восстанавливается автоматически.
-- Отдельные development windows доступны только при явном `PULLBAR_PREVIEW=1` (mock preview) или `PULLBAR_DEBUG_WINDOW=1` (live diagnostics). В Release эти flags игнорируются.
+- Отдельные development windows доступны только при явном `PRHARBOR_PREVIEW=1` (mock preview) или `PRHARBOR_DEBUG_WINDOW=1` (live diagnostics). В Release эти flags игнорируются.
 
 Проверка: **65 tests / 11 suites passed**, `/tmp/prharbor-startup-test.log`. Новый integration test проверяет activation policy настоящего Debug test-host и отсутствие видимого самостоятельного окна. Debug в пользовательском Xcode DerivedData и Release успешно собраны; sandboxed ad hoc signatures проверены. `git diff --check` прошёл.
 

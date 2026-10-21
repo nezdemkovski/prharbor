@@ -19,7 +19,7 @@ struct PRHarborApp: App {
         .restorationBehavior(.disabled)
         #endif
         Settings {
-            PanelSettingsView(store: store, usernameOverride: isTimelinePreview ? "yuri" : nil)
+            PanelSettingsView(store: store, usernameOverride: previewUsername)
                 .frame(width: 780, height: 568)
         }.windowResizability(.contentSize)
         .defaultLaunchBehavior(.suppressed)
@@ -34,16 +34,25 @@ struct PRHarborApp: App {
 
 var isTimelinePreview: Bool {
     #if DEBUG
-    ProcessInfo.processInfo.environment["PULLBAR_PREVIEW"] == "1"
+    ProcessInfo.processInfo.environment["PRHARBOR_PREVIEW"] == "1"
     #else
     false
+    #endif
+}
+
+/// The sample account the preview's settings show instead of the connected one.
+var previewUsername: String? {
+    #if DEBUG
+    isTimelinePreview ? TimelinePreviewData.username : nil
+    #else
+    nil
     #endif
 }
 
 /// Ordinary Debug runs behave like Release. Separate windows are opt-in tools.
 var showsDevelopmentWindow: Bool {
     #if DEBUG
-    isTimelinePreview || ProcessInfo.processInfo.environment["PULLBAR_DEBUG_WINDOW"] == "1"
+    isTimelinePreview || ProcessInfo.processInfo.environment["PRHARBOR_DEBUG_WINDOW"] == "1"
     #else
     false
     #endif

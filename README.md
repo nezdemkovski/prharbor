@@ -59,7 +59,7 @@ See [architecture](docs/architecture.md) for component responsibilities and data
 
 - Xcode 27 or newer
 - Swift 6.4 compiler in Swift 6 language mode, with Approachable Concurrency and complete concurrency checking
-- macOS 27 deployment target
+- macOS 26 deployment target
 
 Build from the command line:
 

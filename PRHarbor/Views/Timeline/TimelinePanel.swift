@@ -86,9 +86,7 @@ struct TimelinePanel: View {
             }
         }
         .frame(width: TimelineMetrics.panelWidth, alignment: .top)
-        .background(TimelineStyle.panel)
-        .clipShape(RoundedRectangle(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(TimelineStyle.line))
+        // No background or frame of its own: the popover draws them, including its arrow.
         .foregroundStyle(TimelineStyle.text)
         .tint(TimelineStyle.accent)
         .monospacedDigit()

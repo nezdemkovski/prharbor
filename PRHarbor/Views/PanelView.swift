@@ -24,7 +24,6 @@ struct PanelView: View {
         }
         .frame(width: Theme.panelWidth)
         .fixedSize(horizontal: false, vertical: true)
-        .background(TimelineStyle.panel)
     }
 
     /// The panel belongs to an accessory app, so activate it before bringing the Settings scene forward.

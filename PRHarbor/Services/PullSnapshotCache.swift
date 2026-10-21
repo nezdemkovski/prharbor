@@ -29,12 +29,14 @@ nonisolated struct PullSnapshot: Codable, Sendable {
 /// Disk work and JSON coding run on this actor, never on the UI executor.
 /// One bounded file in the app's cache directory; no credentials and no shared gh cache.
 actor PullSnapshotCache {
-    static let defaultDirectory = AppRuntime.isTesting
-        ? FileManager.default.temporaryDirectory.appendingPathComponent("PRHarbor-TestCache-" + UUID().uuidString, isDirectory: true)
-        : FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("PRHarbor/Pulls", isDirectory: true)
-    static let shared = PullSnapshotCache(directory: defaultDirectory)
-    private let directory: URL
+    static let productionDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("PRHarbor/Pulls", isDirectory: true)
+    /// A cache nobody else reads, for tests and previews.
+    static func temporary() -> PullSnapshotCache {
+        PullSnapshotCache(directory: FileManager.default.temporaryDirectory
+            .appendingPathComponent("PRHarbor-TestCache-" + UUID().uuidString, isDirectory: true))
+    }
+    nonisolated let directory: URL
     private var file: URL { directory.appendingPathComponent("snapshot-v1.json") }
     private let maximumBytes = 8 * 1_024 * 1_024
     private let maximumAge: TimeInterval = 7 * 86_400

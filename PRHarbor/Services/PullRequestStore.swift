@@ -45,7 +45,7 @@ final class PullRequestStore {
     private var sessionObservation: Task<Void, Never>?
     private let notifications = PullNotificationCoordinator()
     private var refreshGeneration = 0
-    private let session: GitHubSession
+    let session: GitHubSession
     private let cache: PullSnapshotCache
     private let clientProvider: (String, BuildType) async throws -> GitHubClient
     private var cacheWriteTask: Task<Void, Never>?
@@ -54,9 +54,9 @@ final class PullRequestStore {
     private var currentSnapshot: PullSnapshot?
 
     init(startAutomatically: Bool = true, session: GitHubSession? = nil,
-         cache: PullSnapshotCache = .shared,
+         cache: PullSnapshotCache = .temporary(),
          clientProvider: ((String, BuildType) async throws -> GitHubClient)? = nil) {
-        let session = session ?? GitHubSession.shared
+        let session = session ?? GitHubSession()
         self.session = session
         self.cache = cache
         self.clientProvider = clientProvider ?? { try await session.client(baseURL: $0, buildType: $1) }

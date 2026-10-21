@@ -5,13 +5,17 @@ import SwiftUI
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
-    lazy var store = PullRequestStore(startAutomatically: !isTimelinePreview && !AppRuntime.isTesting)
+    private let runtime = AppRuntime.current
+    lazy var store: PullRequestStore = {
+        let services = AppServices(runtime: runtime)
+        return PullRequestStore(startAutomatically: services.startsSync, session: services.session, cache: services.cache)
+    }()
     private var statusBar: StatusBarController?
     private var settingsWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
-        NSApp.setActivationPolicy(showsDevelopmentWindow ? .regular : .accessory)
-        if isTimelinePreview || AppRuntime.isTesting { return }
+        NSApp.setActivationPolicy(runtime.showsDevelopmentWindow ? .regular : .accessory)
+        guard runtime == .production else { return }
         statusBar = StatusBarController(store: store, onSettings: { [weak self] in self?.showSettings() })
         requestNotificationAuthorization()
         UNUserNotificationCenter.current().delegate = self
@@ -21,7 +25,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusBar?.closePanel()
         if settingsWindow == nil {
             let hosting = NSHostingController(rootView: PanelSettingsView(store: store,
-                usernameOverride: previewUsername).frame(width: 780, height: 568))
+                usernameOverride: runtime.usernameOverride).frame(width: 780, height: 568))
             hosting.sizingOptions = []
             let window = NSWindow(contentViewController: hosting)
             window.title = "PR Harbor Settings"

@@ -53,8 +53,14 @@ extension SettingsDestination {
 struct PanelSettingsView: View {
     let store: PullRequestStore
     var usernameOverride: String? = nil
-    @State private var destination: SettingsDestination? = GitHubSession.shared.isConfigured ? .timeline : .account
+    @State private var destination: SettingsDestination?
     @Default(.githubUsername) private var username
+
+    init(store: PullRequestStore, usernameOverride: String? = nil) {
+        self.store = store
+        self.usernameOverride = usernameOverride
+        _destination = State(initialValue: store.isConfigured ? .timeline : .account)
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -113,8 +119,13 @@ private struct EnterpriseSettings: View {
 
 private struct AccountCard: View {
     let store: PullRequestStore
-    private let session = GitHubSession.shared
-    @State private var connector = GitHubTokenConnector()
+    private var session: GitHubSession { store.session }
+    @State private var connector: GitHubTokenConnector
+
+    init(store: PullRequestStore) {
+        self.store = store
+        _connector = State(initialValue: GitHubTokenConnector(session: store.session))
+    }
     @Default(.githubApiBaseUrl) private var apiURL
     @State private var token = ""
     @State private var replacing = false

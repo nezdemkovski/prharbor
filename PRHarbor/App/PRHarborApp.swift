@@ -7,19 +7,19 @@ struct PRHarborApp: App {
 
     var body: some Scene {
         #if DEBUG
-        Window(isTimelinePreview ? "PR Harbor — Timeline Preview" : "PR Harbor", id: "timeline-preview") {
-            if isTimelinePreview {
+        Window(AppRuntime.current == .timelinePreview ? "PR Harbor — Timeline Preview" : "PR Harbor", id: "timeline-preview") {
+            if AppRuntime.current == .timelinePreview {
                 TimelinePreviewHost(store: store)
             } else {
                 PanelView(store: store, onQuit: { NSApp.terminate(nil) }, onSettings: appDelegate.showSettings)
             }
         }
         .windowResizability(.contentSize)
-        .defaultLaunchBehavior(showsDevelopmentWindow ? .presented : .suppressed)
+        .defaultLaunchBehavior(AppRuntime.current.showsDevelopmentWindow ? .presented : .suppressed)
         .restorationBehavior(.disabled)
         #endif
         Settings {
-            PanelSettingsView(store: store, usernameOverride: previewUsername)
+            PanelSettingsView(store: store, usernameOverride: AppRuntime.current.usernameOverride)
                 .frame(width: 780, height: 568)
         }.windowResizability(.contentSize)
         .defaultLaunchBehavior(.suppressed)
@@ -30,30 +30,4 @@ struct PRHarborApp: App {
             }
         }
     }
-}
-
-var isTimelinePreview: Bool {
-    #if DEBUG
-    ProcessInfo.processInfo.environment["PRHARBOR_PREVIEW"] == "1"
-    #else
-    false
-    #endif
-}
-
-/// The sample account the preview's settings show instead of the connected one.
-var previewUsername: String? {
-    #if DEBUG
-    isTimelinePreview ? TimelinePreviewData.username : nil
-    #else
-    nil
-    #endif
-}
-
-/// Ordinary Debug runs behave like Release. Separate windows are opt-in tools.
-var showsDevelopmentWindow: Bool {
-    #if DEBUG
-    isTimelinePreview || ProcessInfo.processInfo.environment["PRHARBOR_DEBUG_WINDOW"] == "1"
-    #else
-    false
-    #endif
 }

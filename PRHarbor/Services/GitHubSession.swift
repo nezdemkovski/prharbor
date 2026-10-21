@@ -5,7 +5,6 @@ import Observation
 /// The connected account and its personal access token.
 @MainActor @Observable
 final class GitHubSession {
-    static let shared = GitHubSession()
     private(set) var connection: GitHubConnection?
     private let tokens: GitHubTokenStorage
     private let persist: (GitHubConnection?) -> Void
@@ -13,14 +12,11 @@ final class GitHubSession {
     private var token: String?
     private(set) var generation = 0
 
-    convenience init() {
-        if AppRuntime.isTesting {
-            self.init(connection: nil)
-            return
-        }
+    /// The saved account, with its token in the login Keychain.
+    static func live() -> GitHubSession {
         let connection = Defaults[.githubConnection]
         Defaults[.githubUsername] = connection?.username ?? ""
-        self.init(connection: connection, tokens: .keychain, persist: { value in
+        return GitHubSession(connection: connection, tokens: .keychain, persist: { value in
             Defaults[.githubConnection] = value
             Defaults[.githubUsername] = value?.username ?? ""
         })

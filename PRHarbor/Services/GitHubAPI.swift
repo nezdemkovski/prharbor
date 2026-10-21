@@ -190,7 +190,7 @@ final class GitHubTokenConnector {
     private var task: Task<Void, Never>?
     private var generation = 0
 
-    init(session: GitHubSession = .shared) { self.session = session }
+    init(session: GitHubSession) { self.session = session }
 
     func connect(token: String) {
         cancel()

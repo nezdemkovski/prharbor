@@ -12,11 +12,12 @@ extension Defaults.Keys {
     static let notifyReviewRequested = Key<Bool>("notifyReviewRequested", default: true, suite: AppPreferences.storage)
     static let notifyAssigned = Key<Bool>("notifyAssigned", default: true, suite: AppPreferences.storage)
     static let notifyCreated = Key<Bool>("notifyCreated", default: false, suite: AppPreferences.storage)
-    
+
     static let timelineRange = Key<Int>("timelineRange", default: 182, suite: AppPreferences.storage)
     static let freshnessThresholds = Key<[Int]>("freshnessThresholds", default: [2, 7, 21], suite: AppPreferences.storage)
     static let ownCommentsCount = Key<Bool>("ownCommentsCount", default: true, suite: AppPreferences.storage)
-    static let botAccounts = Key<[String]>("botAccounts", default: ["dependabot", "github-actions", "renovate", "greptile-apps", "*[bot]"], suite: AppPreferences.storage)
+    static let botAccounts = Key<[String]>(
+        "botAccounts", default: ["dependabot", "github-actions", "renovate", "greptile-apps", "*[bot]"], suite: AppPreferences.storage)
     static let snoozedPulls = Key<[String: Double]>("snoozedPulls", default: [:], suite: AppPreferences.storage)
     static let snoozeActivity = Key<[String: Double]>("snoozeActivity", default: [:], suite: AppPreferences.storage)
     static let wakeOnComment = Key<Bool>("wakeOnComment", default: true, suite: AppPreferences.storage)

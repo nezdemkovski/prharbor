@@ -74,10 +74,12 @@ nonisolated struct PullDisplayGroup: Identifiable, Sendable, Equatable {
 }
 
 nonisolated func groupPullsForDisplay(_ edges: [Edge]) -> [PullDisplayGroup] {
-    let stackEdges = Dictionary(grouping: edges.compactMap { edge -> (String, Edge)? in
-        guard let stack = edge.node.stack, stack.size > 1 else { return nil }
-        return (stack.id, edge)
-    }, by: { $0.0 })
+    let stackEdges = Dictionary(
+        grouping: edges.compactMap { edge -> (String, Edge)? in
+            guard let stack = edge.node.stack, stack.size > 1 else { return nil }
+            return (stack.id, edge)
+        }, by: { $0.0 }
+    )
     .mapValues { pairs in pairs.map(\.1) }
 
     var seenStackIDs = Set<String>()

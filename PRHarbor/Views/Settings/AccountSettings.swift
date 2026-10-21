@@ -24,7 +24,9 @@ struct AccountSettings: View {
             } header: {
                 Text("Server")
             } footer: {
-                Text("Use https://api.github.com for GitHub, or your Enterprise API URL ending in /api/v3. Set it before adding a token; changing it disconnects the account.")
+                Text(
+                    "Use https://api.github.com for GitHub, or your Enterprise API URL ending in /api/v3. Set it before adding a token; changing it disconnects the account."
+                )
             }
             Section {
                 if let username = usernameOverride ?? (session.isConfigured ? session.connection?.username : nil), !replacing {
@@ -59,7 +61,12 @@ struct AccountSettings: View {
                             Text("Checking token…").foregroundStyle(.secondary)
                         }
                         Spacer()
-                        if replacing { Button("Cancel") { replacing = false; token = "" } }
+                        if replacing {
+                            Button("Cancel") {
+                                replacing = false
+                                token = ""
+                            }
+                        }
                         Button("Connect") { connector.connect(token: token) }
                             .keyboardShortcut(.defaultAction)
                             .disabled(connector.isConnecting || token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -71,9 +78,10 @@ struct AccountSettings: View {
             } header: {
                 Text("GitHub")
             } footer: {
-                Text(session.isConfigured && !replacing
-                    ? "The token is stored in your Keychain."
-                    : "For organizations with SAML single sign-on, choose Configure SSO next to the token on GitHub and authorize it.")
+                Text(
+                    session.isConfigured && !replacing
+                        ? "The token is stored in your Keychain."
+                        : "For organizations with SAML single sign-on, choose Configure SSO next to the token on GitHub and authorize it.")
             }
         }
         .onDisappear { connector.cancel() }

@@ -11,12 +11,14 @@ import SwiftUI
 /// AA (4.5:1) against the glass's base tone; fills and borders that identify state meet 3:1.
 nonisolated enum Palette {
     static func color(_ light: Int, _ dark: Int? = nil, alpha: Double = 1, darkAlpha: Double? = nil) -> Color {
-        Color(nsColor: NSColor(name: nil) { appearance in
-            let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            let value = isDark ? (dark ?? light) : light
-            return NSColor(srgbRed: Double((value >> 16) & 255) / 255, green: Double((value >> 8) & 255) / 255,
-                           blue: Double(value & 255) / 255, alpha: isDark ? (darkAlpha ?? alpha) : alpha)
-        })
+        Color(
+            nsColor: NSColor(name: nil) { appearance in
+                let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                let value = isDark ? (dark ?? light) : light
+                return NSColor(
+                    srgbRed: Double((value >> 16) & 255) / 255, green: Double((value >> 8) & 255) / 255,
+                    blue: Double(value & 255) / 255, alpha: isDark ? (darkAlpha ?? alpha) : alpha)
+            })
     }
     /// Black over the light glass, white over the dark one.
     static func overlay(_ light: Double, _ dark: Double) -> Color { color(0x000000, 0xffffff, alpha: light, darkAlpha: dark) }
@@ -68,19 +70,19 @@ nonisolated enum Palette {
 
 /// Type sizes by role. Every size the panel uses is one of these.
 nonisolated enum Typography {
-    static let display: CGFloat = 18      // search field
-    static let iconLarge: CGFloat = 17    // toolbar settings icon
-    static let title: CGFloat = 16        // onboarding title
-    static let icon: CGFloat = 15         // detail card tools
-    static let headline: CGFloat = 13.5   // detail card title
-    static let body: CGFloat = 13         // row titles, empty states
-    static let callout: CGFloat = 12      // segments, repository headers, summaries
-    static let subheadline: CGFloat = 11.5 // row subtitles, detail facts, badges
-    static let footnote: CGFloat = 11     // axis labels, captions, branch names
-    static let caption: CGFloat = 10.5    // timeline chips
-    static let caption2: CGFloat = 10     // annotations inside tracks
-    static let micro: CGFloat = 9.5       // disclosure chevrons, stack positions
-    static let nano: CGFloat = 8          // event cluster counts, miniature initials
+    static let display: CGFloat = 18  // search field
+    static let iconLarge: CGFloat = 17  // toolbar settings icon
+    static let title: CGFloat = 16  // onboarding title
+    static let icon: CGFloat = 15  // detail card tools
+    static let headline: CGFloat = 13.5  // detail card title
+    static let body: CGFloat = 13  // row titles, empty states
+    static let callout: CGFloat = 12  // segments, repository headers, summaries
+    static let subheadline: CGFloat = 11.5  // row subtitles, detail facts, badges
+    static let footnote: CGFloat = 11  // axis labels, captions, branch names
+    static let caption: CGFloat = 10.5  // timeline chips
+    static let caption2: CGFloat = 10  // annotations inside tracks
+    static let micro: CGFloat = 9.5  // disclosure chevrons, stack positions
+    static let nano: CGFloat = 8  // event cluster counts, miniature initials
 }
 
 extension Font {
@@ -121,19 +123,19 @@ nonisolated enum Radius {
 
 /// Fixed sizes of icons, buttons, avatars and markers.
 nonisolated enum Size {
-    static let glyph: CGFloat = 18          // menu bar and search field pull request glyph
-    static let glyphTile: CGFloat = 38      // tile behind the search glyph
+    static let glyph: CGFloat = 18  // menu bar and search field pull request glyph
+    static let glyphTile: CGFloat = 38  // tile behind the search glyph
     static let onboardingGlyph: CGFloat = 36
-    static let button: CGFloat = 30         // primary action and "/" key heights
-    static let iconButton: CGFloat = 28     // toolbar and detail tool buttons
-    static let field: CGFloat = 28          // search field height
-    static let control: CGFloat = 24        // segment height
-    static let chip: CGFloat = 22           // stack summary chips, branch icon
-    static let statusIcon: CGFloat = 20     // search status and onboarding feature icons
-    static let smallButton: CGFloat = 18    // copy branch button
-    static let handle: CGFloat = 18         // freshness threshold handles
+    static let button: CGFloat = 30  // primary action and "/" key heights
+    static let iconButton: CGFloat = 28  // toolbar and detail tool buttons
+    static let field: CGFloat = 28  // search field height
+    static let control: CGFloat = 24  // segment height
+    static let chip: CGFloat = 22  // stack summary chips, branch icon
+    static let statusIcon: CGFloat = 20  // search status and onboarding feature icons
+    static let smallButton: CGFloat = 18  // copy branch button
+    static let handle: CGFloat = 18  // freshness threshold handles
     static let positionBadge: CGFloat = 16  // stack layer number
-    static let disclosure: CGFloat = 12     // repository chevron width
+    static let disclosure: CGFloat = 12  // repository chevron width
     static let avatar: CGFloat = 30
     static let avatarSmall: CGFloat = 20
     static let eventAvatar: CGFloat = 16
@@ -164,52 +166,52 @@ nonisolated enum Layout {
     static let settingsSidebarWidth: CGFloat = 220
     static let settingsMinSize = CGSize(width: 720, height: 460)
     static let settingsDefaultSize = CGSize(width: 800, height: 560)
-    static let trackBarInset: CGFloat = 5          // active and quiet bars inside a track
+    static let trackBarInset: CGFloat = 5  // active and quiet bars inside a track
     static let hatchSpacing: CGFloat = 6 * 2.0.squareRoot()
-    static let trackFadeWidth: CGFloat = 24        // fade where history runs past the range
-    static let trackEdgeInset: CGFloat = 12        // keeps event clusters inside the track
+    static let trackFadeWidth: CGFloat = 24  // fade where history runs past the range
+    static let trackEdgeInset: CGFloat = 12  // keeps event clusters inside the track
     static let axisLabelY: CGFloat = 16
     static let axisChipY: CGFloat = 18
-    static let axisLeadingLabelX: CGFloat = 12     // the oldest label, kept off the edge
-    static let brushChipHalfWidth: CGFloat = 45    // keeps the range chip inside the axis
-    static let cursorChipHalfWidth: CGFloat = 35   // keeps the date chip inside the axis
-    static let collapsedDotInset: CGFloat = 4      // keeps freshness dots inside a collapsed header
+    static let axisLeadingLabelX: CGFloat = 12  // the oldest label, kept off the edge
+    static let brushChipHalfWidth: CGFloat = 45  // keeps the range chip inside the axis
+    static let cursorChipHalfWidth: CGFloat = 35  // keeps the date chip inside the axis
+    static let collapsedDotInset: CGFloat = 4  // keeps freshness dots inside a collapsed header
     static let positionBadgeOffset = CGSize(width: 5, height: 4)
-    static let stackRailOffset: CGFloat = -6       // centers the rail under the layer avatars
-    static let historyTrackScale: CGFloat = 0.65   // the details card's history track, vertically
-    static let brushDragThreshold: CGFloat = 8     // pointer travel before a drag selects a range
+    static let stackRailOffset: CGFloat = -6  // centers the rail under the layer avatars
+    static let historyTrackScale: CGFloat = 0.65  // the details card's history track, vertically
+    static let brushDragThreshold: CGFloat = 8  // pointer travel before a drag selects a range
     static let branchMinWidth: CGFloat = 90
     static let branchMaxWidth: CGFloat = 160
 }
 
 /// Line widths by role.
 nonisolated enum Stroke {
-    static let hairline: CGFloat = 1     // borders, grid lines, brush edges
-    static let hatch: CGFloat = 2        // diagonal hatching in a quiet bar
-    static let today: CGFloat = 2        // the "Today" rule
+    static let hairline: CGFloat = 1  // borders, grid lines, brush edges
+    static let hatch: CGFloat = 2  // diagonal hatching in a quiet bar
+    static let today: CGFloat = 2  // the "Today" rule
     static let eventRing: CGFloat = 1.5  // ring around an event avatar
-    static let fine: CGFloat = 0.5       // button and handle edges
+    static let fine: CGFloat = 0.5  // button and handle edges
 }
 
 /// Opacities by role, applied to the color they tint.
 nonisolated enum Opacity {
-    static let tintFill = 0.15        // freshness tint behind quiet time
-    static let tintStroke = 0.45      // outline of a tinted region
-    static let hatching = 0.45        // diagonal hatching inside a tint
-    static let quietBar = 0.6         // quiet-time bar in repository headers
-    static let todayLine = 0.75       // the "Today" rule
-    static let weekendShade = 0.7     // weekend columns on the axis
-    static let brushFill = 0.09       // selected time range
-    static let brushEdge = 0.55       // edges of the selected time range
-    static let eventTick = 0.38       // commit and own-comment ticks
-    static let badge = 0.12           // tinted badge backgrounds
-    static let deemphasized = 0.7     // secondary marks next to text
+    static let tintFill = 0.15  // freshness tint behind quiet time
+    static let tintStroke = 0.45  // outline of a tinted region
+    static let hatching = 0.45  // diagonal hatching inside a tint
+    static let quietBar = 0.6  // quiet-time bar in repository headers
+    static let todayLine = 0.75  // the "Today" rule
+    static let weekendShade = 0.7  // weekend columns on the axis
+    static let brushFill = 0.09  // selected time range
+    static let brushEdge = 0.55  // edges of the selected time range
+    static let eventTick = 0.38  // commit and own-comment ticks
+    static let badge = 0.12  // tinted badge backgrounds
+    static let deemphasized = 0.7  // secondary marks next to text
     static let decorativeGlyph = 0.5  // onboarding illustration
-    static let outline = 0.2          // hairline highlights and outlines
-    static let shadowSoft = 0.08      // segment selection shadow
-    static let shadow = 0.2           // button shadow
-    static let shadowStrong = 0.25    // handles
-    static let disabled = 0.45        // disabled controls and empty filters
+    static let outline = 0.2  // hairline highlights and outlines
+    static let shadowSoft = 0.08  // segment selection shadow
+    static let shadow = 0.2  // button shadow
+    static let shadowStrong = 0.25  // handles
+    static let disabled = 0.45  // disabled controls and empty filters
 }
 
 /// Brightness changes that show a control reacting to the pointer.

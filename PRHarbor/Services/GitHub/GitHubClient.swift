@@ -15,12 +15,13 @@ nonisolated struct GitHubClient: Sendable {
         expectedLogin: String? = nil
     ) throws {
         guard let url = URL(string: baseURL),
-              url.scheme == "https",
-              url.host != nil,
-              url.user == nil,
-              url.password == nil,
-              url.query == nil,
-              url.fragment == nil else {
+            url.scheme == "https",
+            url.host != nil,
+            url.user == nil,
+            url.password == nil,
+            url.query == nil,
+            url.fragment == nil
+        else {
             throw URLError(.badURL)
         }
 
@@ -68,7 +69,9 @@ nonisolated struct GitHubClient: Sendable {
             pull.stackEntry = summary.stackEntry
             return Edge(node: pull)
         }
-        syncLog.notice("Pulls \(Self.kind(of: queryString), privacy: .public): \(summaries.count) listed, \(stale.count) new or changed, in \(started.duration(to: .now), privacy: .public)")
+        syncLog.notice(
+            "Pulls \(Self.kind(of: queryString), privacy: .public): \(summaries.count) listed, \(stale.count) new or changed, in \(started.duration(to: .now), privacy: .public)"
+        )
         guard includeStacks else { return edges }
         return try await fetchStackDetails(for: edges)
     }
@@ -95,11 +98,14 @@ nonisolated struct GitHubClient: Sendable {
             }
             try verifyAccount(response.data.viewer?.login)
             summaries.append(contentsOf: response.data.search.nodes)
-            syncLog.notice("Search \(Self.kind(of: queryString), privacy: .public) page \(visitedCursors.count + 1): \(response.data.search.nodes.count) PRs of page size \(pageSize), stacks \(includeStacks), in \(started.duration(to: .now), privacy: .public)")
+            syncLog.notice(
+                "Search \(Self.kind(of: queryString), privacy: .public) page \(visitedCursors.count + 1): \(response.data.search.nodes.count) PRs of page size \(pageSize), stacks \(includeStacks), in \(started.duration(to: .now), privacy: .public)"
+            )
 
             guard response.data.search.pageInfo.hasNextPage else { break }
             guard let nextCursor = response.data.search.pageInfo.endCursor,
-                  nextCursor != cursor, visitedCursors.insert(nextCursor).inserted else {
+                nextCursor != cursor, visitedCursors.insert(nextCursor).inserted
+            else {
                 throw URLError(.cannotParseResponse)
             }
             cursor = nextCursor
@@ -196,7 +202,8 @@ nonisolated struct GitHubClient: Sendable {
             throw StackRebaseError.incompleteStack(expected: stack.size, available: entries.count)
         }
 
-        let openEntries = entries
+        let openEntries =
+            entries
             .filter { $0.pullRequest?.state == .open }
             .sorted { $0.position < $1.position }
         guard !openEntries.isEmpty else {
@@ -214,11 +221,12 @@ nonisolated struct GitHubClient: Sendable {
             do {
                 let _: GraphQLRebaseResponse = try await postGraphQL(
                     query: GitHubQueries.rebaseBranch,
-                    variables: GraphQLRebaseVariables(input: .init(
-                        pullRequestId: pullRequest.id,
-                        expectedHeadOid: pullRequest.headRefOid,
-                        updateMethod: "REBASE"
-                    ))
+                    variables: GraphQLRebaseVariables(
+                        input: .init(
+                            pullRequestId: pullRequest.id,
+                            expectedHeadOid: pullRequest.headRefOid,
+                            updateMethod: "REBASE"
+                        ))
                 )
                 completed += 1
             } catch is CancellationError {
@@ -261,7 +269,8 @@ nonisolated struct GitHubClient: Sendable {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         if let errorResponse = try? decoder.decode(GraphQLErrorResponse.self, from: data),
-           !errorResponse.errors.isEmpty {
+            !errorResponse.errors.isEmpty
+        {
             throw GraphQLAPIError(errors: errorResponse.errors)
         }
         return try decoder.decode(T.self, from: data)
@@ -277,7 +286,8 @@ nonisolated struct GitHubClient: Sendable {
             return endpoint("graphql")
         }
 
-        return baseURL
+        return
+            baseURL
             .deletingLastPathComponent()
             .appendingPathComponent("graphql")
     }

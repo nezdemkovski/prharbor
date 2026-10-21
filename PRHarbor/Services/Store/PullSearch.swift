@@ -42,7 +42,8 @@ nonisolated enum PullSearch: CaseIterable, Sendable {
                     for search in allCases {
                         group.addTask {
                             do {
-                                var edges = search.isEnabled(in: scope)
+                                var edges =
+                                    search.isEnabled(in: scope)
                                     ? try await client.fetchPulls(filter: search.filter(username: scope.username), known: known) : []
                                 if scope.hideDrafts { edges = edges.filter { !$0.node.isDraft } }
                                 return Result(search: search, edges: .success(edges))

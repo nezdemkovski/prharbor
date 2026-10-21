@@ -41,10 +41,12 @@ import SwiftUI
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func configure(height: CGFloat, rowIDs: [String], ranges: [String: Range<CGFloat>],
-                   content: @escaping (String) -> Content,
-                   placeholder: @escaping (String) -> TimelineRowPlaceholder = { _ in TimelineRowPlaceholder(title: "", subtitle: "") },
-                   activate: @escaping (String) -> Void = { _ in }, appearance: NSAppearance?) {
+    func configure(
+        height: CGFloat, rowIDs: [String], ranges: [String: Range<CGFloat>],
+        content: @escaping (String) -> Content,
+        placeholder: @escaping (String) -> TimelineRowPlaceholder = { _ in TimelineRowPlaceholder(title: "", subtitle: "") },
+        activate: @escaping (String) -> Void = { _ in }, appearance: NSAppearance?
+    ) {
         configurationCount += 1
         isConfiguring = true
         defer { isConfiguring = false }
@@ -75,8 +77,7 @@ import SwiftUI
         var end = rowIDs.count
         while first < end {
             let middle = (first + end) / 2
-            if (ranges[rowIDs[middle]]?.upperBound ?? 0) <= lower { first = middle + 1 }
-            else { end = middle }
+            if (ranges[rowIDs[middle]]?.upperBound ?? 0) <= lower { first = middle + 1 } else { end = middle }
         }
         let batchSize = 6
         first = (first / batchSize) * batchSize
@@ -126,8 +127,13 @@ import SwiftUI
         guard let range = ranges[id] else { return }
         totalPreparedRowCount += 1
         let host: NSHostingView<Content>
-        if let recycled = pool.popLast() { host = recycled; host.rootView = content(id) }
-        else { host = NSHostingView(rootView: content(id)); host.sizingOptions = [] }
+        if let recycled = pool.popLast() {
+            host = recycled
+            host.rootView = content(id)
+        } else {
+            host = NSHostingView(rootView: content(id))
+            host.sizingOptions = []
+        }
         position(host, id: id)
         hosts[id] = host
         addSubview(host)
@@ -136,8 +142,9 @@ import SwiftUI
 
     private func position(_ host: NSHostingView<Content>, id: String) {
         guard let range = ranges[id] else { return }
-        host.frame = NSRect(x: 0, y: range.lowerBound, width: TimelineMetrics.panelWidth,
-                            height: range.upperBound - range.lowerBound)
+        host.frame = NSRect(
+            x: 0, y: range.lowerBound, width: TimelineMetrics.panelWidth,
+            height: range.upperBound - range.lowerBound)
     }
     private func recycle(_ id: String) {
         guard let host = hosts.removeValue(forKey: id) else { return }
@@ -152,7 +159,9 @@ import SwiftUI
     func removeRows() {
         stopLoading()
         for host in hosts.values { host.removeFromSuperview() }
-        hosts.removeAll(); pool.removeAll(); needed.removeAll()
+        hosts.removeAll()
+        pool.removeAll()
+        needed.removeAll()
         needsDisplay = true
     }
 
@@ -167,27 +176,44 @@ import SwiftUI
             let inset = TimelineMetrics.inset
             let x = preview.isRepository ? inset : inset + Size.avatar + Spacing.l
             let textWidth = TimelineMetrics.labelWidth - Size.avatar - Spacing.l
-            let title = NSAttributedString(string: preview.title, attributes: [
-                .font: NSFont.systemFont(ofSize: preview.isRepository ? Typography.callout : Typography.body, weight: .medium),
-                .foregroundColor: preview.isRepository ? NSColor.secondaryLabelColor : NSColor.labelColor])
+            let title = NSAttributedString(
+                string: preview.title,
+                attributes: [
+                    .font: NSFont.systemFont(ofSize: preview.isRepository ? Typography.callout : Typography.body, weight: .medium),
+                    .foregroundColor: preview.isRepository ? NSColor.secondaryLabelColor : NSColor.labelColor
+                ])
             title.draw(in: NSRect(x: x, y: rect.minY + PlaceholderLayout.titleY, width: textWidth, height: PlaceholderLayout.titleHeight))
             if !preview.isRepository {
                 NSColor.quaternaryLabelColor.setFill()
-                NSBezierPath(ovalIn: NSRect(x: inset, y: rect.minY + PlaceholderLayout.avatarY, width: Size.avatar, height: Size.avatar)).fill()
-                NSAttributedString(string: preview.subtitle, attributes: [.font: NSFont.systemFont(ofSize: Typography.subheadline),
-                    .foregroundColor: NSColor.secondaryLabelColor])
-                    .draw(in: NSRect(x: x, y: rect.minY + PlaceholderLayout.subtitleY, width: textWidth, height: PlaceholderLayout.subtitleHeight))
+                NSBezierPath(ovalIn: NSRect(x: inset, y: rect.minY + PlaceholderLayout.avatarY, width: Size.avatar, height: Size.avatar))
+                    .fill()
+                NSAttributedString(
+                    string: preview.subtitle,
+                    attributes: [
+                        .font: NSFont.systemFont(ofSize: Typography.subheadline),
+                        .foregroundColor: NSColor.secondaryLabelColor
+                    ]
+                )
+                .draw(
+                    in: NSRect(x: x, y: rect.minY + PlaceholderLayout.subtitleY, width: textWidth, height: PlaceholderLayout.subtitleHeight)
+                )
                 NSColor.quaternaryLabelColor.withAlphaComponent(Opacity.badge).setFill()
-                NSBezierPath(roundedRect: NSRect(x: inset + TimelineMetrics.labelWidth, y: rect.minY + PlaceholderLayout.titleY,
-                                                 width: TimelineMetrics.trackWidth, height: PlaceholderLayout.trackHeight),
-                             xRadius: Radius.l, yRadius: Radius.l).fill()
+                NSBezierPath(
+                    roundedRect: NSRect(
+                        x: inset + TimelineMetrics.labelWidth, y: rect.minY + PlaceholderLayout.titleY,
+                        width: TimelineMetrics.trackWidth, height: PlaceholderLayout.trackHeight),
+                    xRadius: Radius.l, yRadius: Radius.l
+                ).fill()
             }
         }
     }
     override func mouseDown(with event: NSEvent) {
         let y = convert(event.locationInWindow, from: nil).y
-        if let id = needed.first(where: { ranges[$0]?.contains(y) == true }), hosts[id] == nil { activate(id) }
-        else { super.mouseDown(with: event) }
+        if let id = needed.first(where: { ranges[$0]?.contains(y) == true }), hosts[id] == nil {
+            activate(id)
+        } else {
+            super.mouseDown(with: event)
+        }
     }
 }
 

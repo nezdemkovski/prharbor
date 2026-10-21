@@ -7,12 +7,13 @@ struct TimelineTrack: View {
     var fixedWidth: CGFloat? = nil
     var body: some View {
         Group {
-            if let fixedWidth { drawing(width: fixedWidth) }
-            else { GeometryReader { drawing(width: $0.size.width) } }
+            if let fixedWidth { drawing(width: fixedWidth) } else { GeometryReader { drawing(width: $0.size.width) } }
         }
         .frame(height: Layout.trackHeight)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(TimelinePolicy.duration(item.age)) old, \(item.standing), \(item.hasKnownQuietPeriod ? item.freshness.rawValue : "quiet time unknown")")
+        .accessibilityLabel(
+            "\(TimelinePolicy.duration(item.age)) old, \(item.standing), \(item.hasKnownQuietPeriod ? item.freshness.rawValue : "quiet time unknown")"
+        )
         .accessibilityValue("\(item.events.count) events; \(item.events.last?.label ?? "opened")")
     }
     private func drawing(width: CGFloat) -> some View {
@@ -24,12 +25,19 @@ struct TimelineTrack: View {
             RoundedRectangle(cornerRadius: Radius.l).fill(Palette.track)
             RoundedRectangle(cornerRadius: Radius.l).strokeBorder(Palette.line)
             Canvas(rendersAsynchronously: true) { context, size in
-                let active = CGRect(x: start, y: Layout.trackBarInset, width: max(0, quietStart - start), height: size.height - 2 * Layout.trackBarInset)
-                context.fill(UnevenRoundedRectangle(topLeadingRadius: Radius.s, bottomLeadingRadius: Radius.s).path(in: active), with: .color(Palette.active))
+                let active = CGRect(
+                    x: start, y: Layout.trackBarInset, width: max(0, quietStart - start), height: size.height - 2 * Layout.trackBarInset)
+                context.fill(
+                    UnevenRoundedRectangle(topLeadingRadius: Radius.s, bottomLeadingRadius: Radius.s).path(in: active),
+                    with: .color(Palette.active))
                 guard item.hasKnownQuietPeriod else { return }
-                let quiet = CGRect(x: quietStart, y: Layout.trackBarInset, width: max(2, size.width - quietStart), height: size.height - 2 * Layout.trackBarInset)
+                let quiet = CGRect(
+                    x: quietStart, y: Layout.trackBarInset, width: max(2, size.width - quietStart),
+                    height: size.height - 2 * Layout.trackBarInset)
                 let leading = quietStart > start + 1 ? 0 : Radius.s
-                let quietPath = UnevenRoundedRectangle(topLeadingRadius: leading, bottomLeadingRadius: leading, bottomTrailingRadius: Radius.s, topTrailingRadius: Radius.s).path(in: quiet)
+                let quietPath = UnevenRoundedRectangle(
+                    topLeadingRadius: leading, bottomLeadingRadius: leading, bottomTrailingRadius: Radius.s, topTrailingRadius: Radius.s
+                ).path(in: quiet)
                 context.fill(quietPath, with: .color(tint.opacity(Opacity.tintFill)))
                 context.stroke(quietPath, with: .color(tint.opacity(Opacity.tintStroke)), lineWidth: Stroke.hairline)
                 context.clip(to: quietPath)
@@ -42,14 +50,21 @@ struct TimelineTrack: View {
             }
             .mask {
                 if item.age > Double(scale.days) {
-                    LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: min(1, Layout.trackFadeWidth / max(1, width)))], startPoint: .leading, endPoint: .trailing)
-                } else { Rectangle() }
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: 0), .init(color: .black, location: min(1, Layout.trackFadeWidth / max(1, width)))
+                        ], startPoint: .leading, endPoint: .trailing)
+                } else {
+                    Rectangle()
+                }
             }
             .accessibilityHidden(true)
             ForEach(workEvents) { event in
-                Rectangle().fill(Palette.textPrimary.opacity(Opacity.eventTick)).frame(width: Size.eventTick.width, height: Size.eventTick.height)
-                    .position(x: scale.position(age: TimelinePolicy.days(since: event.date, now: now)) * width, y: Layout.trackHeight / 2)
-                    .help(event.label + " · " + event.date.formatted(date: .abbreviated, time: .shortened))
+                Rectangle().fill(Palette.textPrimary.opacity(Opacity.eventTick)).frame(
+                    width: Size.eventTick.width, height: Size.eventTick.height
+                )
+                .position(x: scale.position(age: TimelinePolicy.days(since: event.date, now: now)) * width, y: Layout.trackHeight / 2)
+                .help(event.label + " · " + event.date.formatted(date: .abbreviated, time: .shortened))
             }
             ForEach(clusters(width: width), id: \.id) { cluster in
                 HStack(spacing: -Spacing.xs) {
@@ -62,7 +77,8 @@ struct TimelineTrack: View {
                     }
                 }
                 .position(x: max(Layout.trackEdgeInset, min(width - Layout.trackEdgeInset, cluster.position)), y: Layout.trackHeight / 2)
-                .help(cluster.events.map { $0.label + " · " + $0.date.formatted(date: .abbreviated, time: .omitted) }.joined(separator: "\n"))
+                .help(
+                    cluster.events.map { $0.label + " · " + $0.date.formatted(date: .abbreviated, time: .omitted) }.joined(separator: "\n"))
             }
             if item.age > Double(scale.days) {
                 Text("← \(TimelinePolicy.duration(item.age))").font(.ui(Typography.caption2, .semibold))
@@ -86,7 +102,10 @@ struct TimelineTrack: View {
         .frame(width: width, height: Layout.trackHeight)
     }
     private var workEvents: [TimelineEvent] {
-        item.events.filter { ($0.kind == .commit || ($0.kind == .comment && $0.person?.login == item.pull.author?.login)) && TimelinePolicy.days(since: $0.date, now: now) <= Double(scale.days) }
+        item.events.filter {
+            ($0.kind == .commit || ($0.kind == .comment && $0.person?.login == item.pull.author?.login))
+                && TimelinePolicy.days(since: $0.date, now: now) <= Double(scale.days)
+        }
     }
     private struct Cluster {
         var id: Int
@@ -95,13 +114,17 @@ struct TimelineTrack: View {
     }
     private func clusters(width: CGFloat) -> [Cluster] {
         var result: [Cluster] = []
-        for event in item.events where event.kind != .opened && event.kind != .commit && !(event.kind == .comment && event.person?.login == item.pull.author?.login) {
+        for event in item.events
+        where event.kind != .opened && event.kind != .commit && !(event.kind == .comment && event.person?.login == item.pull.author?.login)
+        {
             let age = TimelinePolicy.days(since: event.date, now: now)
             guard age <= Double(scale.days) else { continue }
             let x = scale.position(age: age) * width
             if let last = result.last, x - last.position < width * 0.032 {
                 result[result.count - 1].events.append(event)
-            } else { result.append(Cluster(id: event.id, position: x, events: [event])) }
+            } else {
+                result.append(Cluster(id: event.id, position: x, events: [event]))
+            }
         }
         return result
     }

@@ -1,9 +1,10 @@
-import Foundation
 import Defaults
-import SwiftUI
-import Security
+import Foundation
 import ImageIO
+import Security
+import SwiftUI
 import Testing
+
 @testable import PRHarbor
 
 typealias Edge = PRHarbor.Edge
@@ -41,7 +42,8 @@ nonisolated func requestBody(from request: URLRequest) -> Data? {
 nonisolated func query(from body: Data) throws -> String {
     let object = try JSONSerialization.jsonObject(with: body)
     guard let dictionary = object as? [String: Any],
-          let query = dictionary["query"] as? String else {
+        let query = dictionary["query"] as? String
+    else {
         throw URLError(.cannotParseResponse)
     }
     return query
@@ -54,9 +56,10 @@ nonisolated func rebasePullRequestID(from body: Data) throws -> String {
 nonisolated func rebaseInputValue(_ key: String, from body: Data) throws -> String {
     let object = try JSONSerialization.jsonObject(with: body)
     guard let dictionary = object as? [String: Any],
-          let variables = dictionary["variables"] as? [String: Any],
-          let input = variables["input"] as? [String: Any],
-          let value = input[key] as? String else {
+        let variables = dictionary["variables"] as? [String: Any],
+        let input = variables["input"] as? [String: Any],
+        let value = input[key] as? String
+    else {
         throw URLError(.cannotParseResponse)
     }
     return value
@@ -91,8 +94,9 @@ nonisolated final class MockURLProtocol: URLProtocol, @unchecked Sendable {
 /// Production HTTP transport over a mocked URL session.
 nonisolated enum TestGitHubTransport {
     static func client(baseURL: String, buildType: BuildType, session: URLSession = .shared) throws -> GitHubClient {
-        try GitHubClient(baseURL: baseURL, buildType: buildType,
-                         transport: GitHubHTTPTransport(apiBaseURL: baseURL, token: "test-token", session: session))
+        try GitHubClient(
+            baseURL: baseURL, buildType: buildType,
+            transport: GitHubHTTPTransport(apiBaseURL: baseURL, token: "test-token", session: session))
     }
 }
 

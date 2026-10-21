@@ -23,7 +23,7 @@ nonisolated enum BuildType: String, Codable, Defaults.Serializable, Defaults.Pre
     case checks
     case commitStatus
     case none
-    
+
     var id: Self { self }
 
     var description: String {

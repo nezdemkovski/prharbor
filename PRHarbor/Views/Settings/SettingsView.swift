@@ -1,8 +1,13 @@
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general = "General", pullRequests = "Pull Requests", timeline = "Timeline", bots = "Bots"
-    case notifications = "Notifications", intelligence = "Apple Intelligence", account = "Account"
+    case general = "General"
+    case pullRequests = "Pull Requests"
+    case timeline = "Timeline"
+    case bots = "Bots"
+    case notifications = "Notifications"
+    case intelligence = "Apple Intelligence"
+    case account = "Account"
     var id: Self { self }
     var symbol: String {
         switch self {

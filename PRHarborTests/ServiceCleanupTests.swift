@@ -1,13 +1,15 @@
-import Foundation
 import Defaults
+import Foundation
 import Testing
+
 @testable import PRHarbor
 
 @Suite("Service cleanup")
 struct ServiceCleanupTests {
     @Test @MainActor func refreshQueriesFollowTheInjectedSettings() {
-        var settings = PullRequestSettings(showAssigned: false, showCreated: false, showRequested: false,
-                                           notifyAssigned: false, notifyCreated: false, notifyReviewRequested: false)
+        var settings = PullRequestSettings(
+            showAssigned: false, showCreated: false, showRequested: false,
+            notifyAssigned: false, notifyCreated: false, notifyReviewRequested: false)
         settings.counterType = .none
         let session = GitHubSession(connection: GitHubConnection(username: "octocat", apiBaseURL: settings.apiBaseURL))
         var current = settings
@@ -21,7 +23,10 @@ struct ServiceCleanupTests {
 
     @Test @MainActor func snoozingUpdatesTheProjectionInTheSameTurn() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        defer { try? FileManager.default.removeItem(at: directory); Defaults[.snoozedPulls] = [:] }
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            Defaults[.snoozedPulls] = [:]
+        }
         let cache = PullSnapshotCache(directory: directory)
         let session = GitHubSession(connection: GitHubConnection(username: "yuri", apiBaseURL: Defaults[.githubApiBaseUrl]))
         let probe = PullRequestStore(startAutomatically: false, session: session)
@@ -37,26 +42,35 @@ struct ServiceCleanupTests {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
 
     private func pull(owner: String = "octocat") -> Pull {
-        Pull(url: URL(string: "https://github.com/example/repo/pull/42")!,
-             updatedAt: now.addingTimeInterval(-70 * 86_400), createdAt: now.addingTimeInterval(-90 * 86_400),
-             title: "Change", number: 42, author: User(login: owner), repository: Repository(name: "repo", nameWithOwner: "example/repo"),
-             headRefName: "feature", isDraft: false)
+        Pull(
+            url: URL(string: "https://github.com/example/repo/pull/42")!,
+            updatedAt: now.addingTimeInterval(-70 * 86_400), createdAt: now.addingTimeInterval(-90 * 86_400),
+            title: "Change", number: 42, author: User(login: owner), repository: Repository(name: "repo", nameWithOwner: "example/repo"),
+            headRefName: "feature", isDraft: false)
     }
 
     private func item(_ pull: Pull, ownComments: Bool = true) -> TimelineItem {
-        TimelineItem(pull: pull, username: "octocat", now: now, thresholds: [2, 7, 21],
-                     bots: ["*[bot]"], ownComments: ownComments, snoozedUntil: nil)
+        TimelineItem(
+            pull: pull, username: "octocat", now: now, thresholds: [2, 7, 21],
+            bots: ["*[bot]"], ownComments: ownComments, snoozedUntil: nil)
     }
 
     @Test(arguments: ["FAILURE", "PENDING"])
     func aggregateOverridesASuccessfulBoundedDetailSlice(_ overall: String) {
         var p = pull()
-        p.reviewDecision = .approved; p.mergeable = .mergeable
+        p.reviewDecision = .approved
+        p.mergeable = .mergeable
         p.updatedAt = now
-        p.commits = CommitsNodes(nodes: [Commit(commit: CheckSuites(
-            checkSuites: CheckSuitsNodes(nodes: [CheckSuit(checkRuns: CheckRun(
-                nodes: [Check(name: "one loaded check", conclusion: "SUCCESS", detailsUrl: p.url)]))]),
-            statusCheckRollup: StatusCheckRollup(state: overall)))])
+        p.commits = CommitsNodes(nodes: [
+            Commit(
+                commit: CheckSuites(
+                    checkSuites: CheckSuitsNodes(nodes: [
+                        CheckSuit(
+                            checkRuns: CheckRun(
+                                nodes: [Check(name: "one loaded check", conclusion: "SUCCESS", detailsUrl: p.url)]))
+                    ]),
+                    statusCheckRollup: StatusCheckRollup(state: overall)))
+        ])
         let value = item(p)
         #expect(value.checks.count == 1)
         #expect(value.ci == ciStatusKind(overall))
@@ -82,16 +96,23 @@ struct ServiceCleanupTests {
 
     @Test func truncatedReviewHistoryDoesNotInventAWaitingDate() {
         var p = pull(owner: "teammate")
-        p.timelineItems = PullTimelineConnection(nodes: [PullTimelineNode(__typename: "IssueComment", createdAt: now,
-            author: User(login: "teammate"))], pageInfo: PullTimelinePageInfo(hasPreviousPage: true))
+        p.timelineItems = PullTimelineConnection(
+            nodes: [
+                PullTimelineNode(
+                    __typename: "IssueComment", createdAt: now,
+                    author: User(login: "teammate"))
+            ], pageInfo: PullTimelinePageInfo(hasPreviousPage: true))
         let unknown = item(p)
         #expect(!unknown.hasKnownQuietPeriod)
         #expect(unknown.standing.contains("unknown"))
         #expect(!unknown.matches("stale"))
         #expect(!unknown.matches("idle:0d+"))
-        #expect(TimelineNotificationPolicy.waitingForReview([unknown]).count == 1) // Request membership is known even when its date is not.
-        p.timelineItems?.nodes.append(PullTimelineNode(__typename: "ReviewRequestedEvent",
-            createdAt: now.addingTimeInterval(-3 * 86_400), requestedReviewer: TimelineReviewer(login: "octocat")))
+        // Request membership is known even when its date is not.
+        #expect(TimelineNotificationPolicy.waitingForReview([unknown]).count == 1)
+        p.timelineItems?.nodes.append(
+            PullTimelineNode(
+                __typename: "ReviewRequestedEvent",
+                createdAt: now.addingTimeInterval(-3 * 86_400), requestedReviewer: TimelineReviewer(login: "octocat")))
         #expect(item(p).hasKnownQuietPeriod)
         #expect(item(p).quietDays == 3)
     }
@@ -99,10 +120,11 @@ struct ServiceCleanupTests {
     @Test func truncatedExcludedActivityCannotTriggerRottingOrAgeBasedActions() {
         var p = pull()
         p.reviewRequests = PullReviewRequests(nodes: [PullReviewRequest(requestedReviewer: TimelineReviewer(login: "reviewer"))])
-        p.timelineItems = PullTimelineConnection(nodes: [
-            PullTimelineNode(__typename: "IssueComment", createdAt: now, author: p.author),
-            PullTimelineNode(__typename: "IssueComment", createdAt: now, author: User(login: "checks[bot]"))
-        ], pageInfo: PullTimelinePageInfo(hasPreviousPage: true))
+        p.timelineItems = PullTimelineConnection(
+            nodes: [
+                PullTimelineNode(__typename: "IssueComment", createdAt: now, author: p.author),
+                PullTimelineNode(__typename: "IssueComment", createdAt: now, author: User(login: "checks[bot]"))
+            ], pageInfo: PullTimelinePageInfo(hasPreviousPage: true))
         let unknown = item(p, ownComments: false)
         #expect(!unknown.hasKnownQuietPeriod)
         #expect(unknown.freshness != .rotting)
@@ -110,43 +132,64 @@ struct ServiceCleanupTests {
         #expect(unknown.nextAction != .nudgeReviewers)
         #expect(!unknown.matches("dead"))
         #expect(TimelineNotificationPolicy.rottingOwned([unknown]).isEmpty)
-        p.timelineItems?.nodes.append(PullTimelineNode(__typename: "PullRequestCommit", commit: TimelineCommit(committedDate: now.addingTimeInterval(-22 * 86_400))))
+        p.timelineItems?.nodes.append(
+            PullTimelineNode(__typename: "PullRequestCommit", commit: TimelineCommit(committedDate: now.addingTimeInterval(-22 * 86_400))))
         #expect(item(p, ownComments: false).hasKnownQuietPeriod)
         #expect(TimelineNotificationPolicy.rottingOwned([item(p, ownComments: false)]).count == 1)
     }
 
     @Test func projectionPreservesReviewMembershipAcrossCategoryVisibilityAndDeduplicates() {
         let edge = Edge(node: pull(owner: "teammate"))
-        let input = TimelineInput(assigned: [edge], created: [], requested: [edge], includeRequested: false,
+        let input = TimelineInput(
+            assigned: [edge], created: [], requested: [edge], includeRequested: false,
             username: "octocat", now: now, thresholds: [2, 7, 21], bots: [], ownComments: true, snoozed: [:])
         #expect(input.makeItems().count == 1)
         #expect(input.makeItems().first?.reviewRequested == true)
-        let all = TimelineInput(assigned: [edge], created: [edge], requested: [edge],
+        let all = TimelineInput(
+            assigned: [edge], created: [edge], requested: [edge],
             username: "octocat", now: now, thresholds: [2, 7, 21], bots: [], ownComments: true, snoozed: [:])
         #expect(all.makeItems().count == 1)
     }
 
     @Test func notificationBaselineThresholdsSnoozeAndDayWindowAreExplicit() {
         let rotting = item(pull())
-        #expect(TimelineNotificationPolicy.newlyRotting([rotting], previousIDs: nil, previousThresholds: nil, thresholds: [2, 7, 21]).isEmpty)
-        #expect(TimelineNotificationPolicy.newlyRotting([rotting], previousIDs: [], previousThresholds: [1, 2, 3], thresholds: [2, 7, 21]).isEmpty)
-        #expect(TimelineNotificationPolicy.newlyRotting([rotting], previousIDs: [], previousThresholds: [2, 7, 21], thresholds: [2, 7, 21]).count == 1)
-        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        #expect(
+            TimelineNotificationPolicy.newlyRotting([rotting], previousIDs: nil, previousThresholds: nil, thresholds: [2, 7, 21]).isEmpty)
+        #expect(
+            TimelineNotificationPolicy.newlyRotting([rotting], previousIDs: [], previousThresholds: [1, 2, 3], thresholds: [2, 7, 21])
+                .isEmpty)
+        #expect(
+            TimelineNotificationPolicy.newlyRotting([rotting], previousIDs: [], previousThresholds: [2, 7, 21], thresholds: [2, 7, 21])
+                .count == 1)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         let morning = calendar.date(from: DateComponents(year: 2026, month: 10, day: 5, hour: 9, minute: 5))!
-        #expect(TimelineNotificationPolicy.summaryDay(now: morning, calendar: calendar, scheduledMinutes: 540, refreshMinutes: 5, lastDay: "") == "2026-10-5")
-        #expect(TimelineNotificationPolicy.summaryDay(now: morning, calendar: calendar, scheduledMinutes: 540, refreshMinutes: 5, lastDay: "2026-10-5") == nil)
-        #expect(TimelineNotificationPolicy.summaryDay(now: morning.addingTimeInterval(300), calendar: calendar, scheduledMinutes: 540, refreshMinutes: 5, lastDay: "") == nil)
+        #expect(
+            TimelineNotificationPolicy.summaryDay(now: morning, calendar: calendar, scheduledMinutes: 540, refreshMinutes: 5, lastDay: "")
+                == "2026-10-5")
+        #expect(
+            TimelineNotificationPolicy.summaryDay(
+                now: morning, calendar: calendar, scheduledMinutes: 540, refreshMinutes: 5, lastDay: "2026-10-5") == nil)
+        #expect(
+            TimelineNotificationPolicy.summaryDay(
+                now: morning.addingTimeInterval(300), calendar: calendar, scheduledMinutes: 540, refreshMinutes: 5, lastDay: "") == nil)
     }
 
     @Test func snoozesWakeOnlyForExpiryOrObservedOtherAccountCommentsAfterBaseline() {
         var p = pull()
-        let url = p.url.absoluteString, until = now.addingTimeInterval(86_400).timeIntervalSince1970
+        let url = p.url.absoluteString
+        let until = now.addingTimeInterval(86_400).timeIntervalSince1970
         let baseline = now.addingTimeInterval(-100).timeIntervalSince1970
-        p.timelineItems = PullTimelineConnection(nodes: [PullTimelineNode(__typename: "IssueComment", createdAt: now,
-            author: User(login: "OCTOCAT"))], pageInfo: PullTimelinePageInfo(hasPreviousPage: true))
+        p.timelineItems = PullTimelineConnection(
+            nodes: [
+                PullTimelineNode(
+                    __typename: "IssueComment", createdAt: now,
+                    author: User(login: "OCTOCAT"))
+            ], pageInfo: PullTimelinePageInfo(hasPreviousPage: true))
         func reconcile(_ wake: Bool = true, date: Date? = nil) -> (snoozed: [String: Double], activity: [String: Double]) {
-            TimelineSnoozePolicy.reconcile(edges: [Edge(node: p)], snoozed: [url: until], activity: [url: baseline],
-                                          now: date ?? now, wakeOnComment: wake, username: "octocat")
+            TimelineSnoozePolicy.reconcile(
+                edges: [Edge(node: p)], snoozed: [url: until], activity: [url: baseline],
+                now: date ?? now, wakeOnComment: wake, username: "octocat")
         }
         #expect(reconcile().snoozed[url] == until)
         p.timelineItems?.nodes[0]?.author = User(login: "reviewer")
@@ -154,7 +197,7 @@ struct ServiceCleanupTests {
         #expect(reconcile().snoozed.isEmpty)
         #expect(reconcile().activity.isEmpty)
         p.timelineItems?.nodes = []
-        #expect(reconcile().snoozed[url] == until) // Truncation alone cannot wake it.
+        #expect(reconcile().snoozed[url] == until)  // Truncation alone cannot wake it.
         #expect(reconcile(date: now.addingTimeInterval(86_400)).snoozed.isEmpty)
     }
 }
@@ -165,7 +208,9 @@ private actor CleanupQueryTransport: GitHubAPITransport {
         lastQuery = try query(from: body!)
         // One listed pull request makes the client request its details; none come back.
         if lastQuery.contains("nodes(ids:") { return Data(#"{"data":{"nodes":[]}}"#.utf8) }
-        return Data(#"{"data":{"search":{"nodes":[{"id":"PR_1","url":"https://github.com/o/r/pull/1","updatedAt":"2026-09-16T00:00:00Z","isDraft":false,"mergeable":"MERGEABLE"}],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#.utf8)
+        return Data(
+            #"{"data":{"search":{"nodes":[{"id":"PR_1","url":"https://github.com/o/r/pull/1","updatedAt":"2026-09-16T00:00:00Z","isDraft":false,"mergeable":"MERGEABLE"}],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#
+                .utf8)
     }
 }
 
@@ -173,12 +218,18 @@ private actor CleanupQueryTransport: GitHubAPITransport {
 @MainActor
 struct MutationRevalidationTests {
     private func stack() -> PullRequestStack {
-        PullRequestStack(id: "test-stack", number: 1, baseRefName: "main", size: 2,
-            entries: PullRequestStackEntries(nodes: (1...2).map { position in
-                PullRequestStackEntry(position: position, pullRequest: StackedPullRequest(id: "p\(position)", number: position,
-                    title: "Layer", url: URL(string: "https://github.com/example/repo/pull/\(position)")!,
-                    state: .open, isDraft: false, headRefName: "branch\(position)", headRefOid: "oid\(position)", mergeable: .mergeable))
-            }))
+        PullRequestStack(
+            id: "test-stack", number: 1, baseRefName: "main", size: 2,
+            entries: PullRequestStackEntries(
+                nodes: (1...2).map { position in
+                    PullRequestStackEntry(
+                        position: position,
+                        pullRequest: StackedPullRequest(
+                            id: "p\(position)", number: position,
+                            title: "Layer", url: URL(string: "https://github.com/example/repo/pull/\(position)")!,
+                            state: .open, isDraft: false, headRefName: "branch\(position)", headRefOid: "oid\(position)",
+                            mergeable: .mergeable))
+                }))
     }
 
     @Test(arguments: [false, true])
@@ -189,10 +240,12 @@ struct MutationRevalidationTests {
         let sample = try #require(TimelinePreviewData.items(now: .now).first { $0.pull.stack == nil })
         let transport = CleanupMutationTransport(edge: Edge(node: sample.pull), partial: partial)
         var calls = 0
-        let store = PullRequestStore(startAutomatically: false, session: session, cache: PullSnapshotCache(directory: directory),
+        let store = PullRequestStore(
+            startAutomatically: false, session: session, cache: PullSnapshotCache(directory: directory),
             clientProvider: { baseURL, buildType in
                 calls += 1
-                return try GitHubClient(baseURL: baseURL, buildType: buildType,
+                return try GitHubClient(
+                    baseURL: baseURL, buildType: buildType,
                     transport: CleanupMutationAdapter(transport: transport, revision: calls))
             })
         store.refresh()
@@ -208,7 +261,9 @@ struct MutationRevalidationTests {
                 Issue.record("Expected partial failure")
             } catch let error as StackRebaseError {
                 guard case .partial(let completed, let total, _, _) = error else {
-                    Issue.record("Expected partial progress, got \(error)"); await transport.releaseOld(); return
+                    Issue.record("Expected partial progress, got \(error)")
+                    await transport.releaseOld()
+                    return
                 }
                 #expect(completed == 1)
                 #expect(total == 2)
@@ -217,7 +272,7 @@ struct MutationRevalidationTests {
             #expect(try await store.rebaseStack(stack()).rebasedCount == 2)
         }
         for _ in 0..<200 where store.isLoading { try await Task.sleep(for: .milliseconds(5)) }
-        #expect(calls == 3) // Refresh, injected rebase client, forced revalidation.
+        #expect(calls == 3)  // Refresh, injected rebase client, forced revalidation.
         #expect(await transport.mutations == 2)
         #expect(store.lastSyncedAt != nil)
         #expect(store.timelineInput().makeItems().allSatisfy { $0.pull.title == "After rebase" })
@@ -233,9 +288,11 @@ struct MutationRevalidationTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let session = GitHubSession(connection: GitHubConnection(username: "octocat", apiBaseURL: Defaults[.githubApiBaseUrl]))
-        let gate = PullFetchGate(), transport = CleanupQueryTransport()
+        let gate = PullFetchGate()
+        let transport = CleanupQueryTransport()
         var calls = 0
-        let store = PullRequestStore(startAutomatically: false, session: session, cache: PullSnapshotCache(directory: directory),
+        let store = PullRequestStore(
+            startAutomatically: false, session: session, cache: PullSnapshotCache(directory: directory),
             clientProvider: { baseURL, buildType in
                 calls += 1
                 await gate.wait()
@@ -257,7 +314,8 @@ struct MutationRevalidationTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let session = GitHubSession(connection: GitHubConnection(username: "octocat", apiBaseURL: Defaults[.githubApiBaseUrl]))
         let sample = try #require(TimelinePreviewData.items(now: .now).first)
-        let store = PullRequestStore(startAutomatically: false, session: session, cache: PullSnapshotCache(directory: directory),
+        let store = PullRequestStore(
+            startAutomatically: false, session: session, cache: PullSnapshotCache(directory: directory),
             clientProvider: { _, _ in throw GitHubAccessError.accountChanged })
         store.createdPulls = [Edge(node: sample.pull)]
         await #expect(throws: GitHubAccessError.self) { try await store.rebaseStack(stack()) }
@@ -283,7 +341,10 @@ private actor CleanupMutationTransport {
     var mutations = 0
     private var oldWaiters: [CheckedContinuation<Void, Never>] = []
     private var oldReleased = false
-    init(edge: Edge, partial: Bool) { self.edge = edge; self.partial = partial }
+    init(edge: Edge, partial: Bool) {
+        self.edge = edge
+        self.partial = partial
+    }
 
     func api(body: Data, revision: Int) async throws -> Data {
         let text = try query(from: body)
@@ -305,7 +366,7 @@ private actor CleanupMutationTransport {
 
     func releaseOld() {
         oldReleased = true
-        oldWaiters.forEach { $0.resume() }
+        for waiter in oldWaiters { waiter.resume() }
         oldWaiters = []
     }
 }

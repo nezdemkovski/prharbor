@@ -29,14 +29,18 @@ final class GitHubTokenConnector {
                 let account = try await GitHubHTTPTransport(apiBaseURL: baseURL, token: token).account()
                 try Task.checkCancellation()
                 guard generation == epoch, session.generation == sessionEpoch,
-                      Defaults[.githubApiBaseUrl] == baseURL, !account.user.login.isEmpty else { throw CancellationError() }
+                    Defaults[.githubApiBaseUrl] == baseURL, !account.user.login.isEmpty
+                else { throw CancellationError() }
                 if let scopes = account.scopes, !scopes.contains("repo") { throw GitHubAccessError.missingRepoScope }
                 try session.connect(.init(username: account.user.login, apiBaseURL: baseURL), token: token)
                 successfulConnections += 1
                 isConnecting = false
                 task = nil
             } catch is CancellationError {
-                if generation == epoch { isConnecting = false; task = nil }
+                if generation == epoch {
+                    isConnecting = false
+                    task = nil
+                }
             } catch {
                 guard generation == epoch, !Task.isCancelled else { return }
                 self.error = error.localizedDescription

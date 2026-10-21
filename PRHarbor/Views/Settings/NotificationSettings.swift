@@ -11,12 +11,14 @@ struct NotificationSettings: View {
     @Default(.morningSummaryMinutes) private var minutes
     @State private var permission = NotificationPermission()
     private var time: Binding<Date> {
-        Binding(get: {
-            Calendar.current.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: .now) ?? .now
-        }, set: { date in
-            let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
-            minutes = (parts.hour ?? 9) * 60 + (parts.minute ?? 0)
-        })
+        Binding(
+            get: {
+                Calendar.current.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: .now) ?? .now
+            },
+            set: { date in
+                let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
+                minutes = (parts.hour ?? 9) * 60 + (parts.minute ?? 0)
+            })
     }
 
     var body: some View {
@@ -48,7 +50,9 @@ struct NotificationSettings: View {
             } header: {
                 Text("Daily summary")
             } footer: {
-                Text("How many pull requests wait for your review and how many of yours are rotting. Notifications appear while PR Harbor is running.")
+                Text(
+                    "How many pull requests wait for your review and how many of yours are rotting. Notifications appear while PR Harbor is running."
+                )
             }
         }
         .task { await permission.refresh() }

@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import PRHarbor
 
 /// Collects every GraphQL document the client can send. Scripts/validate-graphql.sh exports
@@ -14,16 +15,23 @@ struct GraphQLDocumentTests {
         for buildType in BuildType.allCases {
             for includeStacks in [true, false] {
                 let transport = DocumentRecorder(edges: edges, rejectStacks: !includeStacks)
-                let client = try GitHubClient(baseURL: "https://\(buildType.rawValue)-\(includeStacks).example/api/v3",
-                                              buildType: buildType, transport: transport)
+                let client = try GitHubClient(
+                    baseURL: "https://\(buildType.rawValue)-\(includeStacks).example/api/v3",
+                    buildType: buildType, transport: transport)
                 _ = try await client.fetchPulls(filter: "author:octocat")
                 documents.merge(await transport.documents) { first, _ in first }
             }
         }
         let rebase = DocumentRecorder(edges: [])
-        let stack = PullRequestStack(id: "S", number: 1, baseRefName: "main", size: 1, entries: .init(nodes: [
-            .init(position: 1, pullRequest: .init(id: "PR_1", number: 1, title: "One", url: URL(string: "https://github.com/o/r/pull/1")!,
-                state: .open, isDraft: false, headRefName: "one", headRefOid: "oid", reviewDecision: nil, mergeable: .mergeable))]))
+        let stack = PullRequestStack(
+            id: "S", number: 1, baseRefName: "main", size: 1,
+            entries: .init(nodes: [
+                .init(
+                    position: 1,
+                    pullRequest: .init(
+                        id: "PR_1", number: 1, title: "One", url: URL(string: "https://github.com/o/r/pull/1")!,
+                        state: .open, isDraft: false, headRefName: "one", headRefOid: "oid", reviewDecision: nil, mergeable: .mergeable))
+            ]))
         _ = try await GitHubClient(baseURL: "https://api.github.com", buildType: .none, transport: rebase).rebaseStack(stack)
         documents.merge(await rebase.documents) { first, _ in first }
 
@@ -45,17 +53,24 @@ private actor DocumentRecorder: GitHubAPITransport {
     let edges: [Edge]
     let rejectStacks: Bool
     private(set) var documents: [String: String] = [:]
-    init(edges: [Edge], rejectStacks: Bool = false) { self.edges = edges; self.rejectStacks = rejectStacks }
+    init(edges: [Edge], rejectStacks: Bool = false) {
+        self.edges = edges
+        self.rejectStacks = rejectStacks
+    }
 
     func api(_ endpoint: String, body: Data?) async throws -> Data {
         let object = try JSONSerialization.jsonObject(with: body!) as! [String: Any]
         let query = object["query"] as! String
         documents[query] = query
         if rejectStacks && query.contains("stack {") {
-            return Data(#"{"errors":[{"message":"Field 'stack' doesn't exist on type 'PullRequest'","extensions":{"code":"undefinedField","typeName":"PullRequest","fieldName":"stack"}}]}"#.utf8)
+            return Data(
+                #"{"errors":[{"message":"Field 'stack' doesn't exist on type 'PullRequest'","extensions":{"code":"undefinedField","typeName":"PullRequest","fieldName":"stack"}}]}"#
+                    .utf8)
         }
         if query.contains("PullRequestStacks") { return Data(#"{"data":{"nodes":[]}}"#.utf8) }
-        if query.contains("mutation") { return Data(#"{"data":{"updatePullRequestBranch":{"pullRequest":{"id":"PR_1","headRefOid":"new"}}}}"#.utf8) }
+        if query.contains("mutation") {
+            return Data(#"{"data":{"updatePullRequestBranch":{"pullRequest":{"id":"PR_1","headRefOid":"new"}}}}"#.utf8)
+        }
         return try PullFixtureResponse.data(for: body!, edges: edges)
     }
 }

@@ -1,20 +1,27 @@
-import Foundation
 import Defaults
-import SwiftUI
-import Security
+import Foundation
 import ImageIO
+import Security
+import SwiftUI
 import Testing
+
 @testable import PRHarbor
 
 struct IntelligencePolicyTests {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
-    private func item(number: Int, author: String = "yuri", quiet: Double = 12, draft: Bool = false, snoozed: Bool = false, requested: Bool = false, conflict: Bool = false) -> TimelineItem {
-        let pull = Pull(url: URL(string: "https://github.com/example/repo/pull/\(number)")!,
-                        updatedAt: now.addingTimeInterval(-quiet * 86_400), createdAt: now.addingTimeInterval(-30 * 86_400),
-                        title: "A change \(number)", number: number, author: User(login: author),
-                        repository: Repository(name: "repo", nameWithOwner: "example/repo"), headRefName: "feature", isDraft: draft, mergeable: conflict ? .conflicting : .mergeable)
-        return TimelineItem(pull: pull, username: "yuri", now: now, thresholds: [2, 7, 21], bots: ["*[bot]"], ownComments: true,
-                            snoozedUntil: snoozed ? now.addingTimeInterval(86_400) : nil, reviewRequested: requested)
+    private func item(
+        number: Int, author: String = "yuri", quiet: Double = 12, draft: Bool = false, snoozed: Bool = false, requested: Bool = false,
+        conflict: Bool = false
+    ) -> TimelineItem {
+        let pull = Pull(
+            url: URL(string: "https://github.com/example/repo/pull/\(number)")!,
+            updatedAt: now.addingTimeInterval(-quiet * 86_400), createdAt: now.addingTimeInterval(-30 * 86_400),
+            title: "A change \(number)", number: number, author: User(login: author),
+            repository: Repository(name: "repo", nameWithOwner: "example/repo"), headRefName: "feature", isDraft: draft,
+            mergeable: conflict ? .conflicting : .mergeable)
+        return TimelineItem(
+            pull: pull, username: "yuri", now: now, thresholds: [2, 7, 21], bots: ["*[bot]"], ownComments: true,
+            snoozedUntil: snoozed ? now.addingTimeInterval(86_400) : nil, reviewRequested: requested)
     }
     @Test func generatedFiltersUseExistingParserAndKeepAgeSeparateFromQuietTime() throws {
         let value = item(number: 42, quiet: 1)
@@ -27,11 +34,16 @@ struct IntelligencePolicyTests {
         #expect(context.explicitRepositories(in: "My PRs in example/repo-tools").isEmpty)
         #expect(context.validatedSuggestion(["mine", ">2w", "example/repo"], request: "My PRs older than two weeks") == "mine >2w")
         #expect(context.validatedSuggestion(["mine", " EXAMPLE/repo "], request: "My PRs") == "mine")
-        #expect(context.validatedSuggestion(["mine", "conflict"], request: "My PRs in example/repo with conflicts") == "mine conflict example/repo")
+        #expect(
+            context.validatedSuggestion(["mine", "conflict"], request: "My PRs in example/repo with conflicts")
+                == "mine conflict example/repo")
     }
     @Test func rejectsInventedFiltersMalformedRangesAndSilentFreeText() {
         let context = IntelligenceSearchContext(items: [item(number: 42)])
-        for tokens in [[], ["needs-review"], ["mine >2w"], ["repo:example/repo"], ["unknown/repo"], ["@unknown"], [">nan"], ["idle:-2d+"], ["#0"], ["not:draft"], Array(repeating: "mine", count: 9)] {
+        for tokens in [
+            [], ["needs-review"], ["mine >2w"], ["repo:example/repo"], ["unknown/repo"], ["@unknown"], [">nan"], ["idle:-2d+"], ["#0"],
+            ["not:draft"], Array(repeating: "mine", count: 9)
+        ] {
             #expect(context.validatedQuery(tokens) == nil)
         }
     }
@@ -46,7 +58,9 @@ struct IntelligencePolicyTests {
         #expect(!context.shouldInterpret("A title with natural words", hasLiteralMatches: true))
     }
     @MainActor private func screenInput(enabled: Bool = true) -> TimelineScreenInput {
-        TimelineScreenInput(items: [item(number: 42)], now: now, thresholds: [2, 7, 21], sortOrder: .updatedNewest, collapsed: [], intelligentSearch: enabled)
+        TimelineScreenInput(
+            items: [item(number: 42)], now: now, thresholds: [2, 7, 21], sortOrder: .updatedNewest, collapsed: [],
+            intelligentSearch: enabled)
     }
     @Test @MainActor func naturalSearchKeepsEnteredTextAndAppliesInterpretationInternally() async {
         let controller = TimelineScreenController()
@@ -75,7 +89,8 @@ struct IntelligencePolicyTests {
         controller.setQuery("mine stale")
         #expect(controller.snapshot.effectiveQuery == "mine stale")
         await controller.resolveSearch(controller.snapshot.searchRequest) { _, _ in
-            Issue.record("Native syntax must bypass generation"); return ""
+            Issue.record("Native syntax must bypass generation")
+            return ""
         }
         #expect(!controller.snapshot.isSearching)
     }
@@ -101,9 +116,11 @@ struct IntelligencePolicyTests {
         #expect(!controller.snapshot.isSearching)
     }
     @Test func morningBriefExcludesBotsDraftsAndSnoozesAndKeepsCountsFactual() {
-        let items = [item(number: 1, conflict: true), item(number: 2, author: "reviewer", requested: true), item(number: 3),
-                     item(number: 4, author: "checks[bot]", requested: true), item(number: 5, draft: true), item(number: 6, snoozed: true),
-                     item(number: 7, author: "assigned", requested: false)]
+        let items = [
+            item(number: 1, conflict: true), item(number: 2, author: "reviewer", requested: true), item(number: 3),
+            item(number: 4, author: "checks[bot]", requested: true), item(number: 5, draft: true), item(number: 6, snoozed: true),
+            item(number: 7, author: "assigned", requested: false)
+        ]
         let brief = MorningBriefSnapshot(items: items, now: now)
         #expect(brief.entries.map(\.number) == [1, 2, 3])
         #expect(brief.waitingForReview == 1)
@@ -116,10 +133,18 @@ struct IntelligencePolicyTests {
         var base = item(number: 10, author: "reviewer", requested: true)
         var child = item(number: 11, author: "reviewer", requested: true)
         let stack = PullRequestStack(id: "stack", number: 1, baseRefName: "main", size: 2)
-        var basePull = base.pull; basePull.stack = stack; basePull.stackEntry = PullRequestStackPosition(position: 1)
-        var childPull = child.pull; childPull.stack = stack; childPull.stackEntry = PullRequestStackPosition(position: 2)
-        base = TimelineItem(pull: basePull, username: "yuri", now: now, thresholds: [2, 7, 21], bots: [], ownComments: true, snoozedUntil: nil, reviewRequested: true)
-        child = TimelineItem(pull: childPull, username: "yuri", now: now, thresholds: [2, 7, 21], bots: [], ownComments: true, snoozedUntil: nil, reviewRequested: true)
+        var basePull = base.pull
+        basePull.stack = stack
+        basePull.stackEntry = PullRequestStackPosition(position: 1)
+        var childPull = child.pull
+        childPull.stack = stack
+        childPull.stackEntry = PullRequestStackPosition(position: 2)
+        base = TimelineItem(
+            pull: basePull, username: "yuri", now: now, thresholds: [2, 7, 21], bots: [], ownComments: true, snoozedUntil: nil,
+            reviewRequested: true)
+        child = TimelineItem(
+            pull: childPull, username: "yuri", now: now, thresholds: [2, 7, 21], bots: [], ownComments: true, snoozedUntil: nil,
+            reviewRequested: true)
         let brief = MorningBriefSnapshot(items: [child, item(number: 12), base], now: now)
         #expect(brief.entries.map(\.number) == [10, 12])
         #expect(brief == MorningBriefSnapshot(items: [base, child, item(number: 12)], now: now))

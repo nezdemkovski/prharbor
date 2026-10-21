@@ -1,29 +1,36 @@
 import AppKit
 import SwiftUI
 import Testing
+
 @testable import PRHarbor
 
 struct TimelineCleanupTests {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
 
-    private func item(_ number: Int, author: String = "yuri", days: Double = 10,
-                      stack: PullRequestStack? = nil, position: Int? = nil) -> TimelineItem {
-        let pull = Pull(url: URL(string: "https://github.com/example/repo/pull/\(number)")!,
+    private func item(
+        _ number: Int, author: String = "yuri", days: Double = 10,
+        stack: PullRequestStack? = nil, position: Int? = nil
+    ) -> TimelineItem {
+        let pull = Pull(
+            url: URL(string: "https://github.com/example/repo/pull/\(number)")!,
             updatedAt: now.addingTimeInterval(-days * 86_400), createdAt: now.addingTimeInterval(-days * 86_400),
             title: "Change \(number)", number: number, author: User(login: author),
             repository: Repository(name: "repo", nameWithOwner: "example/repo"), headRefName: "feature/\(number)", isDraft: false,
             stack: stack, stackEntry: position.map { PullRequestStackPosition(position: $0) })
-        return TimelineItem(pull: pull, username: "yuri", now: now, thresholds: [2, 7, 21], bots: [],
+        return TimelineItem(
+            pull: pull, username: "yuri", now: now, thresholds: [2, 7, 21], bots: [],
             ownComments: true, snoozedUntil: nil, reviewRequested: author != "yuri")
     }
     private func input(_ items: [TimelineItem], collapsed: [String] = [], intelligentSearch: Bool = false) -> TimelineScreenInput {
-        TimelineScreenInput(items: items, now: now, thresholds: [2, 7, 21],
+        TimelineScreenInput(
+            items: items, now: now, thresholds: [2, 7, 21],
             sortOrder: .updatedNewest, collapsed: collapsed, intelligentSearch: intelligentSearch)
     }
 
     @Test @MainActor func dataTabFilterAndSelectionAlwaysDescribeTheSameSnapshot() {
         let controller = TimelineScreenController()
-        let mine = item(1), reviewer = item(2, author: "reviewer")
+        let mine = item(1)
+        let reviewer = item(2, author: "reviewer")
         controller.update(input([mine, reviewer]))
         controller.setTab(.reviewing)
         #expect(controller.snapshot.tabItems == [reviewer])
@@ -57,9 +64,11 @@ struct TimelineCleanupTests {
     }
 
     @Test @MainActor func hiddenCategoriesAreFilteredFromTheSharedProjection() {
-        let items = TimelineInput(assigned: [], created: [Edge(node: item(1).pull)],
+        let items = TimelineInput(
+            assigned: [], created: [Edge(node: item(1).pull)],
             requested: [Edge(node: item(2, author: "reviewer").pull)], username: "yuri", now: now,
-            thresholds: [2, 7, 21], bots: [], ownComments: true, snoozed: [:]).makeItems()
+            thresholds: [2, 7, 21], bots: [], ownComments: true, snoozed: [:]
+        ).makeItems()
         let controller = TimelineScreenController()
         var value = input(items)
         value.sources = [.created]
@@ -73,7 +82,8 @@ struct TimelineCleanupTests {
     @Test @MainActor func selectingAHiddenBriefEntryRevealsItsRepositoryAndStackTogether() {
         let controller = TimelineScreenController()
         let stack = PullRequestStack(id: "selected-stack", number: 1, baseRefName: "main", size: 2)
-        let base = item(1, stack: stack, position: 1), tip = item(2, stack: stack, position: 2)
+        let base = item(1, stack: stack, position: 1)
+        let tip = item(2, stack: stack, position: 2)
         controller.update(input([base, tip], collapsed: ["example/repo", "stack:selected-stack"]))
         controller.setTab(.reviewing)
         controller.setQuery("absent")
@@ -86,11 +96,16 @@ struct TimelineCleanupTests {
     }
 
     @Test @MainActor func selectionChangesDoNotInvalidateUnrelatedLiveRows() {
-        let first = item(1), second = item(2), unaffected = item(3)
-        let rows: [TimelinePresentation.Row] = [.repository(name: "example/repo", items: [first, second, unaffected], collapsed: false),
-            .pull(first), .pull(second), .pull(unaffected)]
+        let first = item(1)
+        let second = item(2)
+        let unaffected = item(3)
+        let rows: [TimelinePresentation.Row] = [
+            .repository(name: "example/repo", items: [first, second, unaffected], collapsed: false),
+            .pull(first), .pull(second), .pull(unaffected)
+        ]
         func rendered(_ row: TimelinePresentation.Row, selection: String) -> TimelinePresentedRow {
-            TimelinePresentedRow(row: row, scale: TimelineScale(days: 182), now: now,
+            TimelinePresentedRow(
+                row: row, scale: TimelineScale(days: 182), now: now,
                 selection: row.normalizedSelection(selection), showOwner: false, stackCollapsed: false,
                 height: nil, select: { _ in }, toggleRepo: { _ in })
         }
@@ -122,7 +137,9 @@ struct TimelineCleanupTests {
         #expect(controller.snapshot.understood && !controller.snapshot.isSearching)
     }
 
-    @Test(arguments: [2, 3, 10]) @MainActor func collapsedStackGeometryContainsRenderedBarsAndKeepsFollowingRowsSeparate(_ count: Int) throws {
+    @Test(arguments: [2, 3, 10]) @MainActor func collapsedStackGeometryContainsRenderedBarsAndKeepsFollowingRowsSeparate(_ count: Int)
+        throws
+    {
         let stack = PullRequestStack(id: "geometry-stack", number: 1, baseRefName: "main", size: count)
         let layers = (1...count).map { item($0, stack: stack, position: $0) }
         let following = item(100)
@@ -134,7 +151,8 @@ struct TimelineCleanupTests {
         let pullRange = try #require(presentation.rowRanges["pull:" + following.id])
         #expect(pullRange.lowerBound == range.upperBound || pullRange.upperBound == range.lowerBound)
         let group = try #require(groupPullsForDisplay(layers.map { Edge(node: $0.pull) }).first)
-        let view = TimelineStackRows(group: group, items: layers, scale: TimelineScale(days: 182), now: now,
+        let view = TimelineStackRows(
+            group: group, items: layers, scale: TimelineScale(days: 182), now: now,
             selection: nil, isCollapsed: true, select: { _ in }, toggle: {})
         let host = NSHostingView(rootView: view.fixedSize(horizontal: false, vertical: true))
         host.frame = NSRect(x: 0, y: 0, width: TimelineMetrics.panelWidth - 36, height: expected)

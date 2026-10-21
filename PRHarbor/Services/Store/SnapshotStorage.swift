@@ -19,7 +19,9 @@ final class SnapshotStorage {
 
     @discardableResult
     func save(_ snapshot: PullSnapshot) -> Task<Void, Never> {
-        let cache = cache, previousWrite = writeTask, previousRemoval = removalTask
+        let cache = cache
+        let previousWrite = writeTask
+        let previousRemoval = removalTask
         let task = Task {
             await previousWrite?.value
             await previousRemoval?.value
@@ -33,7 +35,9 @@ final class SnapshotStorage {
     /// Cancels unfinished writes and removes the snapshot for `scope`.
     func remove(scope: PullSnapshotScope) {
         writeTask?.cancel()
-        let cache = cache, previousWrite = writeTask, previousRemoval = removalTask
+        let cache = cache
+        let previousWrite = writeTask
+        let previousRemoval = removalTask
         removalTask = Task {
             await previousWrite?.value
             await previousRemoval?.value

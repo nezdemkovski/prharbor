@@ -1,9 +1,10 @@
-import Foundation
 import Defaults
-import SwiftUI
-import Security
+import Foundation
 import ImageIO
+import Security
+import SwiftUI
 import Testing
+
 @testable import PRHarbor
 
 @Suite("Avatar decoding")
@@ -29,9 +30,11 @@ struct AvatarDecodingTests {
     }
 
     private func encodedImage(width: Int, height: Int, orientation: Int = 1) throws -> Data {
-        let context = try #require(CGContext(data: nil, width: width, height: height,
-            bitsPerComponent: 8, bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        let context = try #require(
+            CGContext(
+                data: nil, width: width, height: height,
+                bitsPerComponent: 8, bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
         context.setFillColor(CGColor(red: 0.2, green: 0.4, blue: 0.8, alpha: 1))
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
         let bitmap = try #require(context.makeImage())

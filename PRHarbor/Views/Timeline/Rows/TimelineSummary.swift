@@ -20,9 +20,14 @@ struct TimelineSummary: View {
                 }
             }
             .controlTrack()
-            let people = Set(items.filter { !$0.isMine && !$0.isBot && $0.reviewRequested && $0.snoozedUntil == nil }.compactMap { $0.pull.author?.login }).count
+            let people = Set(
+                items.filter { !$0.isMine && !$0.isBot && $0.reviewRequested && $0.snoozedUntil == nil }.compactMap {
+                    $0.pull.author?.login
+                }
+            ).count
             if people > 0 {
-                Text("blocking **\(people)** \(people == 1 ? "person" : "people")").font(.ui(Typography.callout)).foregroundStyle(Palette.textSecondary)
+                Text("blocking **\(people)** \(people == 1 ? "person" : "people")").font(.ui(Typography.callout)).foregroundStyle(
+                    Palette.textSecondary)
             }
             Spacer(minLength: 0)
         }

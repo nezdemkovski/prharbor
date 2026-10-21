@@ -11,10 +11,13 @@ struct TimelineRepositoryHeader: View {
         Button(action: toggle) {
             HStack(spacing: 0) {
                 HStack(spacing: Spacing.xs) {
-                    Image(systemName: collapsed ? "chevron.right" : "chevron.down").font(.ui(Typography.micro, .semibold)).frame(width: Size.disclosure)
+                    Image(systemName: collapsed ? "chevron.right" : "chevron.down").font(.ui(Typography.micro, .semibold)).frame(
+                        width: Size.disclosure)
                     if name == "Bots" { Image(systemName: "gearshape.2") }
                     HStack(spacing: 0) {
-                        if showOwner, name.contains("/"), let owner = name.split(separator: "/").first { Text(String(owner) + "/").fontWeight(.medium).foregroundStyle(Palette.textTertiary) }
+                        if showOwner, name.contains("/"), let owner = name.split(separator: "/").first {
+                            Text(String(owner) + "/").fontWeight(.medium).foregroundStyle(Palette.textTertiary)
+                        }
                         Text(name == "Bots" ? name : String(name.split(separator: "/").last ?? ""))
                     }.lineLimit(1)
                     Text("\(items.count)").foregroundStyle(Palette.textTertiary)
@@ -26,7 +29,12 @@ struct TimelineRepositoryHeader: View {
                     if collapsed {
                         ForEach(items.filter(\.hasKnownQuietPeriod)) { item in
                             Circle().fill(item.freshness.fill).frame(width: Size.dot, height: Size.dot)
-                                .position(x: max(Layout.collapsedDotInset, min(geometry.size.width - Layout.collapsedDotInset, scale.position(age: item.quietDays) * geometry.size.width)), y: Layout.trackHeight / 2)
+                                .position(
+                                    x: max(
+                                        Layout.collapsedDotInset,
+                                        min(
+                                            geometry.size.width - Layout.collapsedDotInset,
+                                            scale.position(age: item.quietDays) * geometry.size.width)), y: Layout.trackHeight / 2)
                         }
                     }
                 }

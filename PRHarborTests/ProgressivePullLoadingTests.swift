@@ -1,9 +1,10 @@
-import Foundation
 import Defaults
-import SwiftUI
-import Security
+import Foundation
 import ImageIO
+import Security
+import SwiftUI
 import Testing
+
 @testable import PRHarbor
 
 @Suite("Progressive pull loading", .serialized)
@@ -13,11 +14,15 @@ struct ProgressivePullLoadingTests {
         let sample = try #require(TimelinePreviewData.items(now: .now).first { $0.pull.stack == nil })
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        let session = GitHubSession(connection: GitHubConnection(username: "progress-user",
-            apiBaseURL: Defaults[.githubApiBaseUrl]))
-        let store = PullRequestStore(startAutomatically: false, session: session, cache: PullSnapshotCache(directory: directory),
+        let session = GitHubSession(
+            connection: GitHubConnection(
+                username: "progress-user",
+                apiBaseURL: Defaults[.githubApiBaseUrl]))
+        let store = PullRequestStore(
+            startAutomatically: false, session: session, cache: PullSnapshotCache(directory: directory),
             clientProvider: { baseURL, build in
-                try GitHubClient(baseURL: baseURL, buildType: build,
+                try GitHubClient(
+                    baseURL: baseURL, buildType: build,
                     transport: ProgressivePullTransport(gate: gate, edge: Edge(node: sample.pull)))
             })
         store.refresh()
@@ -29,7 +34,7 @@ struct ProgressivePullLoadingTests {
         #expect(!store.isLoading)
         #expect(store.error != nil)
         #expect(store.assignedPulls.first?.node.url == sample.pull.url)
-        #expect(store.lastSyncedAt == nil) // A partial fetch never claims a completed synchronization.
+        #expect(store.lastSyncedAt == nil)  // A partial fetch never claims a completed synchronization.
         let cache = PullSnapshotCache(directory: directory)
         var saved: PullSnapshot?
         for _ in 0..<100 {
@@ -53,11 +58,15 @@ struct ProgressivePullLoadingTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let cache = PullSnapshotCache(directory: directory)
-        let session = GitHubSession(connection: GitHubConnection(username: "progress-user",
-            apiBaseURL: Defaults[.githubApiBaseUrl]))
-        let store = PullRequestStore(startAutomatically: false, session: session, cache: cache,
+        let session = GitHubSession(
+            connection: GitHubConnection(
+                username: "progress-user",
+                apiBaseURL: Defaults[.githubApiBaseUrl]))
+        let store = PullRequestStore(
+            startAutomatically: false, session: session, cache: cache,
             clientProvider: { baseURL, build in
-                try GitHubClient(baseURL: baseURL, buildType: build,
+                try GitHubClient(
+                    baseURL: baseURL, buildType: build,
                     transport: ProgressivePullTransport(gate: gate, edge: Edge(node: sample.pull), failRequested: false))
             })
         store.refresh()
@@ -66,7 +75,7 @@ struct ProgressivePullLoadingTests {
         #expect(store.lastSyncedAt != nil)
         let scope = store.snapshotScope
         store.clear()
-        await store.loadCachedSnapshot() // Waits for a pending write and the subsequent removal.
+        await store.loadCachedSnapshot()  // Waits for a pending write and the subsequent removal.
         #expect(store.lastSyncedAt == nil)
         #expect(await cache.load(scope: scope) == nil)
     }
@@ -76,11 +85,15 @@ struct ProgressivePullLoadingTests {
         let sample = try #require(TimelinePreviewData.items(now: .now).first { $0.pull.stack == nil })
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        let session = GitHubSession(connection: GitHubConnection(username: "progress-user",
-            apiBaseURL: Defaults[.githubApiBaseUrl]))
-        let store = PullRequestStore(startAutomatically: false, session: session, cache: PullSnapshotCache(directory: directory),
+        let session = GitHubSession(
+            connection: GitHubConnection(
+                username: "progress-user",
+                apiBaseURL: Defaults[.githubApiBaseUrl]))
+        let store = PullRequestStore(
+            startAutomatically: false, session: session, cache: PullSnapshotCache(directory: directory),
             clientProvider: { baseURL, build in
-                try GitHubClient(baseURL: baseURL, buildType: build,
+                try GitHubClient(
+                    baseURL: baseURL, buildType: build,
                     transport: ProgressivePullTransport(gate: gate, edge: Edge(node: sample.pull)))
             })
         store.refresh()

@@ -13,7 +13,7 @@ nonisolated enum AppRuntime: Equatable, Sendable {
         let environment = ProcessInfo.processInfo.environment
         if environment["PRHARBOR_TESTING"] == "1" || environment["XCTestConfigurationFilePath"] != nil { return .testHost }
         #if DEBUG
-        if environment["PRHARBOR_PREVIEW"] == "1" { return .timelinePreview }
+            if environment["PRHARBOR_PREVIEW"] == "1" { return .timelinePreview }
         #endif
         return .production
     }()
@@ -21,18 +21,18 @@ nonisolated enum AppRuntime: Equatable, Sendable {
     /// Ordinary Debug runs behave like Release. Separate windows are opt-in tools.
     var showsDevelopmentWindow: Bool {
         #if DEBUG
-        self == .timelinePreview || ProcessInfo.processInfo.environment["PRHARBOR_DEBUG_WINDOW"] == "1"
+            self == .timelinePreview || ProcessInfo.processInfo.environment["PRHARBOR_DEBUG_WINDOW"] == "1"
         #else
-        false
+            false
         #endif
     }
 
     /// The sample account the preview's settings show instead of the connected one.
     @MainActor var usernameOverride: String? {
         #if DEBUG
-        self == .timelinePreview ? TimelinePreviewData.username : nil
+            self == .timelinePreview ? TimelinePreviewData.username : nil
         #else
-        nil
+            nil
         #endif
     }
 }

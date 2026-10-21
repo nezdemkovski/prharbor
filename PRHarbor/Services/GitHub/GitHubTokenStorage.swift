@@ -21,8 +21,10 @@ nonisolated struct GitHubTokenStorage: Sendable {
         },
         save: { token, apiBaseURL in
             let query = keychainQuery(apiBaseURL)
-            let attributes: [String: Any] = [kSecValueData as String: Data(token.utf8),
-                                             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly]
+            let attributes: [String: Any] = [
+                kSecValueData as String: Data(token.utf8),
+                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            ]
             var status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
             if status == errSecItemNotFound {
                 status = SecItemAdd(query.merging(attributes) { $1 } as CFDictionary, nil)
@@ -40,9 +42,11 @@ nonisolated struct GitHubTokenStorage: Sendable {
     }
 
     private static func keychainQuery(_ apiBaseURL: String) -> [String: Any] {
-        [kSecClass as String: kSecClassGenericPassword,
-         kSecAttrService as String: "com.nezdemkovski.prharbor",
-         kSecAttrAccount as String: "personal-access-token " + apiBaseURL]
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.nezdemkovski.prharbor",
+            kSecAttrAccount as String: "personal-access-token " + apiBaseURL
+        ]
     }
 
     private static func keychainError(_ status: OSStatus) -> Error {

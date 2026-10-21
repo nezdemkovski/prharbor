@@ -41,10 +41,12 @@ final class PullRequestStore {
     private var startupTask: Task<Void, Never>?
     private var sessionObservation: Task<Void, Never>?
 
-    init(startAutomatically: Bool = true, session: GitHubSession? = nil,
-         cache: PullSnapshotCache = .temporary(),
-         clientProvider: ((String, BuildType) async throws -> GitHubClient)? = nil,
-         settings: @escaping () -> PullRequestSettings = { .saved }) {
+    init(
+        startAutomatically: Bool = true, session: GitHubSession? = nil,
+        cache: PullSnapshotCache = .temporary(),
+        clientProvider: ((String, BuildType) async throws -> GitHubClient)? = nil,
+        settings: @escaping () -> PullRequestSettings = { .saved }
+    ) {
         let session = session ?? GitHubSession()
         self.session = session
         self.storage = SnapshotStorage(cache: cache)
@@ -114,10 +116,16 @@ final class PullRequestStore {
         let refetch: @MainActor () -> Void = { [weak self] in self?.scheduleSettingsRefresh() }
         let reproject: @MainActor () -> Void = { [weak self] in self?.rebuildTimelineItems() }
         preferences.onChange(of: .refreshRate) { [weak self] in self?.startAutoRefresh() }
-        preferences.onChange(of: .counterType) { reproject(); refetch() }
+        preferences.onChange(of: .counterType) {
+            reproject()
+            refetch()
+        }
         // These change what is fetched or notified.
-        preferences.onChange(of: [.showAssigned, .showCreated, .showRequested, .hideDrafts, .notifyReviewRequested,
-                                  .notifyAssigned, .notifyCreated, .notifyRotting, .morningSummary], refetch)
+        preferences.onChange(
+            of: [
+                .showAssigned, .showCreated, .showRequested, .hideDrafts, .notifyReviewRequested,
+                .notifyAssigned, .notifyCreated, .notifyRotting, .morningSummary
+            ], refetch)
         preferences.onChange(of: .buildType, refetch)
         preferences.onChange(of: .githubApiBaseUrl, refetch)
         // These change presentation and counters, never the GitHub query.
@@ -182,8 +190,11 @@ final class PullRequestStore {
 
     func refresh(force: Bool = false, respectFreshness: Bool = false) {
         if respectFreshness, error == nil, let snapshot = currentSnapshot,
-           snapshot.scope == snapshotScope,
-           snapshot.isFresh(at: .now, interval: settings().refreshInterval) { return }
+            snapshot.scope == snapshotScope,
+            snapshot.isFresh(at: .now, interval: settings().refreshInterval)
+        {
+            return
+        }
         guard !isLoading || force else { return }
         guard isConfigured else {
             refreshTask?.cancel()
@@ -203,11 +214,15 @@ final class PullRequestStore {
         let scope = token.scope
         // Pull requests already on screen for the same account, host and check mode keep
         // their details unless the search reports a change; only the rest are fetched in full.
-        let reusable = currentSnapshot.map {
-            $0.scope.username == scope.username && $0.scope.baseURL == scope.baseURL && $0.scope.buildType == scope.buildType
-        } ?? false
-        let known = reusable ? Dictionary((assignedPulls + createdPulls + reviewRequestedPulls).map { ($0.node.url, $0.node) },
-                                          uniquingKeysWith: { first, _ in first }) : [:]
+        let reusable =
+            currentSnapshot.map {
+                $0.scope.username == scope.username && $0.scope.baseURL == scope.baseURL && $0.scope.buildType == scope.buildType
+            } ?? false
+        let known =
+            reusable
+            ? Dictionary(
+                (assignedPulls + createdPulls + reviewRequestedPulls).map { ($0.node.url, $0.node) },
+                uniquingKeysWith: { first, _ in first }) : [:]
         let started = ContinuousClock.now
         refreshTask = Task { [weak self] in
             guard let self else { return }
@@ -217,7 +232,9 @@ final class PullRequestStore {
                 try Task.checkCancellation()
                 guard isCurrent(token) else { return finishCancelledRefresh(generation: generation) }
                 let showProgressively = lastSyncedAt == nil && isEmpty
-                var a = assignedPulls, c = createdPulls, r = reviewRequestedPulls
+                var a = assignedPulls
+                var c = createdPulls
+                var r = reviewRequestedPulls
                 var firstError: Error?
                 for await result in PullSearch.run(client: client, scope: scope, known: known) {
                     guard isCurrent(token), !Task.isCancelled else { continue }
@@ -284,7 +301,8 @@ final class PullRequestStore {
             return result
         } catch {
             if let accessError = error as? GitHubAccessError, accessError == .accountChanged,
-               scope == snapshotScope, sessionGeneration == session.generation {
+                scope == snapshotScope, sessionGeneration == session.generation
+            {
                 mutationStarted = false
                 clear()
                 self.error = error.localizedDescription
@@ -305,8 +323,10 @@ final class PullRequestStore {
         hasIncompleteData = false
         reconcileSnoozes(assigned + created + requested)
         publishPulls(assigned: assigned, created: created, requested: requested)
-        if let day = notifications.refreshed(assigned: assigned, created: created, requested: requested,
-                                             fetched: fetched, items: timelineItems, settings: settings()) {
+        if let day = notifications.refreshed(
+            assigned: assigned, created: created, requested: requested,
+            fetched: fetched, items: timelineItems, settings: settings())
+        {
             Defaults[.lastMorningSummary] = day
         }
         startMinuteTicks()
@@ -326,26 +346,31 @@ final class PullRequestStore {
     private func rebuildTimelineItems() {
         now = .now
         timelineItems = timelineInput(now: now).makeItems()
-        let count = settings().counterType.count(items: timelineItems, assigned: assignedPulls.count,
-                                                 created: createdPulls.count, requested: reviewRequestedPulls.count)
+        let count = settings().counterType.count(
+            items: timelineItems, assigned: assignedPulls.count,
+            created: createdPulls.count, requested: reviewRequestedPulls.count)
         if totalCount != count { totalCount = count }
     }
 
-    func timelineInput(now: Date = .now, thresholds: [Int]? = nil, bots: [String]? = nil,
-                       ownComments: Bool? = nil, snoozed: [String: Double]? = nil,
-                       includeAssigned: Bool = true, includeCreated: Bool = true,
-                       includeRequested: Bool = true, username: String? = nil) -> TimelineInput {
+    func timelineInput(
+        now: Date = .now, thresholds: [Int]? = nil, bots: [String]? = nil,
+        ownComments: Bool? = nil, snoozed: [String: Double]? = nil,
+        includeAssigned: Bool = true, includeCreated: Bool = true,
+        includeRequested: Bool = true, username: String? = nil
+    ) -> TimelineInput {
         let settings = settings()
-        return TimelineInput(assigned: assignedPulls, created: createdPulls, requested: reviewRequestedPulls,
-                      includeAssigned: includeAssigned, includeCreated: includeCreated, includeRequested: includeRequested,
-                      username: username ?? session.connection?.username ?? "", now: now,
-                      thresholds: thresholds ?? settings.thresholds, bots: bots ?? settings.bots,
-                      ownComments: ownComments ?? settings.ownComments, snoozed: snoozed ?? settings.snoozed)
+        return TimelineInput(
+            assigned: assignedPulls, created: createdPulls, requested: reviewRequestedPulls,
+            includeAssigned: includeAssigned, includeCreated: includeCreated, includeRequested: includeRequested,
+            username: username ?? session.connection?.username ?? "", now: now,
+            thresholds: thresholds ?? settings.thresholds, bots: bots ?? settings.bots,
+            ownComments: ownComments ?? settings.ownComments, snoozed: snoozed ?? settings.snoozed)
     }
 
     private func reconcileSnoozes(_ edges: [Edge]) {
         let settings = settings()
-        let (snoozed, activity) = TimelineSnoozePolicy.reconcile(edges: edges, snoozed: settings.snoozed,
+        let (snoozed, activity) = TimelineSnoozePolicy.reconcile(
+            edges: edges, snoozed: settings.snoozed,
             activity: settings.snoozeActivity, now: .now, wakeOnComment: settings.wakeOnComment,
             username: session.connection?.username ?? "")
         // Waking a snoozed pull request is the store's only preference write besides the summary day.

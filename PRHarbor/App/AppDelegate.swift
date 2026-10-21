@@ -1,8 +1,7 @@
-
 import Cocoa
 import Defaults
-import UserNotifications
 import SwiftUI
+import UserNotifications
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -42,7 +41,9 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
-        let opens = response.actionIdentifier == UNNotificationDefaultActionIdentifier || response.actionIdentifier == NotificationDelivery.openAction
+        let opens =
+            response.actionIdentifier == UNNotificationDefaultActionIdentifier
+            || response.actionIdentifier == NotificationDelivery.openAction
         let url = (userInfo["url"] as? String).flatMap(URL.init(string:))
         DispatchQueue.main.async { [weak self] in
             guard opens else { return }

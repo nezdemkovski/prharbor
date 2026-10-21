@@ -13,7 +13,8 @@ nonisolated struct GitHubHTTPTransport: GitHubAPITransport {
 
     init(apiBaseURL: String, token: String, session: URLSession = GitHubHTTPTransport.urlSession) throws {
         guard let url = URL(string: apiBaseURL), url.scheme == "https", url.host != nil,
-              url.user == nil, url.password == nil, url.query == nil, url.fragment == nil else {
+            url.user == nil, url.password == nil, url.query == nil, url.fragment == nil
+        else {
             throw GitHubAccessError.unsupportedHost
         }
         if apiBaseURL == "https://api.github.com" {
@@ -38,7 +39,8 @@ nonisolated struct GitHubHTTPTransport: GitHubAPITransport {
     /// on github.com or the Enterprise host.
     static func newTokenURL(apiBaseURL: String) -> URL? {
         guard var components = URLComponents(string: apiBaseURL), components.scheme == "https",
-              let host = components.host else { return nil }
+            let host = components.host
+        else { return nil }
         components.host = host == "api.github.com" ? "github.com" : host
         components.path = "/settings/tokens/new"
         components.queryItems = [.init(name: "scopes", value: "repo,read:org"), .init(name: "description", value: "PR Harbor")]
@@ -65,19 +67,23 @@ nonisolated struct GitHubHTTPTransport: GitHubAPITransport {
         let started = ContinuousClock.now
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
-        syncLog.notice("HTTP \(endpoint, privacy: .public) \(http.statusCode) \(data.count / 1024) KB in \(started.duration(to: .now), privacy: .public), rate limit remaining \(http.value(forHTTPHeaderField: "X-RateLimit-Remaining") ?? "?", privacy: .public)")
+        syncLog.notice(
+            "HTTP \(endpoint, privacy: .public) \(http.statusCode) \(data.count / 1024) KB in \(started.duration(to: .now), privacy: .public), rate limit remaining \(http.value(forHTTPHeaderField: "X-RateLimit-Remaining") ?? "?", privacy: .public)"
+        )
         if (200..<300).contains(http.statusCode) { return (data, http) }
         if http.statusCode == 401 { throw GitHubAccessError.invalidToken }
         // Primary limits exhaust the remaining count; secondary limits send Retry-After.
         if http.statusCode == 403 || http.statusCode == 429,
-           http.value(forHTTPHeaderField: "X-RateLimit-Remaining") == "0" || http.value(forHTTPHeaderField: "Retry-After") != nil {
+            http.value(forHTTPHeaderField: "X-RateLimit-Remaining") == "0" || http.value(forHTTPHeaderField: "Retry-After") != nil
+        {
             throw GitHubAccessError.rateLimited(until: Self.retryDate(http))
         }
         // GraphQL failures can carry a non-2xx status; the client interprets their errors,
         // so schema fallbacks and mutation failures keep their GitHub messages.
         if endpoint == "graphql",
-           let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let errors = object["errors"] as? [[String: Any]], !errors.isEmpty {
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let errors = object["errors"] as? [[String: Any]], !errors.isEmpty
+        {
             return (data, http)
         }
         throw GitHubAccessError.requestFailed(status: http.statusCode)

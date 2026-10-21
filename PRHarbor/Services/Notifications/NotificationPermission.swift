@@ -24,8 +24,9 @@ final class NotificationPermission {
     }
 
     func sendTest() {
-        NotificationDelivery().message(title: "PR Harbor notifications work",
-                                       body: "Review requests, assignments and quiet pull requests will appear like this.",
-                                       identifier: "timeline-test")
+        NotificationDelivery().message(
+            title: "PR Harbor notifications work",
+            body: "Review requests, assignments and quiet pull requests will appear like this.",
+            identifier: "timeline-test")
     }
 }

@@ -1,22 +1,27 @@
-import Foundation
 import Defaults
-import SwiftUI
-import Security
+import Foundation
 import ImageIO
+import Security
+import SwiftUI
 import Testing
+
 @testable import PRHarbor
 
 @Suite("Timeline policy")
 struct TimelinePolicyTests {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
     private func pull() -> Pull {
-        Pull(url: URL(string: "https://github.com/example/repo/pull/42")!,
-             updatedAt: now.addingTimeInterval(-86_400), createdAt: now.addingTimeInterval(-30 * 86_400),
-             title: "HQ-1234: A useful change", number: 42, author: User(login: "octocat"), repository: Repository(name: "repo", nameWithOwner: "example/repo"),
-             headRefName: "feature/useful", isDraft: false)
+        Pull(
+            url: URL(string: "https://github.com/example/repo/pull/42")!,
+            updatedAt: now.addingTimeInterval(-86_400), createdAt: now.addingTimeInterval(-30 * 86_400),
+            title: "HQ-1234: A useful change", number: 42, author: User(login: "octocat"),
+            repository: Repository(name: "repo", nameWithOwner: "example/repo"),
+            headRefName: "feature/useful", isDraft: false)
     }
     private func item(_ pull: Pull, ownComments: Bool = true, snooze: Date? = nil) -> TimelineItem {
-        TimelineItem(pull: pull, username: "octocat", now: now, thresholds: [2, 7, 21], bots: ["*[bot]"], ownComments: ownComments, snoozedUntil: snooze)
+        TimelineItem(
+            pull: pull, username: "octocat", now: now, thresholds: [2, 7, 21], bots: ["*[bot]"], ownComments: ownComments,
+            snoozedUntil: snooze)
     }
     @Test func rangesRoundTripWithoutDrawingInTheFuture() {
         for days in [14, 30, 90, 182] {
@@ -43,7 +48,8 @@ struct TimelinePolicyTests {
         ])
         #expect(item(p).quietDays == 1)
         #expect(item(p, ownComments: false).quietDays == 10)
-        p.timelineItems?.nodes.append(PullTimelineNode(__typename: "PullRequestReview", submittedAt: now, state: .changesRequested, author: User(login: "reviewer")))
+        p.timelineItems?.nodes.append(
+            PullTimelineNode(__typename: "PullRequestReview", submittedAt: now, state: .changesRequested, author: User(login: "reviewer")))
         #expect(item(p, ownComments: false).quietDays == 0)
     }
     @Test func automatedCommentsDoNotRefreshQuietTime() {
@@ -56,19 +62,33 @@ struct TimelinePolicyTests {
         #expect(item(p).events.count == 2)
     }
     @Test func reviewClockStartsAtLatestPersonalRequest() {
-        var p = pull(); p.author = User(login: "someone-else")
+        var p = pull()
+        p.author = User(login: "someone-else")
         p.timelineItems = PullTimelineConnection(nodes: [
-            PullTimelineNode(__typename: "ReviewRequestedEvent", createdAt: now.addingTimeInterval(-9 * 86_400), requestedReviewer: TimelineReviewer(login: "octocat")),
-            PullTimelineNode(__typename: "ReviewRequestedEvent", createdAt: now.addingTimeInterval(-5 * 86_400), requestedReviewer: TimelineReviewer(login: "other")),
-            PullTimelineNode(__typename: "ReviewRequestedEvent", createdAt: now.addingTimeInterval(-3 * 86_400), requestedReviewer: TimelineReviewer(login: "octocat")),
+            PullTimelineNode(
+                __typename: "ReviewRequestedEvent", createdAt: now.addingTimeInterval(-9 * 86_400),
+                requestedReviewer: TimelineReviewer(login: "octocat")),
+            PullTimelineNode(
+                __typename: "ReviewRequestedEvent", createdAt: now.addingTimeInterval(-5 * 86_400),
+                requestedReviewer: TimelineReviewer(login: "other")),
+            PullTimelineNode(
+                __typename: "ReviewRequestedEvent", createdAt: now.addingTimeInterval(-3 * 86_400),
+                requestedReviewer: TimelineReviewer(login: "octocat")),
             PullTimelineNode(__typename: "IssueComment", createdAt: now, author: p.author)
         ])
         #expect(item(p).quietDays == 3)
     }
     @Test func pendingAndUnknownChecksNeverSuggestMerge() {
-        var p = pull(); p.reviewDecision = .approved; p.mergeable = .mergeable
+        var p = pull()
+        p.reviewDecision = .approved
+        p.mergeable = .mergeable
         func checks(_ state: String) -> CommitsNodes {
-            CommitsNodes(nodes: [Commit(commit: CheckSuites(statusCheckRollup: StatusCheckRollup(state: state, contexts: ContextNodes(nodes: [ContextNode(context: "build", state: state)]))))])
+            CommitsNodes(nodes: [
+                Commit(
+                    commit: CheckSuites(
+                        statusCheckRollup: StatusCheckRollup(
+                            state: state, contexts: ContextNodes(nodes: [ContextNode(context: "build", state: state)]))))
+            ])
         }
         p.commits = checks("PENDING")
         #expect(item(p).nextAction != .merge)
@@ -78,7 +98,8 @@ struct TimelinePolicyTests {
         #expect(item(p).nextAction == .merge)
         p.isDraft = true
         #expect(item(p).nextAction == .continueDraft)
-        p.isDraft = false; p.mergeable = .unknown
+        p.isDraft = false
+        p.mergeable = .unknown
         #expect(item(p).nextAction != .merge)
     }
     @Test func expiredSnoozesAreVisibleAndActiveSnoozesKeepTheirDate() {
@@ -107,8 +128,11 @@ struct TimelinePolicyTests {
         #expect(!value.matches("mine idle:7d+"))
     }
     @Test func assignedPullRequestsDoNotClaimToWaitForReview() {
-        var p = pull(); p.author = User(login: "other")
-        let value = TimelineItem(pull: p, username: "octocat", now: now, thresholds: [2, 7, 21], bots: [], ownComments: true, snoozedUntil: nil, reviewRequested: false)
+        var p = pull()
+        p.author = User(login: "other")
+        let value = TimelineItem(
+            pull: p, username: "octocat", now: now, thresholds: [2, 7, 21], bots: [], ownComments: true, snoozedUntil: nil,
+            reviewRequested: false)
         #expect(value.nextAction == .open)
         #expect(value.standing.hasPrefix("Opened"))
     }
@@ -125,8 +149,12 @@ struct TimelinePolicyTests {
     }
     @Test func stackWaitsForLowestOpenLayerIncludingOneOutsideTheList() {
         var p = pull()
-        let base = StackedPullRequest(id: "base", number: 40, title: "Base", url: URL(string: "https://github.com/example/repo/pull/40")!, state: .open, isDraft: false, headRefName: "base", headRefOid: "abc")
-        p.stack = PullRequestStack(id: "stack", number: 3, baseRefName: "main", size: 2, entries: PullRequestStackEntries(nodes: [PullRequestStackEntry(position: 1, pullRequest: base)]))
+        let base = StackedPullRequest(
+            id: "base", number: 40, title: "Base", url: URL(string: "https://github.com/example/repo/pull/40")!, state: .open,
+            isDraft: false, headRefName: "base", headRefOid: "abc")
+        p.stack = PullRequestStack(
+            id: "stack", number: 3, baseRefName: "main", size: 2,
+            entries: PullRequestStackEntries(nodes: [PullRequestStackEntry(position: 1, pullRequest: base)]))
         p.stackEntry = PullRequestStackPosition(position: 2)
         #expect(item(p).blockedBy?.number == 40)
         #expect(item(p).nextAction == .goToBase(40))

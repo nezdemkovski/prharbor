@@ -14,7 +14,8 @@ import AppKit
     }
 
     override func scrollWheel(with event: NSEvent) {
-        let ended = event.momentumPhase.contains(.ended) || event.momentumPhase.contains(.cancelled)
+        let ended =
+            event.momentumPhase.contains(.ended) || event.momentumPhase.contains(.cancelled)
             || (event.momentumPhase.isEmpty && (event.phase.contains(.ended) || event.phase.contains(.cancelled)))
         interaction?.isScrolling = !ended
         if !ended { interaction?.cursorAge = nil }

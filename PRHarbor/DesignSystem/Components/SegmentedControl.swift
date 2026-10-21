@@ -36,7 +36,9 @@ struct SegmentedControl<Value: Hashable>: View {
             ForEach(options.indices, id: \.self) { index in
                 let option = options[index]
                 let isSelected = selection == option.value
-                Button { selection = option.value } label: {
+                Button {
+                    selection = option.value
+                } label: {
                     HStack(spacing: Spacing.xs) {
                         Text(option.title)
                         if let count = option.count { Text("\(count)").foregroundStyle(Palette.textTertiary) }

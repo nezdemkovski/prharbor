@@ -2,6 +2,7 @@ import AppKit
 import Defaults
 import OSLog
 import Testing
+
 @testable import PRHarbor
 
 @Suite("Menu bar panel", .serialized)
@@ -19,13 +20,16 @@ struct MenuBarPanelTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let cache = PullSnapshotCache(directory: directory)
         let session = GitHubSession(connection: GitHubConnection(username: "yuri", apiBaseURL: Defaults[.githubApiBaseUrl]))
-        let store = PullRequestStore(startAutomatically: false, session: session, cache: cache,
-                                     clientProvider: { _, _ in throw CancellationError() })
+        let store = PullRequestStore(
+            startAutomatically: false, session: session, cache: cache,
+            clientProvider: { _, _ in throw CancellationError() })
         let edges = TimelinePreviewData.items(now: .now).map { Edge(node: $0.pull) }
-        await cache.save(PullSnapshot(scope: store.snapshotScope, syncedAt: .now, assigned: [], created: Array(edges.prefix(3)), requested: []))
+        await cache.save(
+            PullSnapshot(scope: store.snapshotScope, syncedAt: .now, assigned: [], created: Array(edges.prefix(3)), requested: []))
         await store.loadCachedSnapshot()
 
-        let anchor = NSWindow(contentRect: NSRect(x: 200, y: 900, width: 200, height: 40), styleMask: [.titled], backing: .buffered, defer: false)
+        let anchor = NSWindow(
+            contentRect: NSRect(x: 200, y: 900, width: 200, height: 40), styleMask: [.titled], backing: .buffered, defer: false)
         anchor.isReleasedWhenClosed = false
         defer { anchor.close() }
         anchor.orderFront(nil)

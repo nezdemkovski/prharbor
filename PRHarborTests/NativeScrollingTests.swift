@@ -1,9 +1,10 @@
-import Foundation
 import Defaults
-import SwiftUI
-import Security
+import Foundation
 import ImageIO
+import Security
+import SwiftUI
 import Testing
+
 @testable import PRHarbor
 
 @Suite("Native scrolling", .serialized)
@@ -12,12 +13,15 @@ struct NativeScrollingTests {
         let interaction = TimelineInteraction()
         func content(tab: String) -> some View {
             let ids = (0..<68).map { "\(tab):\($0)" }
-            let ranges = Dictionary(uniqueKeysWithValues: ids.enumerated().map { index, id in
-                (id, CGFloat(index * 50)..<CGFloat((index + 1) * 50))
-            })
-            return TimelineNativeScrollView(height: 3_404, rowIDs: ids, ranges: ranges,
-                selection: nil, interaction: interaction, content: { id in Text(id).id(id).frame(height: 50) })
-                .frame(width: 780, height: 456)
+            let ranges = Dictionary(
+                uniqueKeysWithValues: ids.enumerated().map { index, id in
+                    (id, CGFloat(index * 50)..<CGFloat((index + 1) * 50))
+                })
+            return TimelineNativeScrollView(
+                height: 3_404, rowIDs: ids, ranges: ranges,
+                selection: nil, interaction: interaction, content: { id in Text(id).id(id).frame(height: 50) }
+            )
+            .frame(width: 780, height: 456)
         }
         let hosting = NSHostingController(rootView: content(tab: "all"))
         hosting.sizingOptions = []
@@ -47,10 +51,12 @@ struct NativeScrollingTests {
         for prefix in ["all", "mine", "reviewing", "all", "mine", "all"] {
             let count = prefix == "mine" ? 3 : 68
             let ids = (0..<count).map { "\(prefix):\($0)" }
-            let ranges = Dictionary(uniqueKeysWithValues: ids.enumerated().map { index, id in
-                (id, CGFloat(index * 50)..<CGFloat((index + 1) * 50))
-            })
-            document.configure(height: CGFloat(count * 50 + 4), rowIDs: ids, ranges: ranges,
+            let ranges = Dictionary(
+                uniqueKeysWithValues: ids.enumerated().map { index, id in
+                    (id, CGFloat(index * 50)..<CGFloat((index + 1) * 50))
+                })
+            document.configure(
+                height: CGFloat(count * 50 + 4), rowIDs: ids, ranges: ranges,
                 content: { id in Text(id).id(id).frame(height: 50) }, appearance: nil)
             document.refreshViewport(NSRect(x: 0, y: 0, width: 780, height: 100))
             #expect(Set(ids.prefix(2)).isSubset(of: document.preparedRowIDs))
@@ -69,15 +75,21 @@ struct NativeScrollingTests {
             var pull = fixtures[index % fixtures.count].pull
             pull.number = 10_000 + index
             pull.url = URL(string: "https://github.com/fixture/repo/pull/\(pull.number)")!
-            if var stack = pull.stack { stack.id += "-\(index / fixtures.count)"; pull.stack = stack }
-            return TimelineItem(pull: pull, username: "yuri", now: now, thresholds: [2, 7, 14], bots: [".*\\[bot\\]"],
-                                ownComments: true, snoozedUntil: nil)
+            if var stack = pull.stack {
+                stack.id += "-\(index / fixtures.count)"
+                pull.stack = stack
+            }
+            return TimelineItem(
+                pull: pull, username: "yuri", now: now, thresholds: [2, 7, 14], bots: [".*\\[bot\\]"],
+                ownComments: true, snoozedUntil: nil)
         }
         var sizeChanges = 0
-        let content = TimelinePanel(store: PullRequestStore(startAutomatically: false), now: now,
-            onSettings: {}, onAbout: {}, onQuit: {}, previewItems: items)
-            .fixedSize(horizontal: false, vertical: true)
-            .onGeometryChange(for: CGSize.self, of: { $0.size }) { _ in sizeChanges += 1 }
+        let content = TimelinePanel(
+            store: PullRequestStore(startAutomatically: false), now: now,
+            onSettings: {}, onAbout: {}, onQuit: {}, previewItems: items
+        )
+        .fixedSize(horizontal: false, vertical: true)
+        .onGeometryChange(for: CGSize.self, of: { $0.size }, action: { _ in sizeChanges += 1 })
         let hosting = NSHostingController(rootView: content)
         hosting.sizingOptions = []
         let window = NSWindow(contentViewController: hosting)
@@ -134,13 +146,17 @@ struct NativeScrollingTests {
         let output = try #require(environment["PRHARBOR_PROFILE_OUTPUT"])
         let cached = try JSONDecoder().decode(PullSnapshot.self, from: Data(contentsOf: URL(fileURLWithPath: input)))
         let now = Date.now
-        let items = TimelineInput(assigned: cached.assigned, created: cached.created, requested: cached.requested,
+        let items = TimelineInput(
+            assigned: cached.assigned, created: cached.created, requested: cached.requested,
             username: cached.scope.username, now: now, thresholds: [2, 7, 21], bots: ["*[bot]"],
-            ownComments: true, snoozed: [:]).makeItems()
+            ownComments: true, snoozed: [:]
+        ).makeItems()
         #expect(items.count >= 50)
-        let content = TimelinePanel(store: PullRequestStore(startAutomatically: false), now: now,
-            onSettings: {}, onAbout: {}, onQuit: {}, previewItems: items)
-            .fixedSize(horizontal: false, vertical: true)
+        let content = TimelinePanel(
+            store: PullRequestStore(startAutomatically: false), now: now,
+            onSettings: {}, onAbout: {}, onQuit: {}, previewItems: items
+        )
+        .fixedSize(horizontal: false, vertical: true)
         let hosting = NSHostingController(rootView: content)
         hosting.sizingOptions = []
         let window = NSWindow(contentViewController: hosting)
@@ -156,7 +172,8 @@ struct NativeScrollingTests {
         // Give Instruments time to attach to the isolated Release test host.
         try await Task.sleep(for: .seconds(10))
         let maxOffset = max(0, document.frame.height - scroll.contentSize.height)
-        var intervals: [Double] = [], synchronous: [Double] = []
+        var intervals: [Double] = []
+        var synchronous: [Double] = []
         var unpreparedVisible: [Int] = []
         var lastStart = ContinuousClock.now
         let geometry = TimelinePresentation(items: items)
@@ -188,16 +205,20 @@ struct NativeScrollingTests {
         }
         func stats(_ values: [Double]) -> [String: Double] {
             let sorted = values.sorted()
-            return ["median": sorted[sorted.count / 2], "p95": sorted[Int(Double(sorted.count - 1) * 0.95)],
-                "max": sorted.last!, "over16_7ms": Double(values.filter { $0 > 16.7 }.count)]
+            return [
+                "median": sorted[sorted.count / 2], "p95": sorted[Int(Double(sorted.count - 1) * 0.95)],
+                "max": sorted.last!, "over16_7ms": Double(values.filter { $0 > 16.7 }.count)
+            ]
         }
-        let report: [String: Any] = ["pulls": items.count, "rows": geometry.rows.count,
+        let report: [String: Any] = [
+            "pulls": items.count, "rows": geometry.rows.count,
             "synchronous_ms": stats(synchronous), "interval_ms": stats(intervals),
             "frames_with_unprepared_visible_rows": unpreparedVisible.filter { $0 > 0 }.count,
             "maximum_unprepared_visible_rows": unpreparedVisible.max() ?? 0,
             "retained_hosts": virtual.retainedHostingViewCount,
             "configurations_during_replay": virtual.configurationCount - initialConfigurations,
-            "rows_prepared_during_replay": virtual.totalPreparedRowCount - initialPreparations]
+            "rows_prepared_during_replay": virtual.totalPreparedRowCount - initialPreparations
+        ]
         try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
             .write(to: URL(fileURLWithPath: output))
         print("Scroll replay aggregate report: " + output)
@@ -205,11 +226,13 @@ struct NativeScrollingTests {
 
     @Test @MainActor func virtualRowsStayBoundedAndRefreshAfterFiltering() throws {
         let ids = (0..<1_000).map { "row:\($0)" }
-        let ranges = Dictionary(uniqueKeysWithValues: ids.enumerated().map { index, id in
-            (id, CGFloat(index * 50)..<CGFloat((index + 1) * 50))
-        })
+        let ranges = Dictionary(
+            uniqueKeysWithValues: ids.enumerated().map { index, id in
+                (id, CGFloat(index * 50)..<CGFloat((index + 1) * 50))
+            })
         let document = TimelineVirtualDocumentView { id in Text(id).id(id).frame(height: 50) }
-        document.configure(height: 50_004, rowIDs: ids, ranges: ranges,
+        document.configure(
+            height: 50_004, rowIDs: ids, ranges: ranges,
             content: { id in Text(id).id(id).frame(height: 50) }, appearance: NSAppearance(named: .aqua))
         document.updateViewport(NSRect(x: 0, y: 0, width: 780, height: 456))
         #expect(document.mountedRowIDs.contains("row:0"))
@@ -227,12 +250,14 @@ struct NativeScrollingTests {
         document.updateViewport(NSRect(x: 0, y: 0, width: 780, height: 456))
         #expect(document.mountedRowIDs.contains("row:0"))
         #expect(!document.mountedRowIDs.contains("row:999"))
-        document.configure(height: 54, rowIDs: ["row:999"], ranges: ["row:999": 0..<50],
+        document.configure(
+            height: 54, rowIDs: ["row:999"], ranges: ["row:999": 0..<50],
             content: { id in Text(id).id(id).frame(height: 50) }, appearance: NSAppearance(named: .darkAqua))
         document.updateViewport(NSRect(x: 0, y: 0, width: 780, height: 456))
         #expect(document.mountedRowIDs == ["row:999"])
         #expect(document.frame.height == 54)
-        document.configure(height: 4, rowIDs: [], ranges: [:],
+        document.configure(
+            height: 4, rowIDs: [], ranges: [:],
             content: { id in Text(id).id(id).frame(height: 50) }, appearance: nil)
         document.updateViewport(NSRect(x: 0, y: 0, width: 780, height: 456))
         #expect(document.mountedRowIDs.isEmpty)
@@ -240,11 +265,13 @@ struct NativeScrollingTests {
 
     @Test @MainActor func aFastJumpCancelsRowsFromThePreviousViewport() async throws {
         let ids = (0..<1_000).map { "row:\($0)" }
-        let ranges = Dictionary(uniqueKeysWithValues: ids.enumerated().map { index, id in
-            (id, CGFloat(index * 50)..<CGFloat((index + 1) * 50))
-        })
+        let ranges = Dictionary(
+            uniqueKeysWithValues: ids.enumerated().map { index, id in
+                (id, CGFloat(index * 50)..<CGFloat((index + 1) * 50))
+            })
         let document = TimelineVirtualDocumentView { id in Text(id).id(id).frame(height: 50) }
-        document.configure(height: 50_004, rowIDs: ids, ranges: ranges,
+        document.configure(
+            height: 50_004, rowIDs: ids, ranges: ranges,
             content: { id in Text(id).id(id).frame(height: 50) }, appearance: nil)
         document.updateViewport(NSRect(x: 0, y: 0, width: 780, height: 456))
         document.updateViewport(NSRect(x: 0, y: 49_500, width: 780, height: 456))
@@ -261,14 +288,17 @@ struct NativeScrollingTests {
 
     @Test @MainActor func keyboardSelectionMountsAnOffscreenRow() async throws {
         let ids = (0..<100).map { "row:\($0)" }
-        let ranges = Dictionary(uniqueKeysWithValues: ids.enumerated().map { index, id in
-            (id, CGFloat(index * 50)..<CGFloat((index + 1) * 50))
-        })
+        let ranges = Dictionary(
+            uniqueKeysWithValues: ids.enumerated().map { index, id in
+                (id, CGFloat(index * 50)..<CGFloat((index + 1) * 50))
+            })
         let interaction = TimelineInteraction()
         func content(selection: String?) -> some View {
-            TimelineNativeScrollView(height: 5_004, rowIDs: ids, ranges: ranges,
-                selection: selection, interaction: interaction, content: { id in Text(id).id(id).frame(height: 50) })
-                .frame(width: 780, height: 456)
+            TimelineNativeScrollView(
+                height: 5_004, rowIDs: ids, ranges: ranges,
+                selection: selection, interaction: interaction, content: { id in Text(id).id(id).frame(height: 50) }
+            )
+            .frame(width: 780, height: 456)
         }
         let hosting = NSHostingController(rootView: content(selection: "row:0"))
         hosting.sizingOptions = []

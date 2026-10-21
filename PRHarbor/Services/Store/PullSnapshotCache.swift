@@ -33,8 +33,9 @@ actor PullSnapshotCache {
         .appendingPathComponent("PRHarbor/Pulls", isDirectory: true)
     /// A cache nobody else reads, for tests and previews.
     static func temporary() -> PullSnapshotCache {
-        PullSnapshotCache(directory: FileManager.default.temporaryDirectory
-            .appendingPathComponent("PRHarbor-TestCache-" + UUID().uuidString, isDirectory: true))
+        PullSnapshotCache(
+            directory: FileManager.default.temporaryDirectory
+                .appendingPathComponent("PRHarbor-TestCache-" + UUID().uuidString, isDirectory: true))
     }
     nonisolated let directory: URL
     private var file: URL { directory.appendingPathComponent("snapshot-v1.json") }
@@ -51,23 +52,27 @@ actor PullSnapshotCache {
             let age = now.timeIntervalSince(snapshot.syncedAt)
             guard snapshot.version == 1, snapshot.scope == scope, age >= 0, age <= maximumAge else { return nil }
             return snapshot
-        } catch { return nil } // A missing/corrupt/evicted cache simply needs a live fetch.
+        } catch { return nil }  // A missing/corrupt/evicted cache simply needs a live fetch.
     }
 
     func save(_ snapshot: PullSnapshot) {
         do {
             let data = try JSONEncoder().encode(snapshot)
             guard data.count <= maximumBytes else { return }
-            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
-                                                    attributes: [.posixPermissions: 0o700])
+            try FileManager.default.createDirectory(
+                at: directory, withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700])
             try data.write(to: file, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
-        } catch { /* Caching is optional; never hide successful live data on disk failure. */ }
+        } catch {
+            // Caching is optional; never hide successful live data on disk failure.
+        }
     }
 
     func remove(scope: PullSnapshotScope) {
         guard let snapshot = try? JSONDecoder().decode(PullSnapshot.self, from: Data(contentsOf: file)),
-              snapshot.scope.username == scope.username, snapshot.scope.baseURL == scope.baseURL else { return }
+            snapshot.scope.username == scope.username, snapshot.scope.baseURL == scope.baseURL
+        else { return }
         try? FileManager.default.removeItem(at: file)
     }
 }

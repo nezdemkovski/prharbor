@@ -31,8 +31,10 @@ nonisolated struct TimelinePresentation: Equatable, Sendable {
     private(set) var rowRanges: [String: Range<CGFloat>] = [:]
     private(set) var showOwner = false
 
-    init(items: [TimelineItem] = [], tab: TimelineTab = .all, query: String = "",
-         sortOrder: SortOrder = .updatedNewest, brush: ClosedRange<Double>? = nil, collapsed: [String] = []) {
+    init(
+        items: [TimelineItem] = [], tab: TimelineTab = .all, query: String = "",
+        sortOrder: SortOrder = .updatedNewest, brush: ClosedRange<Double>? = nil, collapsed: [String] = []
+    ) {
         itemsByID = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         showOwner = Set(items.map { $0.pull.repository.nameWithOwner.split(separator: "/").first }).count > 1
         let terms = query.lowercased().split(whereSeparator: \.isWhitespace).map(String.init)
@@ -40,10 +42,15 @@ nonisolated struct TimelinePresentation: Equatable, Sendable {
             (tab == .all || (tab == .mine ? item.isMine : !item.isMine))
                 && item.matches(terms: terms) && (brush.map { item.hasKnownQuietPeriod && $0.contains(item.quietDays) } ?? true)
         }.sorted { a, b in
-            let first: Date, second: Date
+            let first: Date
+            let second: Date
             switch sortOrder {
-            case .updatedNewest, .updatedOldest: first = a.pull.updatedAt; second = b.pull.updatedAt
-            case .createdNewest, .createdOldest: first = a.pull.createdAt; second = b.pull.createdAt
+            case .updatedNewest, .updatedOldest:
+                first = a.pull.updatedAt
+                second = b.pull.updatedAt
+            case .createdNewest, .createdOldest:
+                first = a.pull.createdAt
+                second = b.pull.createdAt
             }
             if first == second { return a.id < b.id }
             return sortOrder == .updatedNewest || sortOrder == .createdNewest ? first > second : first < second
@@ -52,7 +59,9 @@ nonisolated struct TimelinePresentation: Equatable, Sendable {
         let allByRepo = Dictionary(grouping: items) { $0.pull.repository.nameWithOwner }
         let grouped = Dictionary(grouping: visible) { $0.isBot ? "Bots" : $0.pull.repository.nameWithOwner }
         let names = grouped.keys.sorted { a, b in
-            if a == "Bots" { return false }; if b == "Bots" { return true }; return a < b
+            if a == "Bots" { return false }
+            if b == "Bots" { return true }
+            return a < b
         }
         let collapsed = Set(collapsed)
         for name in names {

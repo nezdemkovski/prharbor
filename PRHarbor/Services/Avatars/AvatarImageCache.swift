@@ -7,14 +7,19 @@ nonisolated enum AvatarBitmap {
     static let maximumPixelSize = 96
 
     static func image(from data: Data) -> NSImage? {
-        guard let source = CGImageSourceCreateWithData(data as CFData,
-            [kCGImageSourceShouldCache: false] as CFDictionary),
-              let bitmap = CGImageSourceCreateThumbnailAtIndex(source, 0, [
-                kCGImageSourceCreateThumbnailFromImageAlways: true,
-                kCGImageSourceCreateThumbnailWithTransform: true,
-                kCGImageSourceThumbnailMaxPixelSize: maximumPixelSize,
-                kCGImageSourceShouldCacheImmediately: true
-              ] as CFDictionary) else { return nil }
+        guard
+            let source = CGImageSourceCreateWithData(
+                data as CFData,
+                [kCGImageSourceShouldCache: false] as CFDictionary),
+            let bitmap = CGImageSourceCreateThumbnailAtIndex(
+                source, 0,
+                [
+                    kCGImageSourceCreateThumbnailFromImageAlways: true,
+                    kCGImageSourceCreateThumbnailWithTransform: true,
+                    kCGImageSourceThumbnailMaxPixelSize: maximumPixelSize,
+                    kCGImageSourceShouldCacheImmediately: true
+                ] as CFDictionary)
+        else { return nil }
         let image = NSImage(size: NSSize(width: bitmap.width, height: bitmap.height))
         image.addRepresentation(NSBitmapImageRep(cgImage: bitmap))
         return image
@@ -51,8 +56,9 @@ actor AvatarImageCache {
 
     @concurrent private static func download(_ url: URL, session: URLSession) async -> NSImage? {
         guard url.scheme == "https",
-              let (data, response) = try? await session.data(from: url),
-              let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else { return nil }
+            let (data, response) = try? await session.data(from: url),
+            let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode)
+        else { return nil }
         return AvatarBitmap.image(from: data)
     }
 }

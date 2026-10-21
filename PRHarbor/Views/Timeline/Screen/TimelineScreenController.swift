@@ -26,8 +26,11 @@ import Observation
     private var presentationKey: PresentationKey?
 
     init() {
-        snapshot = TimelineScreenSnapshot(items: [], tabItems: [], presentation: TimelinePresentation(),
-            brief: MorningBriefSnapshot(items: [], now: .now), searchRequest: IntelligenceSearchRequest(text: "", enabled: false, context: IntelligenceSearchContext(items: []), hasLiteralMatches: false),
+        snapshot = TimelineScreenSnapshot(
+            items: [], tabItems: [], presentation: TimelinePresentation(),
+            brief: MorningBriefSnapshot(items: [], now: .now),
+            searchRequest: IntelligenceSearchRequest(
+                text: "", enabled: false, context: IntelligenceSearchContext(items: []), hasLiteralMatches: false),
             tab: .all, query: "", effectiveQuery: "", brush: nil, zone: nil, selection: nil,
             isSearching: false, understood: false, searchMessage: nil)
     }
@@ -45,8 +48,14 @@ import Observation
         publish()
     }
 
-    func setTab(_ value: TimelineTab) { tab = value; publish() }
-    func setQuery(_ value: String) { query = value; publish() }
+    func setTab(_ value: TimelineTab) {
+        tab = value
+        publish()
+    }
+    func setQuery(_ value: String) {
+        query = value
+        publish()
+    }
     func clearQuery() { setQuery("") }
 
     func zoneRange(_ zone: Freshness) -> ClosedRange<Double> {
@@ -62,7 +71,8 @@ import Observation
     func writeIdle(_ value: ClosedRange<Double>?) {
         var tokens = query.split(whereSeparator: \.isWhitespace).map(String.init).filter { TimelinePolicy.idleRange($0) == nil }
         if let value {
-            tokens.append(value.upperBound.isFinite ? "idle:\(Int(value.lowerBound))d-\(Int(value.upperBound))d" : "idle:\(Int(value.lowerBound))d+")
+            tokens.append(
+                value.upperBound.isFinite ? "idle:\(Int(value.lowerBound))d-\(Int(value.upperBound))d" : "idle:\(Int(value.lowerBound))d+")
         }
         setQuery(tokens.joined(separator: " "))
     }
@@ -75,7 +85,8 @@ import Observation
     @discardableResult func select(_ id: String) -> [String]? {
         guard let item = snapshot.presentation.itemsByID[id] else { return nil }
         if !snapshot.presentation.visibleIDs.contains(id) && !snapshot.presentation.navigationIDs.contains(id) {
-            tab = .all; query = ""
+            tab = .all
+            query = ""
         }
         collapsed.removeAll { $0 == item.pull.repository.nameWithOwner || $0 == "stack:" + (item.pull.stack?.id ?? "") }
         if item.isBot, !collapsed.contains("Bots") { collapsed.append("Bots") }
@@ -91,19 +102,30 @@ import Observation
         publish()
     }
 
-    func resolveSearch(_ request: IntelligenceSearchRequest, debounce: Duration = .milliseconds(450),
-                       interpret: (String, IntelligenceSearchContext) async throws -> String = { try await PRIntelligenceService.shared.suggestFilter($0, context: $1) }) async {
+    func resolveSearch(
+        _ request: IntelligenceSearchRequest, debounce: Duration = .milliseconds(450),
+        interpret: (String, IntelligenceSearchContext) async throws -> String = {
+            try await PRIntelligenceService.shared.suggestFilter($0, context: $1)
+        }
+    ) async {
         guard request == snapshot.searchRequest else { return }
         let revision = UUID()
         searchRevision = revision
         searchMessage = nil
         understood = false
         guard request.needsInterpretation else {
-            appliedQuery = request.text; isSearching = false; completedRequest = nil
+            appliedQuery = request.text
+            isSearching = false
+            completedRequest = nil
             publish()
             return
         }
-        if completedRequest == request { understood = true; isSearching = false; publish(); return }
+        if completedRequest == request {
+            understood = true
+            isSearching = false
+            publish()
+            return
+        }
         isSearching = true
         publish()
         do {
@@ -112,23 +134,29 @@ import Observation
             let filter = try await interpret(request.text, request.context)
             try Task.checkCancellation()
             guard searchRevision == revision, snapshot.searchRequest == request else { return }
-            appliedQuery = filter; completedRequest = request; understood = true
+            appliedQuery = filter
+            completedRequest = request
+            understood = true
         } catch {
             guard !Task.isCancelled, searchRevision == revision, snapshot.searchRequest == request else { return }
-            appliedQuery = request.text; completedRequest = nil
+            appliedQuery = request.text
+            completedRequest = nil
             if let failure = error as? PRIntelligenceService.Failure {
                 switch failure {
                 case .unsupported: searchMessage = "Couldn’t understand this search. Try phrasing it differently."
                 default: searchMessage = failure.localizedDescription
                 }
-            } else { searchMessage = "Couldn’t finish this search. Try again in a moment." }
+            } else {
+                searchMessage = "Couldn’t finish this search. Try again in a moment."
+            }
         }
         isSearching = false
         publish()
     }
 
     private func publish() {
-        let request = IntelligenceSearchRequest(text: query, enabled: input?.intelligentSearch ?? false,
+        let request = IntelligenceSearchRequest(
+            text: query, enabled: input?.intelligentSearch ?? false,
             context: context, hasLiteralMatches: items.contains { $0.matches(query) })
         if request != snapshot.searchRequest {
             searchRevision = UUID()
@@ -140,16 +168,21 @@ import Observation
         let brush = effective.split(whereSeparator: \.isWhitespace).compactMap { TimelinePolicy.idleRange(String($0)) }.first
         let key = PresentationKey(tab: tab, query: effective, sortOrder: input?.sortOrder ?? .updatedNewest, collapsed: collapsed)
         let presentation: TimelinePresentation
-        if presentationKey == key { presentation = snapshot.presentation }
-        else {
-            presentation = TimelinePresentation(items: items, tab: tab, query: effective,
+        if presentationKey == key {
+            presentation = snapshot.presentation
+        } else {
+            presentation = TimelinePresentation(
+                items: items, tab: tab, query: effective,
                 sortOrder: key.sortOrder, brush: brush, collapsed: collapsed)
             presentationKey = key
         }
         if let current = selection, presentation.visibleIDs.contains(current) || presentation.navigationIDs.contains(current) {
             // Keep the selected filtered stack companion, including its detail.
-        } else { selection = presentation.navigationIDs.first }
-        snapshot = TimelineScreenSnapshot(items: items, tabItems: items.filter { tab == .all || (tab == .mine ? $0.isMine : !$0.isMine) },
+        } else {
+            selection = presentation.navigationIDs.first
+        }
+        snapshot = TimelineScreenSnapshot(
+            items: items, tabItems: items.filter { tab == .all || (tab == .mine ? $0.isMine : !$0.isMine) },
             presentation: presentation, brief: brief, searchRequest: request, tab: tab, query: query, effectiveQuery: effective,
             brush: brush, zone: Freshness.allCases.first { zoneRange($0) == brush }, selection: selection,
             isSearching: request.needsInterpretation && isSearching, understood: request.needsInterpretation && understood,

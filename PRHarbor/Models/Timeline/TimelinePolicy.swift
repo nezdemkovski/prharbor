@@ -20,7 +20,8 @@ nonisolated enum TimelinePolicy {
         let value = String(token.dropFirst(5)).lowercased()
         func days(_ value: String) -> Double? {
             let number = value.hasSuffix("d") ? String(value.dropLast()) : value
-            guard let days = Int(number), days >= 0 else { return nil }; return Double(days)
+            guard let days = Int(number), days >= 0 else { return nil }
+            return Double(days)
         }
         if value.hasSuffix("+"), let lower = days(String(value.dropLast())) { return lower...Double.infinity }
         let parts = value.split(separator: "-", omittingEmptySubsequences: false).map(String.init)
@@ -34,13 +35,18 @@ nonisolated enum TimelinePolicy {
             let date: Date?
             var person = node.author
             switch node.__typename {
-            case "PullRequestCommit": kind = .commit; date = node.commit?.committedDate
-            case "IssueComment": kind = .comment; date = node.createdAt
+            case "PullRequestCommit":
+                kind = .commit
+                date = node.commit?.committedDate
+            case "IssueComment":
+                kind = .comment
+                date = node.createdAt
             case "PullRequestReview":
                 kind = node.state == .approved ? .approved : node.state == .changesRequested ? .changes : .comment
                 date = node.submittedAt
             case "ReviewRequestedEvent":
-                kind = .requested; date = node.createdAt
+                kind = .requested
+                date = node.createdAt
                 if let r = node.requestedReviewer, let login = r.login { person = User(login: login, avatarUrl: r.avatarUrl) }
             default: continue
             }

@@ -18,7 +18,9 @@ struct IntelligenceSettings: View {
                 }
             } footer: {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("Uses Apple's on-device model. Both features are off by default and do not change regular search or the morning summary notification.")
+                    Text(
+                        "Uses Apple's on-device model. Both features are off by default and do not change regular search or the morning summary notification."
+                    )
                     if let message = PRIntelligenceService.unavailableMessage { Text(message) }
                 }
             }

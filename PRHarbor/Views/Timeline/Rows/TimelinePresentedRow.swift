@@ -23,12 +23,15 @@ struct TimelinePresentedRow: View, Equatable {
         Group {
             switch row {
             case .repository(let name, let items, let collapsed):
-                TimelineRepositoryHeader(name: name, items: items, scale: scale,
-                    collapsed: collapsed, showOwner: showOwner) { toggleRepo(name) }
+                TimelineRepositoryHeader(
+                    name: name, items: items, scale: scale,
+                    collapsed: collapsed, showOwner: showOwner
+                ) { toggleRepo(name) }
             case .pull(let item):
                 TimelineRow(item: item, scale: scale, now: now, selected: selection == item.id) { select(item.id) }
             case .stack(let group, let items):
-                TimelineStackRows(group: group, items: items, scale: scale, now: now, selection: selection,
+                TimelineStackRows(
+                    group: group, items: items, scale: scale, now: now, selection: selection,
                     isCollapsed: stackCollapsed,
                     select: select, toggle: { toggleRepo("stack:" + group.id) })
             }

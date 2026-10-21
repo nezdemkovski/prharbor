@@ -1,6 +1,7 @@
-import Foundation
 import Defaults
+import Foundation
 import Testing
+
 @testable import PRHarbor
 
 @Suite("Isolated app test host", .serialized)

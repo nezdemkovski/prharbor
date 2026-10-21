@@ -33,8 +33,10 @@ final class StatusBarController: NSObject {
         quit.target = self
         menu.addItem(quit)
 
-        let hosting = NSHostingController(rootView: PanelView(store: store,
-            onQuit: { [weak self] in self?.quit() }))
+        let hosting = NSHostingController(
+            rootView: PanelView(
+                store: store,
+                onQuit: { [weak self] in self?.quit() }))
         // The panel has a fixed width and a natural height; the row area has an explicit
         // height, so tracking the preferred size never measures scrolling content.
         hosting.sizingOptions = [.preferredContentSize]

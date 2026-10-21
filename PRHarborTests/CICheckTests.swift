@@ -1,9 +1,10 @@
-import Foundation
 import Defaults
-import SwiftUI
-import Security
+import Foundation
 import ImageIO
+import Security
+import SwiftUI
 import Testing
+
 @testable import PRHarbor
 
 struct CICheckTests {
@@ -14,12 +15,14 @@ struct CICheckTests {
         let first = commits(checkName: "build", conclusion: "SUCCESS", url: firstURL)
         let second = commits(checkName: "build", conclusion: "FAILURE", url: secondURL)
 
-        #expect(CICheck.from(commits: first) == [
-            CICheck(name: "build", status: "SUCCESS", url: firstURL, index: 0)
-        ])
-        #expect(CICheck.from(commits: second) == [
-            CICheck(name: "build", status: "FAILURE", url: secondURL, index: 0)
-        ])
+        #expect(
+            CICheck.from(commits: first) == [
+                CICheck(name: "build", status: "SUCCESS", url: firstURL, index: 0)
+            ])
+        #expect(
+            CICheck.from(commits: second) == [
+                CICheck(name: "build", status: "FAILURE", url: secondURL, index: 0)
+            ])
     }
 
     @Test(arguments: ["FAILURE", "ERROR", "CANCELLED", "STALE", "STARTUP_FAILURE", "TIMED_OUT"])
@@ -38,17 +41,18 @@ struct CICheckTests {
 
     private func commits(checkName: String, conclusion: String, url: URL) -> CommitsNodes {
         CommitsNodes(nodes: [
-            Commit(commit: CheckSuites(
-                checkSuites: CheckSuitsNodes(nodes: [
-                    CheckSuit(
-                        app: nil,
-                        checkRuns: CheckRun(
-                            nodes: [Check(name: checkName, conclusion: conclusion, detailsUrl: url)]
+            Commit(
+                commit: CheckSuites(
+                    checkSuites: CheckSuitsNodes(nodes: [
+                        CheckSuit(
+                            app: nil,
+                            checkRuns: CheckRun(
+                                nodes: [Check(name: checkName, conclusion: conclusion, detailsUrl: url)]
+                            )
                         )
-                    )
-                ]),
-                statusCheckRollup: nil
-            ))
+                    ]),
+                    statusCheckRollup: nil
+                ))
         ])
     }
 }

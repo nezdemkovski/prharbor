@@ -1,9 +1,10 @@
-import Foundation
 import Defaults
-import SwiftUI
-import Security
+import Foundation
 import ImageIO
+import Security
+import SwiftUI
 import Testing
+
 @testable import PRHarbor
 
 @Suite("Timeline presentation")
@@ -37,7 +38,7 @@ struct TimelinePresentationTests {
         let first = snapshot.rowRanges[base.id]!
         let second = snapshot.rowRanges[tip.id]!
         #expect(first.upperBound - first.lowerBound == 44)
-        #expect(first.lowerBound - second.lowerBound == 44) // Higher stack layers are above the base.
+        #expect(first.lowerBound - second.lowerBound == 44)  // Higher stack layers are above the base.
         #expect(snapshot.rowRanges.values.map(\.upperBound).max()! + 4 == snapshot.contentHeight)
         let collapsed = TimelinePresentation(items: [base, tip], collapsed: ["stack:range-stack"])
         #expect(collapsed.rowRanges[base.id] == nil)
@@ -45,19 +46,25 @@ struct TimelinePresentationTests {
         #expect(collapsed.contentHeight == 114)
     }
 
-    private func item(_ number: Int, repo: String = "example/repo", author: String = "octocat", stack: PullRequestStack? = nil,
-                      position: Int? = nil, days: Double = 10) -> TimelineItem {
-        let pull = Pull(url: URL(string: "https://github.com/\(repo)/pull/\(number)")!,
-                        updatedAt: now.addingTimeInterval(-days * 86_400), createdAt: now.addingTimeInterval(-days * 86_400),
-                        title: "HQ-\(number): Change \(number)", number: number, author: User(login: author), repository: Repository(name: "repo", nameWithOwner: repo),
-                        headRefName: "feature/\(number)", isDraft: false,
-                        stack: stack, stackEntry: position.map { PullRequestStackPosition(position: $0) })
-        return TimelineItem(pull: pull, username: "octocat", now: now, thresholds: [2, 7, 21], bots: ["*[bot]"],
-                            ownComments: true, snoozedUntil: nil)
+    private func item(
+        _ number: Int, repo: String = "example/repo", author: String = "octocat", stack: PullRequestStack? = nil,
+        position: Int? = nil, days: Double = 10
+    ) -> TimelineItem {
+        let pull = Pull(
+            url: URL(string: "https://github.com/\(repo)/pull/\(number)")!,
+            updatedAt: now.addingTimeInterval(-days * 86_400), createdAt: now.addingTimeInterval(-days * 86_400),
+            title: "HQ-\(number): Change \(number)", number: number, author: User(login: author),
+            repository: Repository(name: "repo", nameWithOwner: repo),
+            headRefName: "feature/\(number)", isDraft: false,
+            stack: stack, stackEntry: position.map { PullRequestStackPosition(position: $0) })
+        return TimelineItem(
+            pull: pull, username: "octocat", now: now, thresholds: [2, 7, 21], bots: ["*[bot]"],
+            ownComments: true, snoozedUntil: nil)
     }
     @Test func filteredStackRetainsCompanionsAndDependencyOrder() {
         let stack = PullRequestStack(id: "stack-one", number: 1, baseRefName: "main", size: 2)
-        let base = item(10, stack: stack, position: 1), tip = item(11, stack: stack, position: 2)
+        let base = item(10, stack: stack, position: 1)
+        let tip = item(11, stack: stack, position: 2)
         let snapshot = TimelinePresentation(items: [base, tip, item(12)], query: "#10")
         #expect(snapshot.visibleIDs == [base.id])
         #expect(snapshot.navigationIDs == [tip.id, base.id])
@@ -67,7 +74,8 @@ struct TimelinePresentationTests {
         #expect(hidden.rows.count == 2)
     }
     @Test func repositoryAndBotCollapseRespectKeyboardNavigation() {
-        let regular = item(1), bot = item(2, author: "checks[bot]")
+        let regular = item(1)
+        let bot = item(2, author: "checks[bot]")
         let snapshot = TimelinePresentation(items: [bot, regular])
         #expect(snapshot.navigationIDs == [regular.id])
         #expect(snapshot.rows.count == 3)
@@ -77,7 +85,9 @@ struct TimelinePresentationTests {
         #expect(expanded.scrollTargets[bot.id] == "pull:" + bot.id)
     }
     @Test func tabBrushAndSortPreserveMatchingRowsAndStableTies() {
-        let young = item(1, days: 1), old = item(2, days: 30), review = item(3, author: "reviewer", days: 30)
+        let young = item(1, days: 1)
+        let old = item(2, days: 30)
+        let review = item(3, author: "reviewer", days: 30)
         let mine = TimelinePresentation(items: [review, young, old], tab: .mine, brush: 7...40)
         #expect(mine.navigationIDs == [old.id])
         let first = TimelinePresentation(items: [review, old], sortOrder: .createdNewest)
@@ -87,12 +97,17 @@ struct TimelinePresentationTests {
     }
     @Test @MainActor func rowUpdatesForCIOrReviewChangesWithoutANewUpdatedAt() {
         var original = item(1).pull
-        original.commits = CommitsNodes(nodes: [Commit(commit: CheckSuites(
-            statusCheckRollup: StatusCheckRollup(state: "PENDING")))])
+        original.commits = CommitsNodes(nodes: [
+            Commit(
+                commit: CheckSuites(
+                    statusCheckRollup: StatusCheckRollup(state: "PENDING")))
+        ])
         func rendered(_ pull: Pull) -> TimelinePresentedRow {
-            let value = TimelineItem(pull: pull, username: "octocat", now: now,
+            let value = TimelineItem(
+                pull: pull, username: "octocat", now: now,
                 thresholds: [2, 7, 21], bots: ["*[bot]"], ownComments: true, snoozedUntil: nil)
-            return TimelinePresentedRow(row: .pull(value), scale: TimelineScale(days: 182), now: now,
+            return TimelinePresentedRow(
+                row: .pull(value), scale: TimelineScale(days: 182), now: now,
                 selection: nil, showOwner: false, stackCollapsed: false, height: 50,
                 select: { _ in }, toggleRepo: { _ in })
         }

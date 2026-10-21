@@ -16,7 +16,8 @@ nonisolated enum GitHubAccessError: LocalizedError, Equatable {
         switch self {
         case .signInRequired: "Add a GitHub personal access token in Settings → Account."
         case .invalidToken: "GitHub rejected the token. It may have expired or been revoked; add a new one in Settings → Account."
-        case .missingRepoScope: "This token lacks the repo scope, so private pull requests would be missing. Create a token with repo and read:org."
+        case .missingRepoScope:
+            "This token lacks the repo scope, so private pull requests would be missing. Create a token with repo and read:org."
         case .accountChanged: "The saved token now answers for a different GitHub account. Reconnect in Settings → Account."
         case .unsupportedHost: "Use https://api.github.com or your GitHub Enterprise URL ending in /api/v3."
         case .rateLimited(let until):

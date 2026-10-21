@@ -1,9 +1,10 @@
-import Foundation
 import Defaults
-import SwiftUI
-import Security
+import Foundation
 import ImageIO
+import Security
+import SwiftUI
 import Testing
+
 @testable import PRHarbor
 
 @Suite(.serialized)
@@ -30,11 +31,15 @@ struct GitHubClientTests {
         // A new comment moves updatedAt; a finished check only changes the CI state.
         current[0].node.updatedAt = current[0].node.updatedAt.addingTimeInterval(60)
         current[0].node.title = "Edited"
-        let checked = try #require(current.firstIndex { $0.node.commits?.nodes.first?.commit.statusCheckRollup != nil && $0.node.url != current[0].node.url })
+        let checked = try #require(
+            current.firstIndex { $0.node.commits?.nodes.first?.commit.statusCheckRollup != nil && $0.node.url != current[0].node.url })
         current[checked].node.commits?.nodes[0].commit.statusCheckRollup?.state = "FAILURE"
         await transport.reset(edges: current)
         let changed = try await client.fetchPulls(filter: "author:octocat", known: known)
-        #expect(Set(await transport.detailBatches.flatMap { $0 }) == [current[0].node.url.absoluteString, current[checked].node.url.absoluteString])
+        #expect(
+            Set(await transport.detailBatches.flatMap { $0 }) == [
+                current[0].node.url.absoluteString, current[checked].node.url.absoluteString
+            ])
         #expect(changed[0].node.title == "Edited")
         #expect(changed[checked].node.commits?.nodes.first?.commit.statusCheckRollup?.state == "FAILURE")
         #expect(changed.map(\.node.url) == current.map(\.node.url))
@@ -46,24 +51,24 @@ struct GitHubClientTests {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let summaries = #"""
-        {"data":{"viewer":{"login":"octocat"},"search":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[null,{
-          "id":"PR_7","url":"https://github.com/o/r/pull/7","updatedAt":"2026-09-16T00:00:00Z","isDraft":false,"mergeable":"MERGEABLE",
-          "stack":null,"stackEntry":null,"commits":{"nodes":[null,{"commit":{"statusCheckRollup":null}}]}}]}}}
-        """#
+            {"data":{"viewer":{"login":"octocat"},"search":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[null,{
+              "id":"PR_7","url":"https://github.com/o/r/pull/7","updatedAt":"2026-09-16T00:00:00Z","isDraft":false,"mergeable":"MERGEABLE",
+              "stack":null,"stackEntry":null,"commits":{"nodes":[null,{"commit":{"statusCheckRollup":null}}]}}]}}}
+            """#
         let page = try decoder.decode(GraphQLSummaryResponse.self, from: Data(summaries.utf8)).data.search
         #expect(page.nodes.map(\.id) == ["PR_7"])
         #expect(page.nodes.first?.ciState == nil)
         let details = #"""
-        {"data":{"nodes":[null,{
-          "number":7,"createdAt":"2026-09-16T00:00:00Z","updatedAt":"2026-09-16T00:00:00Z","title":"T","headRefName":"h","baseRefName":"main",
-          "url":"https://github.com/o/r/pull/7","isDraft":false,"reviewDecision":null,"mergeable":"MERGEABLE",
-          "author":null,"repository":{"name":"r","nameWithOwner":"o/r"},
-          "timelineItems":{"pageInfo":{"hasPreviousPage":false},"nodes":null},
-          "reviewRequests":{"nodes":[null,{"requestedReviewer":null}]},
-          "commits":{"nodes":[null,{"commit":{"statusCheckRollup":null,"checkSuites":{"nodes":[null,{"app":null,"checkRuns":null},
-            {"app":{"name":"CI"},"checkRuns":{"nodes":[null,{"name":"build","conclusion":null,"detailsUrl":null}]}}]}}}]}
-        }]}}
-        """#
+            {"data":{"nodes":[null,{
+              "number":7,"createdAt":"2026-09-16T00:00:00Z","updatedAt":"2026-09-16T00:00:00Z","title":"T","headRefName":"h","baseRefName":"main",
+              "url":"https://github.com/o/r/pull/7","isDraft":false,"reviewDecision":null,"mergeable":"MERGEABLE",
+              "author":null,"repository":{"name":"r","nameWithOwner":"o/r"},
+              "timelineItems":{"pageInfo":{"hasPreviousPage":false},"nodes":null},
+              "reviewRequests":{"nodes":[null,{"requestedReviewer":null}]},
+              "commits":{"nodes":[null,{"commit":{"statusCheckRollup":null,"checkSuites":{"nodes":[null,{"app":null,"checkRuns":null},
+                {"app":{"name":"CI"},"checkRuns":{"nodes":[null,{"name":"build","conclusion":null,"detailsUrl":null}]}}]}}}]}
+            }]}}
+            """#
         let pulls = try decoder.decode(GraphQLDetailsResponse.self, from: Data(details.utf8)).data.nodes
         #expect(pulls.map(\.number) == [7])
         let pull = try #require(pulls.first)
@@ -78,10 +83,17 @@ struct GitHubClientTests {
         func error(_ json: String) throws -> GraphQLAPIError {
             GraphQLAPIError(errors: try JSONDecoder().decode([GraphQLError].self, from: Data(json.utf8)))
         }
-        #expect(try error(#"[{"message":"No such type PullRequestStack","extensions":{"code":"undefinedType","typeName":"PullRequestStack"}}]"#).isMissingStackSchema)
+        #expect(
+            try error(#"[{"message":"No such type PullRequestStack","extensions":{"code":"undefinedType","typeName":"PullRequestStack"}}]"#)
+                .isMissingStackSchema)
         // Ordinary failures that mention a stack or a field must not disable stacks for the session.
-        #expect(try !error(#"[{"type":"NOT_FOUND","message":"Could not resolve to a node with the global id of 'stack'"}]"#).isMissingStackSchema)
-        #expect(try !error(#"[{"message":"Field 'title' doesn't exist on type 'PullRequest'","extensions":{"code":"undefinedField","typeName":"PullRequest","fieldName":"title"}}]"#).isMissingStackSchema)
+        #expect(
+            try !error(#"[{"type":"NOT_FOUND","message":"Could not resolve to a node with the global id of 'stack'"}]"#)
+                .isMissingStackSchema)
+        #expect(
+            try !error(
+                #"[{"message":"Field 'title' doesn't exist on type 'PullRequest'","extensions":{"code":"undefinedField","typeName":"PullRequest","fieldName":"title"}}]"#
+            ).isMissingStackSchema)
         #expect(try error(#"[{"type":"RESOURCE_LIMITS_EXCEEDED","message":"Resource limits for this query exceeded."}]"#).isResourceLimit)
         #expect(try !error(#"[{"type":"FORBIDDEN","message":"Resource limits for this query exceeded."}]"#).isResourceLimit)
     }
@@ -91,26 +103,32 @@ struct GitHubClientTests {
         MockURLProtocol.requestHandler = { request in
             let number = recorder.record(body: requestBody(from: request))
             let cursor = number == 2 ? "second" : "first"
-            let body = Data(#"{"data":{"search":{"edges":[],"issueCount":0,"pageInfo":{"hasNextPage":true,"endCursor":"\#(cursor)"}}}}"#.utf8)
+            let body = Data(
+                #"{"data":{"search":{"edges":[],"issueCount":0,"pageInfo":{"hasNextPage":true,"endCursor":"\#(cursor)"}}}}"#.utf8)
             return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, body)
         }
         defer { MockURLProtocol.requestHandler = nil }
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
-        let client = try TestGitHubTransport.client(baseURL: "https://cursor-cycle.example/api/v3", buildType: .none,
-                                     session: URLSession(configuration: configuration))
+        let client = try TestGitHubTransport.client(
+            baseURL: "https://cursor-cycle.example/api/v3", buildType: .none,
+            session: URLSession(configuration: configuration))
         await #expect(throws: URLError.self) { try await client.fetchPulls(filter: "author:octocat") }
         #expect(recorder.bodies.count == 3)
     }
 
     @Test func avatarDownloadsAreSharedAndHTTPFailuresAreNotCached() async throws {
         let recorder = RequestRecorder()
-        let png = try #require(Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGMwTjvzHwAEmgJlc/kGHwAAAABJRU5ErkJggg=="))
+        let png = try #require(
+            Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGMwTjvzHwAEmgJlc/kGHwAAAABJRU5ErkJggg=="))
         MockURLProtocol.requestHandler = { request in
             let number = recorder.record(body: nil)
             Thread.sleep(forTimeInterval: 0.03)
-            return (HTTPURLResponse(url: request.url!, statusCode: number == 1 ? 404 : 200,
-                                    httpVersion: nil, headerFields: ["Content-Type": "image/png"])!, png)
+            return (
+                HTTPURLResponse(
+                    url: request.url!, statusCode: number == 1 ? 404 : 200,
+                    httpVersion: nil, headerFields: ["Content-Type": "image/png"])!, png
+            )
         }
         defer { MockURLProtocol.requestHandler = nil }
         let configuration = URLSessionConfiguration.ephemeral
@@ -143,8 +161,9 @@ struct GitHubClientTests {
         defer { MockURLProtocol.requestHandler = nil }
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [MockURLProtocol.self]
-        let client = try TestGitHubTransport.client(baseURL: "https://resource-limit.example.com/api/v3",
-                                     buildType: .none, session: URLSession(configuration: configuration))
+        let client = try TestGitHubTransport.client(
+            baseURL: "https://resource-limit.example.com/api/v3",
+            buildType: .none, session: URLSession(configuration: configuration))
         #expect(try await client.fetchPulls(filter: "author:octocat").isEmpty)
         #expect(recorder.bodies.count == 3)
         let secondBody = try #require(recorder.bodies[1])
@@ -236,7 +255,9 @@ struct GitHubClientTests {
             let data: Data
 
             if requestNumber == 1 {
-                data = Data(#"{"errors":[{"message":"Field 'stack' doesn't exist on type 'PullRequest'","extensions":{"code":"undefinedField","typeName":"PullRequest","fieldName":"stack"}}]}"#.utf8)
+                data = Data(
+                    #"{"errors":[{"message":"Field 'stack' doesn't exist on type 'PullRequest'","extensions":{"code":"undefinedField","typeName":"PullRequest","fieldName":"stack"}}]}"#
+                        .utf8)
             } else {
                 data = Data(
                     #"{"data":{"search":{"edges":[],"issueCount":0,"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#.utf8
@@ -281,11 +302,17 @@ struct GitHubClientTests {
             let data: Data
 
             if query.contains("query PullRequestDetails") {
-                data = Data(#"{"data":{"nodes":[{"number":102,"createdAt":"2026-09-16T00:00:00Z","updatedAt":"2026-09-16T00:00:00Z","title":"UI","headRefName":"stack/ui","url":"https://github.com/example/repo/pull/102","isDraft":true,"reviewDecision":null,"mergeable":"UNKNOWN","author":{"login":"octocat","avatarUrl":null},"repository":{"name":"repo","nameWithOwner":"example/repo"}}]}}"#.utf8)
+                data = Data(
+                    #"{"data":{"nodes":[{"number":102,"createdAt":"2026-09-16T00:00:00Z","updatedAt":"2026-09-16T00:00:00Z","title":"UI","headRefName":"stack/ui","url":"https://github.com/example/repo/pull/102","isDraft":true,"reviewDecision":null,"mergeable":"UNKNOWN","author":{"login":"octocat","avatarUrl":null},"repository":{"name":"repo","nameWithOwner":"example/repo"}}]}}"#
+                        .utf8)
             } else if query.contains("query PullRequestStacks") {
-                data = Data(#"{"data":{"nodes":[{"id":"PRS_example","number":42,"baseRefName":"main","size":2,"entries":{"nodes":[{"position":1,"pullRequest":{"id":"PR_101","number":101,"title":"Foundation","url":"https://github.com/example/repo/pull/101","state":"OPEN","isDraft":false,"headRefName":"stack/foundation","headRefOid":"oid-101","reviewDecision":"APPROVED","mergeable":"MERGEABLE"}},{"position":2,"pullRequest":{"id":"PR_102","number":102,"title":"UI","url":"https://github.com/example/repo/pull/102","state":"OPEN","isDraft":true,"headRefName":"stack/ui","headRefOid":"oid-102","reviewDecision":null,"mergeable":"UNKNOWN"}}]}}]}}"#.utf8)
+                data = Data(
+                    #"{"data":{"nodes":[{"id":"PRS_example","number":42,"baseRefName":"main","size":2,"entries":{"nodes":[{"position":1,"pullRequest":{"id":"PR_101","number":101,"title":"Foundation","url":"https://github.com/example/repo/pull/101","state":"OPEN","isDraft":false,"headRefName":"stack/foundation","headRefOid":"oid-101","reviewDecision":"APPROVED","mergeable":"MERGEABLE"}},{"position":2,"pullRequest":{"id":"PR_102","number":102,"title":"UI","url":"https://github.com/example/repo/pull/102","state":"OPEN","isDraft":true,"headRefName":"stack/ui","headRefOid":"oid-102","reviewDecision":null,"mergeable":"UNKNOWN"}}]}}]}}"#
+                        .utf8)
             } else {
-                data = Data(#"{"data":{"search":{"nodes":[{"id":"PR_102","url":"https://github.com/example/repo/pull/102","updatedAt":"2026-09-16T00:00:00Z","isDraft":true,"mergeable":"UNKNOWN","stack":{"id":"PRS_example","number":42,"baseRefName":"main","size":2},"stackEntry":{"position":2}}],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#.utf8)
+                data = Data(
+                    #"{"data":{"search":{"nodes":[{"id":"PR_102","url":"https://github.com/example/repo/pull/102","updatedAt":"2026-09-16T00:00:00Z","isDraft":true,"mergeable":"UNKNOWN","stack":{"id":"PRS_example","number":42,"baseRefName":"main","size":2},"stackEntry":{"position":2}}],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#
+                        .utf8)
             }
 
             let response = HTTPURLResponse(
@@ -325,7 +352,8 @@ struct GitHubClientTests {
             _ = recorder.record(body: body)
             let pullRequestID = try rebasePullRequestID(from: body)
             let data = Data(
-                #"{"data":{"updatePullRequestBranch":{"pullRequest":{"id":"\#(pullRequestID)","headRefOid":"updated-\#(pullRequestID)"}}}}"#.utf8
+                #"{"data":{"updatePullRequestBranch":{"pullRequest":{"id":"\#(pullRequestID)","headRefOid":"updated-\#(pullRequestID)"}}}}"#
+                    .utf8
             )
             let response = HTTPURLResponse(
                 url: try #require(request.url),
@@ -448,7 +476,10 @@ private actor TwoPhaseTransport: GitHubAPITransport {
     private var edges: [Edge]
     private(set) var detailBatches: [[String]] = []
     init(edges: [Edge]) { self.edges = edges }
-    func reset(edges: [Edge]) { self.edges = edges; detailBatches = [] }
+    func reset(edges: [Edge]) {
+        self.edges = edges
+        detailBatches = []
+    }
     func api(_ endpoint: String, body: Data?) async throws -> Data {
         let object = try JSONSerialization.jsonObject(with: body!) as! [String: Any]
         if let ids = (object["variables"] as? [String: Any])?["ids"] as? [String], query(from: body!).contains("PullRequestDetails") {
@@ -461,4 +492,3 @@ private actor TwoPhaseTransport: GitHubAPITransport {
         ((try? JSONSerialization.jsonObject(with: body)) as? [String: Any])?["query"] as? String ?? ""
     }
 }
-

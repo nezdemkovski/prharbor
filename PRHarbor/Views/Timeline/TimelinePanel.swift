@@ -31,7 +31,8 @@ struct TimelinePanel: View {
         if showAssigned { sources.insert(.assigned) }
         if showCreated { sources.insert(.created) }
         if showRequested { sources.insert(.requested) }
-        return TimelineScreenInput(items: previewItems ?? store.timelineItems, sources: previewItems == nil ? sources : .all,
+        return TimelineScreenInput(
+            items: previewItems ?? store.timelineItems, sources: previewItems == nil ? sources : .all,
             now: now, thresholds: thresholds, sortOrder: sortOrder, collapsed: collapsed, intelligentSearch: intelligentSearch)
     }
     private var snapshot: TimelineScreenSnapshot { screen.snapshot }
@@ -54,35 +55,53 @@ struct TimelinePanel: View {
     var body: some View {
         let request = snapshot.searchRequest
         VStack(spacing: 0) {
-            TimelineSearchBar(query: queryBinding, focus: $searching, onNavigate: { searching = false; navigating = true; move(1) },
-                              isUnderstanding: request.needsInterpretation && snapshot.isSearching,
-                              understood: request.needsInterpretation && snapshot.understood,
-                              searchMessage: request.needsInterpretation ? snapshot.searchMessage : nil, naturalLanguageEnabled: intelligentSearch)
-            TimelineHeading(items: items, now: now, tab: tabBinding, range: $range, sortOrder: $sortOrder, store: store, isPreview: previewItems != nil, onSettings: onSettings, onAbout: onAbout, onQuit: onQuit)
+            TimelineSearchBar(
+                query: queryBinding, focus: $searching,
+                onNavigate: {
+                    searching = false
+                    navigating = true
+                    move(1)
+                },
+                isUnderstanding: request.needsInterpretation && snapshot.isSearching,
+                understood: request.needsInterpretation && snapshot.understood,
+                searchMessage: request.needsInterpretation ? snapshot.searchMessage : nil, naturalLanguageEnabled: intelligentSearch)
+            TimelineHeading(
+                items: items, now: now, tab: tabBinding, range: $range, sortOrder: $sortOrder, store: store, isPreview: previewItems != nil,
+                onSettings: onSettings, onAbout: onAbout, onQuit: onQuit)
             TimelineSummary(items: snapshot.tabItems, zone: zoneBinding)
                 .padding(.horizontal, Spacing.panel).padding(.top, Spacing.xxxs).padding(.bottom, Spacing.xl)
             if intelligentMorningBrief {
-                TimelineMorningBrief(snapshot: briefSnapshot, expanded: $briefExpanded, select: select,
-                                     emptyMessage: store.isLoading && items.isEmpty ? "Waiting for pull requests…" : store.error != nil && items.isEmpty ? "Refresh pull requests to prepare an overview." : "All clear. No pull requests need attention right now.")
-                    .padding(.horizontal, Spacing.panel).padding(.bottom, Spacing.m)
-                    .onGeometryChange(for: CGFloat.self, of: \.size.height) { briefHeight = $0 }
+                TimelineMorningBrief(
+                    snapshot: briefSnapshot, expanded: $briefExpanded, select: select,
+                    emptyMessage: store.isLoading && items.isEmpty
+                        ? "Waiting for pull requests…"
+                        : store.error != nil && items.isEmpty
+                            ? "Refresh pull requests to prepare an overview." : "All clear. No pull requests need attention right now."
+                )
+                .padding(.horizontal, Spacing.panel).padding(.bottom, Spacing.m)
+                .onGeometryChange(for: CGFloat.self, of: \.size.height) { briefHeight = $0 }
             }
             if let error = store.error {
                 HStack {
                     SwiftUI.Label(error, systemImage: "exclamationmark.triangle").lineLimit(2)
-                    Spacer(); Button("Retry") { store.refresh() }
+                    Spacer()
+                    Button("Retry") { store.refresh() }
                 }.font(.caption).foregroundStyle(Palette.failure).padding(.horizontal, Spacing.panel).padding(.bottom, Spacing.m)
             }
             if presentation.visibleIDs.isEmpty {
                 // Without rows the axis has nothing to measure; the empty state takes its place.
-                TimelineEmptyState(isLoading: store.isLoading && items.isEmpty,
-                                   isSearching: snapshot.searchRequest.needsInterpretation && snapshot.isSearching,
-                                   isFiltered: !query.isEmpty || snapshot.zone != nil || brush != nil,
-                                   searchMessage: snapshot.searchRequest.needsInterpretation ? snapshot.searchMessage ?? "No pull request fits this search." : nil,
-                                   clearFilters: screen.clearQuery)
-                    .frame(maxWidth: .infinity).frame(height: Layout.axisHeight + rowAreaHeight)
+                TimelineEmptyState(
+                    isLoading: store.isLoading && items.isEmpty,
+                    isSearching: snapshot.searchRequest.needsInterpretation && snapshot.isSearching,
+                    isFiltered: !query.isEmpty || snapshot.zone != nil || brush != nil,
+                    searchMessage: snapshot.searchRequest.needsInterpretation
+                        ? snapshot.searchMessage ?? "No pull request fits this search." : nil,
+                    clearFilters: screen.clearQuery
+                )
+                .frame(maxWidth: .infinity).frame(height: Layout.axisHeight + rowAreaHeight)
             } else {
-                TimelineInteractiveAxis(scale: scale, now: now, interaction: interaction, brush: brush, clearBrush: { writeIdle(nil) }).padding(.horizontal, Spacing.panel)
+                TimelineInteractiveAxis(scale: scale, now: now, interaction: interaction, brush: brush, clearBrush: { writeIdle(nil) })
+                    .padding(.horizontal, Spacing.panel)
                 rows.frame(height: rowAreaHeight)
             }
             if let selected {
@@ -99,16 +118,23 @@ struct TimelinePanel: View {
         .focusable().focused($navigating).focusEffectDisabled()
         .onKeyPress(phases: [.down, .repeat], action: handleNavigation)
         .onChange(of: screenInput, initial: true) { _, value in screen.update(value) }
-        .onChange(of: intelligentMorningBrief) { _, enabled in if !enabled { briefExpanded = false; briefHeight = 0 } }
+        .onChange(of: intelligentMorningBrief) { _, enabled in
+            if !enabled {
+                briefExpanded = false
+                briefHeight = 0
+            }
+        }
         .task(id: request) { await screen.resolveSearch(request) }
     }
     private var rows: some View {
         let rowsByID = Dictionary(uniqueKeysWithValues: presentation.rows.map { ($0.id, $0) })
-        return TimelineNativeScrollView(height: presentation.contentHeight, rowIDs: presentation.rows.map(\.id),
+        return TimelineNativeScrollView(
+            height: presentation.contentHeight, rowIDs: presentation.rows.map(\.id),
             ranges: presentation.rowRanges, selection: selection, interaction: interaction,
             content: { id in rowDocument(row: rowsByID[id]).id(id) },
             placeholder: { id in placeholder(for: rowsByID[id]) },
-            activate: { id in activate(rowsByID[id]) })
+            activate: { id in activate(rowsByID[id]) }
+        )
         .background(alignment: .trailing) {
             TimelineInteractiveGrid(scale: scale, now: now, interaction: interaction, brush: brush)
                 .frame(width: TimelineMetrics.trackWidth).padding(.trailing, TimelineMetrics.inset)
@@ -128,18 +154,21 @@ struct TimelinePanel: View {
                 case .ended: interaction.cursorAge = nil
                 }
             }
-            .simultaneousGesture(DragGesture(minimumDistance: Layout.brushDragThreshold).onChanged { value in
-                interaction.drag(from: value.startLocation.x, to: value.location.x, scale: scale)
-            }.onEnded { _ in
-                if interaction.brushing { writeIdle(interaction.dragging) }
-                interaction.endDrag()
-            })
+            .simultaneousGesture(
+                DragGesture(minimumDistance: Layout.brushDragThreshold).onChanged { value in
+                    interaction.drag(from: value.startLocation.x, to: value.location.x, scale: scale)
+                }.onEnded { _ in
+                    if interaction.brushing { writeIdle(interaction.dragging) }
+                    interaction.endDrag()
+                })
     }
     private func rowView(_ row: TimelinePresentation.Row) -> some View {
-        TimelinePresentedRow(row: row, scale: scale, now: now, selection: row.normalizedSelection(selection),
+        TimelinePresentedRow(
+            row: row, scale: scale, now: now, selection: row.normalizedSelection(selection),
             showOwner: presentation.showOwner, stackCollapsed: stackCollapsed(row),
             height: presentation.rowRanges[row.id].map { $0.upperBound - $0.lowerBound },
-            select: select, toggleRepo: toggleRepo).equatable()
+            select: select, toggleRepo: toggleRepo
+        ).equatable()
     }
 
     private func stackCollapsed(_ row: TimelinePresentation.Row) -> Bool {
@@ -192,7 +221,8 @@ struct TimelinePanel: View {
     private func select(_ id: String) {
         guard let value = screen.select(id) else { return }
         collapsed = value
-        searching = false; navigating = true
+        searching = false
+        navigating = true
     }
     private func toggleRepo(_ name: String) { collapsed = screen.toggleCollapsed(name) }
     private func move(_ delta: Int) { screen.move(delta) }
@@ -210,6 +240,8 @@ struct TimelinePanel: View {
         guard let selected else { return }
         if selected.isBlocked, let base = selected.blockedBy {
             if items.contains(where: { $0.id == base.url.absoluteString }) { select(base.url.absoluteString) } else { openURL(base.url) }
-        } else { openURL(selected.pull.url) }
+        } else {
+            openURL(selected.pull.url)
+        }
     }
 }

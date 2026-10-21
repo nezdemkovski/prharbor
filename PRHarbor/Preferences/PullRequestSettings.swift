@@ -22,7 +22,8 @@ nonisolated struct PullRequestSettings: Equatable, Sendable {
     var refreshInterval: TimeInterval { Double(max(1, refreshMinutes)) * 60 }
 
     @MainActor static var saved: PullRequestSettings {
-        PullRequestSettings(apiBaseURL: Defaults[.githubApiBaseUrl], refreshMinutes: Defaults[.refreshRate],
+        PullRequestSettings(
+            apiBaseURL: Defaults[.githubApiBaseUrl], refreshMinutes: Defaults[.refreshRate],
             counterType: Defaults[.counterType], showAssigned: Defaults[.showAssigned], showCreated: Defaults[.showCreated],
             showRequested: Defaults[.showRequested], notifyAssigned: Defaults[.notifyAssigned], notifyCreated: Defaults[.notifyCreated],
             notifyReviewRequested: Defaults[.notifyReviewRequested], notifyRotting: Defaults[.notifyRotting],
@@ -35,11 +36,14 @@ nonisolated struct PullRequestSettings: Equatable, Sendable {
     /// The query a refresh needs: visible categories plus whatever notifications and the counter read.
     func scope(username: String) -> PullSnapshotScope {
         let fetchAssigned = showAssigned || notifyAssigned || counterType == .assigned
-        let fetchCreated = showCreated || notifyRotting || morningSummary || notifyCreated
+        let fetchCreated =
+            showCreated || notifyRotting || morningSummary || notifyCreated
             || counterType == .rotting || counterType == .created
-        let fetchRequested = showRequested || morningSummary || notifyReviewRequested
+        let fetchRequested =
+            showRequested || morningSummary || notifyReviewRequested
             || counterType == .waitingOnYou || counterType == .rotting || counterType == .reviewRequested
-        return PullSnapshotScope(username: username, baseURL: apiBaseURL, buildType: buildType, hideDrafts: hideDrafts,
-                                 assigned: fetchAssigned, created: fetchCreated, requested: fetchRequested)
+        return PullSnapshotScope(
+            username: username, baseURL: apiBaseURL, buildType: buildType, hideDrafts: hideDrafts,
+            assigned: fetchAssigned, created: fetchCreated, requested: fetchRequested)
     }
 }

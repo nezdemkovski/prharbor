@@ -1,26 +1,28 @@
-import Foundation
 import Defaults
-import SwiftUI
-import Security
+import Foundation
 import ImageIO
+import Security
+import SwiftUI
 import Testing
+
 @testable import PRHarbor
 
 struct PullRequestStackTests {
     @Test
     func decodesLayerOrderAndTrunk() throws {
-        let data = Data(#"""
-        {
-            "id":"PRS_example",
-            "number":42,
-            "baseRefName":"main",
-            "size":2,
-            "entries":{"nodes":[
-                {"position":1,"pullRequest":{"id":"PR_101","number":101,"title":"Foundation","url":"https://github.com/example/repo/pull/101","state":"OPEN","isDraft":false,"headRefName":"stack/foundation","headRefOid":"oid-101","reviewDecision":"APPROVED","mergeable":"MERGEABLE"}},
-                {"position":2,"pullRequest":{"id":"PR_102","number":102,"title":"UI","url":"https://github.com/example/repo/pull/102","state":"OPEN","isDraft":true,"headRefName":"stack/ui","headRefOid":"oid-102","reviewDecision":null,"mergeable":"UNKNOWN"}}
-            ]}
-        }
-        """#.utf8)
+        let data = Data(
+            #"""
+            {
+                "id":"PRS_example",
+                "number":42,
+                "baseRefName":"main",
+                "size":2,
+                "entries":{"nodes":[
+                    {"position":1,"pullRequest":{"id":"PR_101","number":101,"title":"Foundation","url":"https://github.com/example/repo/pull/101","state":"OPEN","isDraft":false,"headRefName":"stack/foundation","headRefOid":"oid-101","reviewDecision":"APPROVED","mergeable":"MERGEABLE"}},
+                    {"position":2,"pullRequest":{"id":"PR_102","number":102,"title":"UI","url":"https://github.com/example/repo/pull/102","state":"OPEN","isDraft":true,"headRefName":"stack/ui","headRefOid":"oid-102","reviewDecision":null,"mergeable":"UNKNOWN"}}
+                ]}
+            }
+            """#.utf8)
 
         let stack = try JSONDecoder().decode(PullRequestStack.self, from: data)
 

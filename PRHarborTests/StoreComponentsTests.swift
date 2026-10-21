@@ -2,15 +2,18 @@ import Foundation
 import Synchronization
 import Testing
 import UserNotifications
+
 @testable import PRHarbor
 
 @Suite("Store components")
 struct StoreComponentsTests {
-    private let scope = PullSnapshotScope(username: "octocat", baseURL: "https://api.github.com", buildType: .none,
-                                          hideDrafts: false, assigned: true, created: false, requested: true)
+    private let scope = PullSnapshotScope(
+        username: "octocat", baseURL: "https://api.github.com", buildType: .none,
+        hideDrafts: false, assigned: true, created: false, requested: true)
 
     @Test func searchesQueryTheConnectedAccountAndFollowTheScope() {
-        #expect(PullSearch.allCases.map { $0.filter(username: "octocat") }
+        #expect(
+            PullSearch.allCases.map { $0.filter(username: "octocat") }
                 == ["assignee:octocat", "author:octocat", "review-requested:octocat"])
         #expect(PullSearch.allCases.filter { $0.isEnabled(in: scope) } == [.assigned, .requested])
     }

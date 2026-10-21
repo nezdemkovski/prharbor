@@ -19,6 +19,8 @@ nonisolated struct PullTimelinePageInfo: Codable, Sendable, Equatable {
 }
 
 nonisolated struct PullTimelineNode: Codable, Sendable, Equatable {
+    // swift-format-ignore: AlwaysUseLowerCamelCase
+    // GraphQL's own field name.
     var __typename: String
     var createdAt: Date?
     var submittedAt: Date?
@@ -36,6 +38,8 @@ nonisolated struct TimelineReviewer: Codable, Sendable, Equatable {
     var login: String?
     var avatarUrl: URL?
     var name: String?
+    // swift-format-ignore: AlwaysUseLowerCamelCase
+    // GraphQL's own field name.
     var __typename: String? = nil
 }
 

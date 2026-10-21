@@ -12,7 +12,9 @@ struct ChipToggleStyle: ToggleStyle {
         @State private var hovering = false
 
         var body: some View {
-            Button { configuration.isOn.toggle() } label: {
+            Button {
+                configuration.isOn.toggle()
+            } label: {
                 configuration.label
                     .font(.ui(Typography.callout)).foregroundStyle(Palette.textSecondary)
                     .padding(.horizontal, Spacing.m).frame(height: Size.chip)

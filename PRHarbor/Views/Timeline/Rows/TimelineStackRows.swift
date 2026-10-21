@@ -22,18 +22,21 @@ struct TimelineStackRows: View {
                             ForEach(items) { item in
                                 GeometryReader { geometry in
                                     let start = scale.position(age: item.age) * geometry.size.width
-                                    Capsule().fill((item.hasKnownQuietPeriod ? item.freshness.fill : Palette.textTertiary).opacity(Opacity.quietBar)).frame(width: max(2, geometry.size.width - start)).offset(x: start)
+                                    Capsule().fill(
+                                        (item.hasKnownQuietPeriod ? item.freshness.fill : Palette.textTertiary).opacity(Opacity.quietBar)
+                                    ).frame(width: max(2, geometry.size.width - start)).offset(x: start)
                                 }.frame(height: TimelineRowGeometry.collapsedBarHeight)
                             }
                         }
                     }
                     .frame(height: TimelineRowGeometry.collapsedBodyHeight(layers: items.count))
                     .padding(TimelineRowGeometry.collapsedContentPadding)
-                        .contentShape(Rectangle())
+                    .contentShape(Rectangle())
                 }.buttonStyle(.plain)
             } else {
                 ForEach(items) { item in
-                    TimelineRow(item: item, scale: scale, now: now, selected: selection == item.id, layer: true) { select(item.id) }.id(item.id)
+                    TimelineRow(item: item, scale: scale, now: now, selected: selection == item.id, layer: true) { select(item.id) }.id(
+                        item.id)
                 }
             }
             Button(action: toggle) {
@@ -46,9 +49,13 @@ struct TimelineStackRows: View {
                         if mergedStyle != .hidden, let entries = group.stack?.entries?.nodes {
                             let merged = entries.compactMap(\.pullRequest).filter { $0.state == .merged }
                             if !merged.isEmpty {
-                                Text("· " + (mergedStyle == .count ? "\(merged.count) merged" : merged.map { "#\($0.number)" }.joined(separator: " ")))
-                                    .font(.ui(Typography.footnote)).foregroundStyle(Palette.textTertiary).lineLimit(1)
-                                    .help(merged.map { "#\($0.number) \($0.title)" }.joined(separator: "\n"))
+                                Text(
+                                    "· "
+                                        + (mergedStyle == .count
+                                            ? "\(merged.count) merged" : merged.map { "#\($0.number)" }.joined(separator: " "))
+                                )
+                                .font(.ui(Typography.footnote)).foregroundStyle(Palette.textTertiary).lineLimit(1)
+                                .help(merged.map { "#\($0.number) \($0.title)" }.joined(separator: "\n"))
                             }
                         }
                     }
@@ -59,7 +66,10 @@ struct TimelineStackRows: View {
         }
         .background(alignment: .topLeading) {
             if !isCollapsed {
-                TimelineLiquidRail(layers: items.count).frame(width: Layout.stackRailWidth, height: CGFloat(items.count) * TimelineRowGeometry.layerHeight + TimelineRowGeometry.stackFooterHeight).offset(x: Layout.stackRailOffset)
+                TimelineLiquidRail(layers: items.count).frame(
+                    width: Layout.stackRailWidth,
+                    height: CGFloat(items.count) * TimelineRowGeometry.layerHeight + TimelineRowGeometry.stackFooterHeight
+                ).offset(x: Layout.stackRailOffset)
             }
         }
         .padding(.vertical, TimelineRowGeometry.stackPadding)

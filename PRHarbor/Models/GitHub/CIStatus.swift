@@ -13,7 +13,8 @@ nonisolated struct CICheck: Identifiable, Equatable, Sendable {
         if let suites = commits.nodes.first?.commit.checkSuites {
             for suite in suites.nodes {
                 for check in suite.checkRuns?.nodes ?? [] {
-                    result.append(CICheck(name: check.name, status: check.conclusion ?? "PENDING", url: check.detailsUrl, index: result.count))
+                    result.append(
+                        CICheck(name: check.name, status: check.conclusion ?? "PENDING", url: check.detailsUrl, index: result.count))
                 }
             }
         } else if let rollup = commits.nodes.first?.commit.statusCheckRollup {
@@ -38,7 +39,6 @@ nonisolated func ciAggregateStatus(_ commits: CommitsNodes?) -> CIStatusKind? {
     if observed.contains(.pending) { return .pending }
     return nil
 }
-
 
 nonisolated enum CIStatusKind: Equatable, Sendable {
     case success

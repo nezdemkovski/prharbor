@@ -7,16 +7,16 @@ struct PRHarborApp: App {
 
     var body: some Scene {
         #if DEBUG
-        Window(AppRuntime.current == .timelinePreview ? "PR Harbor — Timeline Preview" : "PR Harbor", id: "timeline-preview") {
-            if AppRuntime.current == .timelinePreview {
-                TimelinePreviewHost(store: store)
-            } else {
-                PanelView(store: store, onQuit: { NSApp.terminate(nil) })
+            Window(AppRuntime.current == .timelinePreview ? "PR Harbor — Timeline Preview" : "PR Harbor", id: "timeline-preview") {
+                if AppRuntime.current == .timelinePreview {
+                    TimelinePreviewHost(store: store)
+                } else {
+                    PanelView(store: store, onQuit: { NSApp.terminate(nil) })
+                }
             }
-        }
-        .windowResizability(.contentSize)
-        .defaultLaunchBehavior(AppRuntime.current.showsDevelopmentWindow ? .presented : .suppressed)
-        .restorationBehavior(.disabled)
+            .windowResizability(.contentSize)
+            .defaultLaunchBehavior(AppRuntime.current.showsDevelopmentWindow ? .presented : .suppressed)
+            .restorationBehavior(.disabled)
         #endif
         Settings {
             SettingsView(store: store, usernameOverride: AppRuntime.current.usernameOverride)

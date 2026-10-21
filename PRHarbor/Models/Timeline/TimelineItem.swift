@@ -48,9 +48,14 @@ nonisolated struct TimelineItem: Identifiable, Equatable, Sendable {
         return quietDays < 1 ? "Active today" : "\(TimelinePolicy.duration(quietDays)) quiet"
     }
 
-    init(pull: Pull, username: String, now: Date, thresholds: [Int], bots: [String], ownComments: Bool, snoozedUntil: Date?, reviewRequested: Bool = true, sources: PullSources = .all, botMatcher: TimelineBotMatcher? = nil) {
+    init(
+        pull: Pull, username: String, now: Date, thresholds: [Int], bots: [String], ownComments: Bool, snoozedUntil: Date?,
+        reviewRequested: Bool = true, sources: PullSources = .all, botMatcher: TimelineBotMatcher? = nil
+    ) {
         let matcher = botMatcher ?? TimelineBotMatcher(patterns: bots)
-        let cleaned = pull.title.replacingOccurrences(of: #"^(\s*\[?[A-Z]{2,}-\d+\]?\s*[:,\-–]?\s*)+"#, with: "", options: .regularExpression).trimmingCharacters(in: .whitespaces)
+        let cleaned = pull.title.replacingOccurrences(
+            of: #"^(\s*\[?[A-Z]{2,}-\d+\]?\s*[:,\-–]?\s*)+"#, with: "", options: .regularExpression
+        ).trimmingCharacters(in: .whitespaces)
         self.title = cleaned.isEmpty ? pull.title : cleaned
         self.ticket = pull.title.range(of: #"\b[A-Z]{2,}-\d+\b"#, options: .regularExpression).map { String(pull.title[$0]) }
         self.hasHumanReviewRequest = (pull.reviewRequests?.nodes ?? []).contains { request in
@@ -72,10 +77,15 @@ nonisolated struct TimelineItem: Identifiable, Equatable, Sendable {
         self.ci = ciAggregateStatus(pull.commits)
         let truncated = pull.timelineItems?.pageInfo?.hasPreviousPage == true
         if isMine {
-            let relevant = events.filter { $0.kind != .opened && (ownComments || !($0.kind == .comment && $0.person?.login.caseInsensitiveCompare(pull.author?.login ?? "") == .orderedSame)) }
+            let relevant = events.filter {
+                $0.kind != .opened
+                    && (ownComments
+                        || !($0.kind == .comment && $0.person?.login.caseInsensitiveCompare(pull.author?.login ?? "") == .orderedSame))
+            }
             // Older API fixtures have no history. Never infer a quiet period from an empty timeline.
             self.hasKnownQuietPeriod = !truncated || relevant.last != nil
-            self.waitingSince = pull.timelineItems == nil || (truncated && relevant.isEmpty) ? pull.updatedAt : relevant.last?.date ?? pull.createdAt
+            self.waitingSince =
+                pull.timelineItems == nil || (truncated && relevant.isEmpty) ? pull.updatedAt : relevant.last?.date ?? pull.createdAt
         } else {
             let request = events.last(where: { $0.kind == .requested && $0.person?.login.caseInsensitiveCompare(username) == .orderedSame })
             self.hasKnownQuietPeriod = !truncated || request != nil
@@ -83,7 +93,8 @@ nonisolated struct TimelineItem: Identifiable, Equatable, Sendable {
         }
         let quietDays = TimelinePolicy.days(since: waitingSince, now: now)
         self.quietDays = quietDays
-        self.freshness = hasKnownQuietPeriod ? (Freshness.allCases.first { $0.contains(quietDays, thresholds: thresholds) } ?? .rotting) : .fresh
+        self.freshness =
+            hasKnownQuietPeriod ? (Freshness.allCases.first { $0.contains(quietDays, thresholds: thresholds) } ?? .rotting) : .fresh
         let open = (pull.stack?.entries?.nodes ?? []).filter { $0.pullRequest?.state == .open }.sorted { $0.position < $1.position }
         self.blockedBy = open.first.flatMap { entry in
             guard let base = entry.pullRequest, base.url != pull.url, (pull.stackEntry?.position ?? 0) > entry.position else { return nil }
@@ -97,7 +108,8 @@ nonisolated struct TimelineItem: Identifiable, Equatable, Sendable {
 
     func matches(terms: [String]) -> Bool {
         guard !terms.isEmpty else { return true }
-        let searchable = "\(pull.title) \(pull.repository.nameWithOwner) \(pull.author?.login ?? "") #\(pull.number) \(pull.headRefName)".lowercased()
+        let searchable = "\(pull.title) \(pull.repository.nameWithOwner) \(pull.author?.login ?? "") #\(pull.number) \(pull.headRefName)"
+            .lowercased()
         return terms.allSatisfy { term in
             switch term {
             case "mine", "my": return isMine
@@ -119,7 +131,8 @@ nonisolated struct TimelineItem: Identifiable, Equatable, Sendable {
                 if let idle = TimelinePolicy.idleRange(term) { return hasKnownQuietPeriod && idle.contains(quietDays) }
                 if term.hasPrefix("@") {
                     let login = String(term.dropFirst())
-                    return pull.author?.login.lowercased() == login || (pull.reviewRequests?.nodes ?? []).contains { $0.requestedReviewer?.login?.lowercased() == login }
+                    return pull.author?.login.lowercased() == login
+                        || (pull.reviewRequests?.nodes ?? []).contains { $0.requestedReviewer?.login?.lowercased() == login }
                 }
                 if term.hasPrefix("#"), let number = Int(term.dropFirst()) { return pull.number == number || pull.stack?.number == number }
                 if let comparison = term.first, comparison == ">" || comparison == "<" {

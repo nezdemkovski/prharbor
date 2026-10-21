@@ -12,18 +12,25 @@ nonisolated struct NotificationDelivery: Sendable {
         let center = UNUserNotificationCenter.current()
         center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
         let open = UNNotificationAction(identifier: openAction, title: "Open PR", options: [.foreground])
-        center.setNotificationCategories(Set(Category.allCases.map {
-            UNNotificationCategory(identifier: $0.rawValue, actions: [open], intentIdentifiers: [])
-        }))
+        center.setNotificationCategories(
+            Set(
+                Category.allCases.map {
+                    UNNotificationCategory(identifier: $0.rawValue, actions: [open], intentIdentifiers: [])
+                }))
     }
 
     var post: @Sendable (UNNotificationRequest) -> Void = { UNUserNotificationCenter.current().add($0) }
 
     /// Announces pull requests that appeared since the last refresh, for the kinds the settings enable.
     func announceNew(requested: [Pull], assigned: [Pull], created: [Pull], settings: PullRequestSettings) {
-        if settings.notifyReviewRequested { requested.forEach { pullRequest($0, title: "Review requested", category: .review) } }
-        if settings.notifyAssigned { assigned.forEach { pullRequest($0, title: "PR assigned to you", category: .assigned) } }
-        if settings.notifyCreated { created.forEach { pullRequest($0, title: "New PR created", category: .created) } }
+        let announcements: [(enabled: Bool, pulls: [Pull], title: String, category: Category)] = [
+            (settings.notifyReviewRequested, requested, "Review requested", .review),
+            (settings.notifyAssigned, assigned, "PR assigned to you", .assigned),
+            (settings.notifyCreated, created, "New PR created", .created)
+        ]
+        for announcement in announcements where announcement.enabled {
+            for pull in announcement.pulls { pullRequest(pull, title: announcement.title, category: announcement.category) }
+        }
     }
 
     func pullRequest(_ pull: Pull, title: String, category: Category) {

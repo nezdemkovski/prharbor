@@ -44,7 +44,8 @@ struct TimelineNativeScrollView<Content: View>: NSViewRepresentable {
         let offset = anchor.flatMap { coordinator.ranges[$0] }.map { top - $0.lowerBound } ?? 0
         let changedSelection = coordinator.selection != selection
         coordinator.selection = selection
-        coordinator.document.configure(height: height, rowIDs: rowIDs, ranges: ranges, content: content,
+        coordinator.document.configure(
+            height: height, rowIDs: rowIDs, ranges: ranges, content: content,
             placeholder: placeholder, activate: activate, appearance: NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua))
         coordinator.rowIDs = rowIDs
         coordinator.ranges = ranges
@@ -67,13 +68,18 @@ struct TimelineNativeScrollView<Content: View>: NSViewRepresentable {
         var generation = 0
         init(content: @escaping (String) -> Content) { document = TimelineVirtualDocumentView(content: content) }
 
-        func positionViewport(_ scroll: TimelineAppKitScrollView, anchor: String?, offset: CGFloat,
-                              top: CGFloat, changedSelection: Bool) {
+        func positionViewport(
+            _ scroll: TimelineAppKitScrollView, anchor: String?, offset: CGFloat,
+            top: CGFloat, changedSelection: Bool
+        ) {
             let viewport = scroll.contentView.bounds
             var y = anchor.flatMap { ranges[$0] }.map { $0.lowerBound + offset } ?? top
             if changedSelection, let selection, let range = ranges[selection] {
-                if range.lowerBound < y { y = range.lowerBound }
-                else if range.upperBound > y + viewport.height { y = range.upperBound - viewport.height }
+                if range.lowerBound < y {
+                    y = range.lowerBound
+                } else if range.upperBound > y + viewport.height {
+                    y = range.upperBound - viewport.height
+                }
             }
             let maximum = max(0, document.frame.height - viewport.height)
             y = min(maximum, max(0, y))
@@ -85,4 +91,3 @@ struct TimelineNativeScrollView<Content: View>: NSViewRepresentable {
         }
     }
 }
-

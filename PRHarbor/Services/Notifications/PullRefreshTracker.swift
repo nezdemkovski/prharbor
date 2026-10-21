@@ -7,7 +7,8 @@ nonisolated struct PullRefreshTracker: Sendable {
     mutating func update(edges: [Edge], fetched: Bool, canNotify: Bool) -> [Pull] {
         let newPulls: [Pull]
         if canNotify && fetched && wasFetched {
-            newPulls = edges
+            newPulls =
+                edges
                 .filter { !knownURLs.contains($0.node.url.absoluteString) }
                 .map(\.node)
         } else {

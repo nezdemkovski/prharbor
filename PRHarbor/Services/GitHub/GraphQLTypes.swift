@@ -33,7 +33,8 @@ nonisolated struct GraphQLAPIError: LocalizedError, Sendable {
     var isMissingStackSchema: Bool {
         errors.contains { error in
             guard let extensions = error.extensions,
-                  extensions.code == "undefinedField" || extensions.code == "undefinedType" else { return false }
+                extensions.code == "undefinedField" || extensions.code == "undefinedType"
+            else { return false }
             return [extensions.fieldName, extensions.typeName].contains { $0?.lowercased().contains("stack") == true }
         }
     }

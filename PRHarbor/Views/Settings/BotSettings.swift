@@ -22,7 +22,9 @@ struct BotSettings: View {
             } header: {
                 Text("Bot accounts")
             } footer: {
-                Text("Their pull requests are grouped under Bots, and they don't count as reviewers. Use * as a wildcard; press Return to add.")
+                Text(
+                    "Their pull requests are grouped under Bots, and they don't count as reviewers. Use * as a wildcard; press Return to add."
+                )
             }
             Section {
                 Button("Reset to Defaults") { bots = Defaults.Keys.botAccounts.defaultValue }

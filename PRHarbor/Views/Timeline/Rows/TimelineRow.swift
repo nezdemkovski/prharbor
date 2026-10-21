@@ -17,7 +17,9 @@ struct TimelineRow: View {
                         .overlay(alignment: .bottomTrailing) {
                             if layer, let position = item.pull.stackEntry?.position {
                                 Text("\(position)").font(.ui(Typography.micro, .bold)).foregroundStyle(Palette.textSecondary)
-                                    .frame(minWidth: Size.positionBadge).frame(height: Size.positionBadge).background(Palette.raised, in: Capsule())
+                                    .frame(minWidth: Size.positionBadge).frame(height: Size.positionBadge).background(
+                                        Palette.raised, in: Capsule()
+                                    )
                                     .overlay(Capsule().strokeBorder(Palette.strong)).offset(Layout.positionBadgeOffset)
                             }
                         }
@@ -25,7 +27,10 @@ struct TimelineRow: View {
                         Text(item.title).font(.ui(Typography.body, .medium)).lineLimit(1)
                         HStack(spacing: Spacing.xs) {
                             Text(verbatim: "#\(item.pull.number)")
-                            if let detail = item.isMine ? item.ticket : item.pull.author?.login { Text("·"); Text(detail).lineLimit(1) }
+                            if let detail = item.isMine ? item.ticket : item.pull.author?.login {
+                                Text("·")
+                                Text(detail).lineLimit(1)
+                            }
                             if item.pull.isDraft { Text("· draft") }
                             if item.snoozedUntil != nil { Image(systemName: "moon.zzz") }
                         }
@@ -44,7 +49,10 @@ struct TimelineRow: View {
         }
         .buttonStyle(.plain)
         .help(item.pull.title + "\n" + item.standing)
-        .accessibilityAction(named: Text("Show history")) { Defaults[.detailHistory] = true; select() }
+        .accessibilityAction(named: Text("Show history")) {
+            Defaults[.detailHistory] = true
+            select()
+        }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(selected ? [.isSelected] : [])
         .contextMenu {

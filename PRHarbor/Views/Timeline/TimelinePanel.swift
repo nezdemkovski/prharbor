@@ -1,5 +1,5 @@
-import SwiftUI
 import Defaults
+import SwiftUI
 
 struct TimelinePanel: View {
     let store: PullRequestStore
@@ -79,7 +79,12 @@ struct TimelinePanel: View {
             }
             if presentation.visibleIDs.isEmpty {
                 // Without rows the axis has nothing to measure; the empty state takes its place.
-                emptyState.frame(maxWidth: .infinity).frame(height: Layout.axisHeight + rowAreaHeight)
+                TimelineEmptyState(isLoading: store.isLoading && items.isEmpty,
+                                   isSearching: snapshot.searchRequest.needsInterpretation && snapshot.isSearching,
+                                   isFiltered: !query.isEmpty || snapshot.zone != nil || brush != nil,
+                                   searchMessage: snapshot.searchRequest.needsInterpretation ? snapshot.searchMessage ?? "No pull request fits this search." : nil,
+                                   clearFilters: screen.clearQuery)
+                    .frame(maxWidth: .infinity).frame(height: Layout.axisHeight + rowAreaHeight)
             } else {
                 TimelineInteractiveAxis(scale: scale, now: now, interaction: interaction, brush: brush, clearBrush: { writeIdle(nil) }).padding(.horizontal, Spacing.panel)
                 rows.frame(height: rowAreaHeight)
@@ -226,29 +231,6 @@ struct TimelinePanel: View {
         return .handled
     }
 
-    @ViewBuilder private var emptyState: some View {
-        let request = snapshot.searchRequest
-        if store.isLoading && items.isEmpty {
-            ProgressView("Fetching pull requests…")
-        } else if request.needsInterpretation, snapshot.isSearching {
-            ProgressView("Searching…")
-        } else if query.isEmpty && snapshot.zone == nil && brush == nil {
-            ContentUnavailableView {
-                SwiftUI.Label("All Clear", systemImage: "checkmark.circle")
-            } description: {
-                Text("No open pull requests.").foregroundStyle(Palette.textSecondary)
-            }
-        } else {
-            ContentUnavailableView {
-                SwiftUI.Label("No Matches", systemImage: "line.3.horizontal.decrease.circle")
-            } description: {
-                Text(request.needsInterpretation ? snapshot.searchMessage ?? "No pull request fits this search." : "No pull request fits these filters.")
-                    .foregroundStyle(Palette.textSecondary)
-            } actions: {
-                Button("Clear Filters") { screen.clearQuery() }
-            }
-        }
-    }
     private func writeIdle(_ value: ClosedRange<Double>?) { screen.writeIdle(value) }
     private func select(_ id: String) {
         guard let value = screen.select(id) else { return }
@@ -272,40 +254,5 @@ struct TimelinePanel: View {
         if selected.isBlocked, let base = selected.blockedBy {
             if items.contains(where: { $0.id == base.url.absoluteString }) { select(base.url.absoluteString) } else { openURL(base.url) }
         } else { openURL(selected.pull.url) }
-    }
-}
-
-/// Content equality excludes action closures, which access the panel's live
-/// State/Defaults storage. Scrolling retains overlapping row render trees.
-struct TimelinePresentedRow: View, Equatable {
-    let row: TimelinePresentation.Row
-    let scale: TimelineScale
-    let now: Date
-    let selection: String?
-    let showOwner: Bool
-    let stackCollapsed: Bool
-    let height: CGFloat?
-    let select: (String) -> Void
-    let toggleRepo: (String) -> Void
-
-    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.row == rhs.row && lhs.scale == rhs.scale && lhs.now == rhs.now
-            && lhs.selection == rhs.selection && lhs.showOwner == rhs.showOwner
-            && lhs.stackCollapsed == rhs.stackCollapsed && lhs.height == rhs.height
-    }
-    var body: some View {
-        Group {
-            switch row {
-            case .repository(let name, let items, let collapsed):
-                TimelineRepositoryHeader(name: name, items: items, scale: scale,
-                    collapsed: collapsed, showOwner: showOwner) { toggleRepo(name) }
-            case .pull(let item):
-                TimelineRow(item: item, scale: scale, now: now, selected: selection == item.id) { select(item.id) }
-            case .stack(let group, let items):
-                TimelineStackRows(group: group, items: items, scale: scale, now: now, selection: selection,
-                    isCollapsed: stackCollapsed,
-                    select: select, toggle: { toggleRepo("stack:" + group.id) })
-            }
-        }.frame(height: height, alignment: .top)
     }
 }

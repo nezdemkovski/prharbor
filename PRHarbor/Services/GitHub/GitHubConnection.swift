@@ -1,9 +1,5 @@
 import Defaults
 import Foundation
-import os
-
-/// Request and sync timings, visible in Console under the "sync" category.
-nonisolated let syncLog = Logger(subsystem: "com.nezdemkovski.prharbor", category: "sync")
 
 /// The connected account. Its token lives in the Keychain, never in preferences.
 nonisolated struct GitHubConnection: Codable, Defaults.Serializable, Equatable, Sendable {

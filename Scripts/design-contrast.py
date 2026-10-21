@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the WCAG 2.2 contrast of every Palette color pair in PRHarbor/Helpers/DesignTokens.swift.
+"""Check the WCAG 2.2 contrast of every Palette color pair in PRHarbor/DesignSystem/DesignTokens.swift.
 
 Reads the light and dark values straight from the Swift source, prints a table per theme and
 exits with status 1 when a pair is below its minimum. Translucent colors are blended over the
@@ -11,7 +11,7 @@ import pathlib
 import re
 import sys
 
-SOURCE = pathlib.Path(__file__).resolve().parent.parent / "PRHarbor/Helpers/DesignTokens.swift"
+SOURCE = pathlib.Path(__file__).resolve().parent.parent / "PRHarbor/DesignSystem/DesignTokens.swift"
 
 BACKDROP = {"light": 0xECECEC, "dark": 0x1E1E1E}
 # Opacity the views apply to a freshness fill behind its label (Opacity.tintFill in the source).

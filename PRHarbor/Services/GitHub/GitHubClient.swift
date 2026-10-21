@@ -1,10 +1,6 @@
 import Foundation
 import os
 
-nonisolated protocol GitHubAPITransport: Sendable {
-    func api(_ endpoint: String, body: Data?) async throws -> Data
-}
-
 nonisolated struct GitHubClient: Sendable {
     let baseURL: URL
     let buildType: BuildType

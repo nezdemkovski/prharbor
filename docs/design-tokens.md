@@ -1,6 +1,6 @@
 # Design tokens
 
-Every visual constant of the panel lives in `PRHarbor/Helpers/DesignTokens.swift`; views refer to token names instead of literals.
+Every visual constant of the panel lives in `PRHarbor/DesignSystem/DesignTokens.swift`; views refer to token names instead of literals.
 
 | Group | Holds |
 |---|---|

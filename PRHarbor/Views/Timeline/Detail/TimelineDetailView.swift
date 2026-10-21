@@ -76,7 +76,7 @@ struct TimelineDetailView: View {
             }
             separator
             Text(detailStatus).lineLimit(1)
-            if !item.checks.isEmpty || item.ci != nil { separator; checksSummary }
+            if !item.checks.isEmpty || item.ci != nil { separator; TimelineChecksSummary(item: item) }
             if let target = item.pull.baseRefName ?? item.pull.stack?.baseRefName {
                 separator
                 Text("→ \(target)").font(.ui(Typography.subheadline, .medium, design: .monospaced)).lineLimit(1)
@@ -108,25 +108,6 @@ struct TimelineDetailView: View {
     private func tool(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) { Image(systemName: symbol) }
             .buttonStyle(.icon).help(label).accessibilityLabel(label)
-    }
-    @ViewBuilder private var checksSummary: some View {
-        let failures = item.checks.filter { ciStatusKind($0.status) == .failure }
-        if let check = failures.first {
-            HStack(spacing: Spacing.xs) {
-                Image(systemName: "xmark.circle").foregroundStyle(Palette.failure)
-                Text(check.name + (failures.count > 1 ? " +\(failures.count - 1)" : "")).lineLimit(1).foregroundStyle(Palette.failure)
-                if let url = check.url { Link("Open log ↗", destination: url).foregroundStyle(Palette.textPrimary) }
-            }
-        } else if item.ci == .failure {
-            SwiftUI.Label("Checks failed", systemImage: "xmark.circle").foregroundStyle(Palette.failure)
-                .help("A failing check is outside the loaded details. Open GitHub for all checks.")
-        } else if item.ci == .pending {
-            SwiftUI.Label("Checks running", systemImage: "clock").foregroundStyle(Palette.warning)
-        } else if item.ci == .success {
-            SwiftUI.Label("Checks passed", systemImage: "checkmark.circle").foregroundStyle(Palette.success)
-        } else {
-            SwiftUI.Label("Check status unknown", systemImage: "questionmark.circle").foregroundStyle(Palette.textSecondary)
-        }
     }
     private func primary() {
         if item.isBlocked, let base = item.blockedBy {

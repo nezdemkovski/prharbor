@@ -2,18 +2,20 @@
 
 ## Source layout
 
-The Xcode project uses synchronized folders: a file joins its target by being in the folder.
+The Xcode project uses synchronized folders: a file joins its target by being in the folder. Each file holds one component and the small private types only it uses.
 
-- `App/`: app lifetime, the status item and popover, runtime and preferences domain.
-- `Models/GitHub/`: GraphQL payload types, one file per area (pull request, stack, checks, history, responses), and `GitHubEnums` for schema enums that decode unknown values as `unknown`.
-- `Models/Timeline/`: what the panel derives from a pull request: `TimelineItem`, `NextAction`, freshness, scale, history events, search matching and `TimelinePresentation`.
-- `Services/GitHub/`: transport, token storage and connection, the client, and `GitHubQueries`, every GraphQL document it sends.
-- `Services/Store/`: `PullRequestStore` and the pieces it coordinates: `PullSearch` (the three GitHub searches), `SnapshotStorage` (ordered cache writes and removals over `PullSnapshotCache`), `RefreshSchedule` (refresh and minute timers) and `PreferenceObserver`.
-- `Services/`: the screen controller, timeline policies and intelligence.
-- `Views/Timeline/`: the panel, with `Drawing/` for the axis, grid, track and avatars and `Rows/` for row types.
-- `Views/Settings/`: the settings window, one file per pane.
-- `Views/Components/`: the panel's controls as SwiftUI styles over system buttons and toggles: `SegmentedControl`, `ChipToggleStyle`, `PrimaryButtonStyle`, `IconButtonStyle` and `TintedButtonStyle`. Screens use these instead of styling a plain button in place, so hover, press, disabled and accessibility behave the same everywhere.
-- `Helpers/`: design tokens, preference keys, notifications.
+- `App/`: app lifetime, the status item and popover, runtime, the service graph and the About window.
+- `Preferences/`: preference keys, their option types, the `PullRequestSettings` snapshot the store reads, and the preferences domain.
+- `DesignSystem/`: `DesignTokens` and `Components/`, the panel's controls as SwiftUI styles over system buttons and toggles (`SegmentedControl`, `ChipToggleStyle`, `PrimaryButtonStyle`, `IconButtonStyle`, `TintedButtonStyle`). Screens use these instead of styling a plain button in place, so hover, press, disabled and accessibility behave the same everywhere.
+- `Models/GitHub/`: GraphQL payload types by area (pull request, stack, checks, history, responses), `GitHubEnums`, and how check results become a CI status.
+- `Models/Timeline/`: what the panel derives from a pull request: `TimelineItem`, `NextAction`, freshness, scale, events, sources, bot matching, snooze policy and `TimelinePresentation`.
+- `Models/Intelligence/`: what Apple Intelligence receives: the search context and the morning brief snapshot.
+- `Services/GitHub/`: transport, token storage and connection, the client and `GitHubQueries`, every GraphQL document it sends.
+- `Services/Store/`: `PullRequestStore` and the pieces it coordinates: `PullSearch`, `SnapshotStorage` over `PullSnapshotCache`, `RefreshSchedule` and `PreferenceObserver`.
+- `Services/Notifications/`: permission, change tracking between refreshes, the policy for what to announce, and delivery.
+- `Services/Intelligence/`, `Services/Avatars/`: on-device model calls, and downscaled avatar loading with a shared cache.
+- `Views/Timeline/`: the panel. `Header/` (search and controls), `Rows/`, `Drawing/` (axis, grid, track, hatching), `Detail/`, `Scrolling/` (the AppKit virtual scroll view), `Screen/` (the screen controller and its state), `Preview/`, plus the morning brief and empty state.
+- `Views/Settings/`: the settings window, one file per pane. `Views/Avatar/`: avatar views.
 
 ## Responsibilities
 

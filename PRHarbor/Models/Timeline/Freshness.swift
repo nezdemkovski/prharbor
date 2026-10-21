@@ -1,10 +1,5 @@
 import Foundation
 
-nonisolated enum TimelineTab: String, CaseIterable, Identifiable, Sendable {
-    case all = "All", mine = "Mine", reviewing = "Reviewing"
-    var id: Self { self }
-}
-
 nonisolated enum Freshness: String, CaseIterable, Identifiable, Sendable {
     case fresh, aging, stale, rotting
     var id: Self { self }

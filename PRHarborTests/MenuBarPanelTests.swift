@@ -13,6 +13,8 @@ struct MenuBarPanelTests {
     }
 
     @Test func showingAndResizingThePanelLaysOutWithoutRecursion() async throws {
+        let logs = try OSLogStore(scope: .currentProcessIdentifier)
+        let start = logs.position(date: .now)
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let cache = PullSnapshotCache(directory: directory)
@@ -44,7 +46,8 @@ struct MenuBarPanelTests {
         #expect(popover.frame.height > initialHeight)
 
         // AppKit logs a layout recursion once per process, so this catches the first occurrence.
-        let recursion = try OSLogStore(scope: .currentProcessIdentifier).getEntries()
+        // Entries from earlier tests in the same process are not this panel's.
+        let recursion = try logs.getEntries(at: start)
             .compactMap { ($0 as? OSLogEntryLog)?.composedMessage }
             .filter { $0.contains("already being laid out") }
         #expect(recursion.isEmpty)

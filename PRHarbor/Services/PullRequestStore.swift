@@ -4,37 +4,17 @@ import Foundation
 import Defaults
 import Observation
 
-nonisolated struct PullRefreshTracker: Sendable {
-    private var knownURLs: Set<String> = []
-    private var wasFetched = false
-
-    mutating func update(edges: [Edge], fetched: Bool, canNotify: Bool) -> [Pull] {
-        let newPulls: [Pull]
-        if canNotify && fetched && wasFetched {
-            newPulls = edges
-                .filter { !knownURLs.contains($0.node.url.absoluteString) }
-                .map(\.node)
-        } else {
-            newPulls = []
-        }
-
-        if fetched {
-            knownURLs = Set(edges.map { $0.node.url.absoluteString })
-        }
-        wasFetched = fetched
-        return newPulls
-    }
-
-    mutating func reset() {
-        knownURLs = []
-        wasFetched = false
-    }
-}
-
 private nonisolated enum PullCategory: CaseIterable, Sendable { case assigned, created, requested }
 private nonisolated struct PullCategoryResult: Sendable {
     let category: PullCategory
     let result: Result<[Edge], Error>
+}
+
+/// The identity a refresh started with. Any newer refresh, account or query scope supersedes it.
+private nonisolated struct RefreshToken: Sendable {
+    let generation: Int
+    let sessionGeneration: Int
+    let scope: PullSnapshotScope
 }
 
 @MainActor @Observable
@@ -48,14 +28,14 @@ final class PullRequestStore {
     var lastSyncedAt: Date?
     private(set) var isShowingCache = false
     private(set) var hasIncompleteData = false
-    var minutesUntilRefresh: Int = 0
     /// Every fetched PR projected once, for the menu bar count, notifications and the panel.
     private(set) var timelineItems: [TimelineItem] = []
     /// The time `timelineItems` describes; ages and the panel axis share it.
     private(set) var now = Date.now
     private(set) var totalCount = 0
 
-    private var countdownTimer: Timer?
+    /// Re-projects items each minute, so ages and quiet periods advance between refreshes.
+    private var minuteTimer: Timer?
     private var refreshTimer: Timer?
     private var refreshTask: Task<Void, Never>?
     private var settingsRefreshTask: Task<Void, Never>?
@@ -63,9 +43,7 @@ final class PullRequestStore {
     private var counterTypeObservation: Defaults.Observation?
     private var settingsObservations: [Defaults.Observation] = []
     private var sessionObservation: AnyCancellable?
-    private var hasLoadedOnce = false
-    private var knownRotting: Set<String>?
-    private var previousThresholds: [Int]?
+    private let notifications = PullNotificationCoordinator()
     private var refreshGeneration = 0
     private let session: GitHubSession
     private let cache: PullSnapshotCache
@@ -74,11 +52,6 @@ final class PullRequestStore {
     private var cacheRemovalTask: Task<Void, Never>?
     private var startupTask: Task<Void, Never>?
     private var currentSnapshot: PullSnapshot?
-
-
-    private var reviewRequestedTracker = PullRefreshTracker()
-    private var assignedTracker = PullRefreshTracker()
-    private var createdTracker = PullRefreshTracker()
 
     init(startAutomatically: Bool = true, session: GitHubSession? = nil,
          cache: PullSnapshotCache = .shared,
@@ -105,7 +78,7 @@ final class PullRequestStore {
 
     isolated deinit {
         refreshTimer?.invalidate()
-        countdownTimer?.invalidate()
+        minuteTimer?.invalidate()
         refreshTask?.cancel()
         startupTask?.cancel()
         settingsRefreshTask?.cancel()
@@ -154,19 +127,13 @@ final class PullRequestStore {
         reviewRequestedPulls = []
         isLoading = false
         error = nil
-        minutesUntilRefresh = 0
         lastSyncedAt = nil
         isShowingCache = false
         hasIncompleteData = false
-        hasLoadedOnce = false
-        knownRotting = nil
-        previousThresholds = nil
+        notifications.reset()
         rebuildTimelineItems()
-        reviewRequestedTracker.reset()
-        assignedTracker.reset()
-        createdTracker.reset()
-        countdownTimer?.invalidate()
-        countdownTimer = nil
+        minuteTimer?.invalidate()
+        minuteTimer = nil
     }
     private func startAutoRefresh() {
         refreshTimer?.invalidate()
@@ -273,6 +240,14 @@ final class PullRequestStore {
                                  assigned: fetchAssigned, created: fetchCreated, requested: fetchRequested)
     }
 
+    private func currentToken() -> RefreshToken {
+        RefreshToken(generation: refreshGeneration, sessionGeneration: session.generation, scope: snapshotScope)
+    }
+
+    private func isCurrent(_ token: RefreshToken) -> Bool {
+        token.generation == refreshGeneration && token.sessionGeneration == session.generation && token.scope == snapshotScope
+    }
+
     private func startWithCache() {
         startupTask?.cancel()
         if isConfigured && lastSyncedAt == nil { isLoading = true }
@@ -288,13 +263,10 @@ final class PullRequestStore {
 
     func loadCachedSnapshot() async {
         guard isConfigured else { return }
-        let scope = snapshotScope
-        let sessionGeneration = session.generation
-        let generation = refreshGeneration
+        let token = currentToken()
         await cacheRemovalTask?.value
-        let snapshot = await cache.load(scope: scope)
-        guard !Task.isCancelled, generation == refreshGeneration, scope == snapshotScope,
-              sessionGeneration == session.generation, isConfigured, lastSyncedAt == nil, let snapshot else { return }
+        let snapshot = await cache.load(scope: token.scope)
+        guard !Task.isCancelled, isCurrent(token), isConfigured, lastSyncedAt == nil, let snapshot else { return }
         currentSnapshot = snapshot
         assignedPulls = snapshot.assigned
         createdPulls = snapshot.created
@@ -303,7 +275,7 @@ final class PullRequestStore {
         isShowingCache = true
         hasIncompleteData = !snapshot.isComplete
         rebuildTimelineItems()
-        startCountdown()
+        startMinuteTimer()
         // Restoration never sends notifications or wakes snoozed PRs from old history.
     }
 
@@ -315,9 +287,8 @@ final class PullRequestStore {
         guard isConfigured else {
             refreshTask?.cancel()
             refreshTask = nil
-            countdownTimer?.invalidate()
-            countdownTimer = nil
-            minutesUntilRefresh = 0
+            minuteTimer?.invalidate()
+            minuteTimer = nil
             isLoading = false
             error = nil
             return
@@ -325,11 +296,11 @@ final class PullRequestStore {
 
         refreshTask?.cancel()
         refreshGeneration += 1
-        let generation = refreshGeneration
+        let token = currentToken()
+        let generation = token.generation
         isLoading = true
         error = nil
-        let scope = snapshotScope
-        let sessionGeneration = session.generation
+        let scope = token.scope
         let username = scope.username
         let fetchAssigned = scope.assigned
         let fetchCreated = scope.created
@@ -342,7 +313,7 @@ final class PullRequestStore {
             do {
                 let client = try await clientProvider(baseURL, buildType)
                 try Task.checkCancellation()
-                guard sessionGeneration == session.generation, scope == snapshotScope else { return finishCancelledRefresh(generation: generation) }
+                guard isCurrent(token) else { return finishCancelledRefresh(generation: generation) }
                 let showProgressively = lastSyncedAt == nil && isEmpty
                 var a = assignedPulls, c = createdPulls, r = reviewRequestedPulls
                 var firstError: Error?
@@ -363,8 +334,7 @@ final class PullRequestStore {
                         }
                     }
                     for await result in group {
-                        guard generation == refreshGeneration, sessionGeneration == session.generation,
-                              scope == snapshotScope, !Task.isCancelled else { continue }
+                        guard isCurrent(token), !Task.isCancelled else { continue }
                         switch result.result {
                         case .success(let edges):
                             let edges = hideDrafts ? edges.filter { !$0.node.isDraft } : edges
@@ -394,23 +364,18 @@ final class PullRequestStore {
                 if let firstError { throw firstError }
 
                 let snapshot = PullSnapshot(scope: scope, syncedAt: .now, assigned: a, created: c, requested: r)
-                guard generation == refreshGeneration, sessionGeneration == session.generation,
-                      scope == snapshotScope else { return finishCancelledRefresh(generation: generation) }
+                guard isCurrent(token) else { return finishCancelledRefresh(generation: generation) }
                 currentSnapshot = snapshot
-                self.finishRefresh(
-                    generation: generation,
-                    assigned: a,
-                    created: c,
-                    requested: r,
-                    fetchedAssigned: fetchAssigned,
-                    fetchedCreated: fetchCreated,
-                    fetchedRequested: fetchRequested
-                )
+                var fetched: PullSources = []
+                if fetchAssigned { fetched.insert(.assigned) }
+                if fetchCreated { fetched.insert(.created) }
+                if fetchRequested { fetched.insert(.requested) }
+                self.finishRefresh(generation: generation, assigned: a, created: c, requested: r, fetched: fetched)
                 await persist(snapshot).value
             } catch is CancellationError {
                 self.finishCancelledRefresh(generation: generation)
             } catch {
-                guard sessionGeneration == session.generation, scope == snapshotScope else { return finishCancelledRefresh(generation: generation) }
+                guard isCurrent(token) else { return finishCancelledRefresh(generation: generation) }
                 self.finishFailedRefresh(error, generation: generation)
             }
         }
@@ -446,64 +411,23 @@ final class PullRequestStore {
         }
     }
 
-    private func startCountdown() {
-        countdownTimer?.invalidate()
-        let interval = Double(max(1, Defaults[.refreshRate])) * 60
-        minutesUntilRefresh = max(0, Int(ceil(((lastSyncedAt ?? .now).addingTimeInterval(interval).timeIntervalSinceNow) / 60)))
-
-        countdownTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self else { return }
-                self.rebuildTimelineItems()
-                self.minutesUntilRefresh = max(0, self.minutesUntilRefresh - 1)
-            }
+    private func startMinuteTimer() {
+        minuteTimer?.invalidate()
+        minuteTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.rebuildTimelineItems() }
         }
     }
 
-    private func finishRefresh(
-        generation: Int,
-        assigned: [Edge],
-        created: [Edge],
-        requested: [Edge],
-        fetchedAssigned: Bool,
-        fetchedCreated: Bool,
-        fetchedRequested: Bool
-    ) {
+    private func finishRefresh(generation: Int, assigned: [Edge], created: [Edge], requested: [Edge], fetched: PullSources) {
         guard generation == refreshGeneration else { return }
-
-        let newRequested = reviewRequestedTracker.update(
-            edges: requested,
-            fetched: fetchedRequested,
-            canNotify: hasLoadedOnce
-        )
-        let newAssigned = assignedTracker.update(
-            edges: assigned,
-            fetched: fetchedAssigned,
-            canNotify: hasLoadedOnce
-        )
-        let newCreated = createdTracker.update(
-            edges: created,
-            fetched: fetchedCreated,
-            canNotify: hasLoadedOnce
-        )
-
-        if hasLoadedOnce {
-            sendPRNotifications(
-                newReviewRequested: newRequested,
-                newAssigned: newAssigned,
-                newCreated: newCreated
-            )
-        }
-
         lastSyncedAt = currentSnapshot?.syncedAt ?? .now
         isShowingCache = false
         hasIncompleteData = false
         reconcileSnoozes(assigned + created + requested)
         publishPulls(assigned: assigned, created: created, requested: requested)
-        sendTimelineSummaries()
-        hasLoadedOnce = true
-
-        startCountdown()
+        notifications.refreshed(assigned: assigned, created: created, requested: requested,
+                                fetched: fetched, items: timelineItems)
+        startMinuteTimer()
         // Schedule from completion, so a slow request cannot make the next tick
         // fall just before freshness expires and accidentally skip a whole interval.
         refreshTimer?.fireDate = (lastSyncedAt ?? .now).addingTimeInterval(Double(max(1, Defaults[.refreshRate])) * 60)
@@ -549,26 +473,6 @@ final class PullRequestStore {
                       username: username ?? session.cliConnection?.username ?? "", now: now,
                       thresholds: thresholds ?? Defaults[.freshnessThresholds], bots: bots ?? Defaults[.botAccounts],
                       ownComments: ownComments ?? Defaults[.ownCommentsCount], snoozed: snoozed ?? Defaults[.snoozedPulls])
-    }
-
-    private func sendTimelineSummaries() {
-        let rotting = TimelineNotificationPolicy.rottingOwned(timelineItems)
-        let ids = Set(rotting.map(\.id))
-        let thresholds = Defaults[.freshnessThresholds]
-        if Defaults[.notifyRotting] {
-            for item in TimelineNotificationPolicy.newlyRotting(rotting, previousIDs: knownRotting, previousThresholds: previousThresholds, thresholds: thresholds) {
-                sendPRNotification(title: "A pull request went quiet", pr: item.pull, category: "rotting")
-            }
-        }
-        knownRotting = ids
-        previousThresholds = thresholds
-        guard Defaults[.morningSummary] else { return }
-        let now = Date()
-        guard let day = TimelineNotificationPolicy.summaryDay(now: now, calendar: .current, scheduledMinutes: Defaults[.morningSummaryMinutes], refreshMinutes: Defaults[.refreshRate], lastDay: Defaults[.lastMorningSummary]) else { return }
-        let waiting = TimelineNotificationPolicy.waitingForReview(timelineItems).count
-        guard waiting > 0 || !rotting.isEmpty else { return }
-        sendTimelineNotification(title: "Your pull requests this morning", body: "\(waiting) waiting for your review · \(rotting.count) of yours rotting")
-        Defaults[.lastMorningSummary] = day
     }
 
     private func reconcileSnoozes(_ edges: [Edge]) {

@@ -32,6 +32,22 @@ struct GitHubSessionTests {
         #expect(store.isConfigured)
     }
 
+    @Test func aSavedTokenRestoresTheAccountAfterPreferencesWereReset() async throws {
+        let tokens = GitHubTokenStorage.memory()
+        try tokens.save("saved", "https://api.github.com")
+        let session = GitHubSession(connection: nil, tokens: tokens)
+        await session.restoreFromSavedToken(baseURL: "https://api.github.com") { token in
+            #expect(token == "saved")
+            return "octocat"
+        }
+        #expect(session.connection == connection)
+        // Without a token for the host, or once connected, nothing is requested.
+        let empty = GitHubSession(connection: nil)
+        await empty.restoreFromSavedToken(baseURL: "https://api.github.com") { _ in Issue.record("No token to verify"); return "" }
+        #expect(empty.connection == nil)
+        await session.restoreFromSavedToken(baseURL: "https://api.github.com") { _ in Issue.record("Already connected"); return "" }
+    }
+
     @Test func tokensAreStoredPerHostAndRemovedOnDisconnect() throws {
         let tokens = GitHubTokenStorage.memory()
         var writes: [GitHubConnection?] = []

@@ -1,5 +1,6 @@
 
 import Cocoa
+import Defaults
 import UserNotifications
 import SwiftUI
 
@@ -16,6 +17,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         NSApp.setActivationPolicy(runtime.showsDevelopmentWindow ? .regular : .accessory)
         guard runtime == .production else { return }
+        let session = store.session
+        Task { await session.restoreFromSavedToken(baseURL: Defaults[.githubApiBaseUrl]) }
         statusBar = StatusBarController(store: store, onSettings: { [weak self] in self?.showSettings() })
         requestNotificationAuthorization()
         UNUserNotificationCenter.current().delegate = self

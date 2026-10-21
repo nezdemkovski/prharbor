@@ -36,6 +36,15 @@ final class GitHubSession {
         self.connection = connection
     }
 
+    /// The account lives in preferences, which start empty inside the sandbox container, while the
+    /// token stays in the Keychain. Without a saved account, a saved token for this host restores it.
+    func restoreFromSavedToken(baseURL: String, login: ((_ token: String) async throws -> String)? = nil) async {
+        let login = login ?? { try await GitHubHTTPTransport(apiBaseURL: baseURL, token: $0).account().user.login }
+        guard connection == nil, let token = try? tokens.read(baseURL),
+              let username = try? await login(token), connection == nil, !username.isEmpty else { return }
+        try? connect(GitHubConnection(username: username, apiBaseURL: baseURL), token: token)
+    }
+
     func disconnect() {
         if let connection { try? tokens.delete(connection.apiBaseURL) }
         generation += 1

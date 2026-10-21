@@ -37,8 +37,8 @@ struct SettingsView: View {
             List(SettingsTab.allCases, selection: $tab) { tab in
                 Label(tab.rawValue, systemImage: tab.symbol)
             }
-            .navigationSplitViewColumnWidth(min: 210, ideal: 220, max: 280)
             .toolbar(removing: .sidebarToggle)
+            .navigationSplitViewColumnWidth(220)
         } detail: {
             let tab = tab ?? .general
             pane(tab).navigationTitle(tab.rawValue)

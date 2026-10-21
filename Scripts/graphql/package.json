@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Validates PR Harbor's GraphQL documents against GitHub's public schema.",
+  "dependencies": {
+    "graphql": "16.14.2"
+  }
+}

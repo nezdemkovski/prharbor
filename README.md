@@ -92,3 +92,5 @@ Open `PRHarbor/Views/Timeline/TimelinePreview.swift` in Xcode for a SwiftUI prev
 Ordinary Debug and Release runs both stay in the menu bar, without a Dock icon or a separate timeline window. For an explicit live-data development window, set `PRHARBOR_DEBUG_WINDOW=1` in the Xcode scheme's Run environment. Development windows are not restored on the next launch.
 
 The Test action sets `PRHARBOR_TESTING=1`. Hosted tests skip production startup and notifications, use a fresh preferences suite and temporary cache, and supply fixture GitHub transports. Tests are organized by suite in `PRHarborTests/`; shared transports and gates live in `TestSupport.swift`.
+
+GitHub GraphQL documents are checked against GitHub's public schema, pinned in `Scripts/graphql/github-schema.graphqls`. `Scripts/validate-graphql.sh` (Node.js required) exports every document the client sends, validates it, and rewrites `Scripts/graphql/selected-fields.txt` with each selected field and its nullability; review that diff whenever a query changes, and keep nullable fields optional in the models. The release workflow runs the same check.

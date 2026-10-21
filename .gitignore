@@ -26,3 +26,6 @@ prototype/data.js
 # Python development helpers
 __pycache__/
 *.pyc
+
+# GraphQL validation dependencies
+Scripts/graphql/node_modules/

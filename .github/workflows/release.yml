@@ -48,6 +48,15 @@ jobs:
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate GraphQL documents
+        run: |
+          bash Scripts/validate-graphql.sh
+          git diff --exit-code Scripts/graphql/selected-fields.txt
+
       - name: Build Release
         run: |
           xcodebuild \

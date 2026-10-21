@@ -559,11 +559,11 @@ private nonisolated struct GraphQLRebaseResponse: Decodable, Sendable {
     let data: Data
 
     struct Data: Decodable, Sendable {
-        let updatePullRequestBranch: Payload
+        let updatePullRequestBranch: Payload?
     }
 
     struct Payload: Decodable, Sendable {
-        let pullRequest: UpdatedPullRequest
+        let pullRequest: UpdatedPullRequest?
     }
 
     struct UpdatedPullRequest: Decodable, Sendable {

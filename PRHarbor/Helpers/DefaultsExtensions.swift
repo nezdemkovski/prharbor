@@ -5,7 +5,7 @@ import Defaults
 extension Defaults.Keys {
     static let githubApiBaseUrl = Key<String>("githubApiBaseUrl", default: "https://api.github.com", suite: AppPreferences.storage)
     static let githubUsername = Key<String>("githubUsername", default: "", suite: AppPreferences.storage)
-    static let githubCLIConnection = Key<GitHubCLIConnection?>("githubCLIConnection", default: nil, suite: AppPreferences.storage)
+    static let githubConnection = Key<GitHubConnection?>("githubConnection", default: nil, suite: AppPreferences.storage)
     static let showAssigned = Key<Bool>("showAssigned", default: false, suite: AppPreferences.storage)
     static let showCreated = Key<Bool>("showCreated", default: true, suite: AppPreferences.storage)
     static let showRequested = Key<Bool>("showRequested", default: true, suite: AppPreferences.storage)

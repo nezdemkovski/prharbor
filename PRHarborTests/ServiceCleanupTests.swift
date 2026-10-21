@@ -155,7 +155,7 @@ struct MutationRevalidationTests {
     func rebaseDuringRefreshSupersedesOldDataEvenAfterPartialFailure(_ partial: Bool) async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        let session = GitHubSession(connection: GitHubCLIConnection(executablePath: "/unused", username: "octocat", apiBaseURL: Defaults[.githubApiBaseUrl]))
+        let session = GitHubSession(connection: GitHubConnection(username: "octocat", apiBaseURL: Defaults[.githubApiBaseUrl]))
         let sample = try #require(TimelinePreviewData.items(now: .now).first { $0.pull.stack == nil })
         let transport = CleanupMutationTransport(edge: Edge(node: sample.pull), partial: partial)
         var calls = 0
@@ -202,7 +202,7 @@ struct MutationRevalidationTests {
     @Test func accountChangeDuringClientCreationPreventsMutationAndRevalidation() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        let session = GitHubSession(connection: GitHubCLIConnection(executablePath: "/unused", username: "octocat", apiBaseURL: Defaults[.githubApiBaseUrl]))
+        let session = GitHubSession(connection: GitHubConnection(username: "octocat", apiBaseURL: Defaults[.githubApiBaseUrl]))
         let gate = PullFetchGate(), transport = CleanupQueryTransport()
         var calls = 0
         let store = PullRequestStore(startAutomatically: false, session: session, cache: PullSnapshotCache(directory: directory),
@@ -213,7 +213,7 @@ struct MutationRevalidationTests {
             })
         let task = Task { try await store.rebaseStack(stack()) }
         for _ in 0..<200 where calls == 0 { try await Task.sleep(for: .milliseconds(5)) }
-        session.useCLI(GitHubCLIConnection(executablePath: "/unused", username: "another-account", apiBaseURL: Defaults[.githubApiBaseUrl]))
+        try session.connect(GitHubConnection(username: "another-account", apiBaseURL: Defaults[.githubApiBaseUrl]), token: "another-token")
         await gate.release()
         await #expect(throws: CancellationError.self) { try await task.value }
         #expect(calls == 1)
@@ -225,14 +225,14 @@ struct MutationRevalidationTests {
     @Test func accountMismatchRetainsItsOriginalErrorAndClearsOldData() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        let session = GitHubSession(connection: GitHubCLIConnection(executablePath: "/unused", username: "octocat", apiBaseURL: Defaults[.githubApiBaseUrl]))
+        let session = GitHubSession(connection: GitHubConnection(username: "octocat", apiBaseURL: Defaults[.githubApiBaseUrl]))
         let sample = try #require(TimelinePreviewData.items(now: .now).first)
         let store = PullRequestStore(startAutomatically: false, session: session, cache: PullSnapshotCache(directory: directory),
-            clientProvider: { _, _ in throw GitHubCLIError.accountChanged })
+            clientProvider: { _, _ in throw GitHubAccessError.accountChanged })
         store.createdPulls = [Edge(node: sample.pull)]
-        await #expect(throws: GitHubCLIError.self) { try await store.rebaseStack(stack()) }
+        await #expect(throws: GitHubAccessError.self) { try await store.rebaseStack(stack()) }
         #expect(store.isEmpty)
-        #expect(store.error == GitHubCLIError.accountChanged.localizedDescription)
+        #expect(store.error == GitHubAccessError.accountChanged.localizedDescription)
         #expect(!store.isLoading)
         await store.loadCachedSnapshot()
     }

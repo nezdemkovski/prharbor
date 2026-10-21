@@ -33,8 +33,8 @@ struct OnboardingView: View {
                 onConnect()
             } label: {
                 HStack(spacing: 5) {
-                    Image(systemName: "terminal")
-                    Text("Connect GitHub CLI")
+                    Image(systemName: "key")
+                    Text("Add GitHub Token")
                 }
                 .font(.system(size: 12, weight: .semibold))
             }

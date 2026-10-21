@@ -20,7 +20,7 @@ A native macOS menu bar app that keeps you on top of your code reviews, assignme
 - **Notifications** — New review requests, assignments, quiet PRs, and an optional morning summary while the app is running
 - **Keyboard navigation** — Arrow keys or J/K to select, Return to continue, O to open, S to snooze, / to filter
 - **Light and dark mode**, VoiceOver labels, and system typography
-- **GitHub CLI**, signed in to GitHub or GitHub Enterprise
+- **Personal access token** for GitHub or GitHub Enterprise, kept in the Keychain
 
 Merge, close, review, and reviewer nudges continue on GitHub. Stack rebase uses the GitHub API and asks for confirmation before updating branches. GitHub's latest 60 timeline events are shown; the full history remains available on GitHub.
 
@@ -43,17 +43,19 @@ Grab the latest `.dmg` from [GitHub Releases](https://github.com/nezdemkovski/pr
 
 ## Setup
 
-1. Install [GitHub CLI](https://cli.github.com/) and run `gh auth login` in Terminal if you have not already signed in.
-2. Open PR Harbor from the menu bar.
-3. Choose **Settings → Account → Connect GitHub CLI**. PR Harbor checks the active account and loads its accessible pull requests.
+1. [Create a classic personal access token](https://github.com/settings/tokens/new?scopes=repo,read:org&description=PR%20Harbor) with the `repo` and `read:org` scopes. For organizations that use SAML single sign-on, choose **Configure SSO** next to the token and authorize it for them.
+2. Open PR Harbor from the menu bar and choose **Settings → Account**.
+3. Paste the token and choose **Connect**. PR Harbor checks the token's account and scopes, then loads the pull requests it can access.
 
-GitHub CLI is the only connection method. API requests, pagination, stack loading, and user-triggered rebases run through `gh api`; PR Harbor never extracts or copies the CLI token and never runs `gh auth login`, requests organization approval, or changes CLI permissions. Access is limited to what the existing CLI account can already access. If the active account changes, reconnect in Account settings. Disconnecting PR Harbor clears its local account selection and leaves `gh` signed in. GitHub Enterprise is supported through the API URL setting (for example `https://github.example.com/api/v3`).
+A personal access token works across all your organizations without installing or approving an OAuth or GitHub App in each of them. PR Harbor stores the token in your login Keychain, sends it only to the configured GitHub API host over HTTPS, and keeps responses out of the shared URL cache. Requests go straight to GitHub's GraphQL API; nothing else needs to be installed. Disconnecting removes the token from the Keychain; revoke it on GitHub if you no longer need it.
 
-PR Harbor launches `gh` directly as a background child process. App Sandbox is disabled for this CLI integration; Hardened Runtime remains enabled. No Application Scripts bridge is needed, so synchronization does not create macOS script-monitor menu items. Cancellation and timeouts terminate the owned CLI process. Each search response and each stack rebase confirms that the active `gh` account is still the connected one.
+Fine-grained tokens also work, but each one covers a single owner, so pull requests from other organizations are missing. GitHub Enterprise is supported through the API URL setting (for example `https://github.example.com/api/v3`); create the token on that host.
 
-### Updating from v0.1.x
+Each search response confirms that the token still belongs to the connected account. Rate limits and rejected tokens are reported in the panel with the time to retry or the step to fix them.
 
-Versions before 0.2.0 were sandboxed and used built-in sign-in. Their settings and sign-in are not carried over: connect GitHub CLI again in Settings → Account and re-apply your preferences. The old sign-in may remain in Keychain as `com.nezdemkovski.prharbor` items named `githubToken` and `githubSession`; delete them in Keychain Access if you like. PR Harbor never reads them, and GitHub CLI credentials are separate.
+### Updating from earlier versions
+
+Version 0.2 connected through GitHub CLI. After updating, add a personal access token in Settings → Account; your other settings are kept. Versions before 0.2.0 were sandboxed and used built-in sign-in, so their settings are not carried over. Their sign-in may remain in Keychain as `com.nezdemkovski.prharbor` items named `githubToken` and `githubSession`; delete them in Keychain Access if you like. PR Harbor never reads them.
 
 ## Development
 

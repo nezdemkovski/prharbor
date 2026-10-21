@@ -1,32 +1,36 @@
 import Foundation
 import Defaults
-import SwiftUI
-import Security
-import ImageIO
 import Testing
 @testable import PRHarbor
 
-@Suite("CLI connection", .serialized)
+@Suite("GitHub connection", .serialized)
 @MainActor
 struct GitHubSessionTests {
-    private let connection = GitHubCLIConnection(executablePath: "/opt/homebrew/bin/gh", username: "octocat", apiBaseURL: "https://api.github.com")
+    private let connection = GitHubConnection(username: "octocat", apiBaseURL: "https://api.github.com")
 
-    @Test func aDisconnectedOrDifferentHostCannotCreateAClient() async {
+    @Test func aDisconnectedOrDifferentHostCannotCreateAClient() async throws {
         let session = GitHubSession(connection: nil)
-        await #expect(throws: GitHubCLIError.self) { try await session.client(baseURL: "https://api.github.com", buildType: .none) }
-        session.useCLI(connection)
-        await #expect(throws: GitHubCLIError.self) { try await session.client(baseURL: "https://other.example/api/v3", buildType: .none) }
+        await #expect(throws: GitHubAccessError.signInRequired) { try await session.client(baseURL: "https://api.github.com", buildType: .none) }
+        try session.connect(connection, token: "token")
+        await #expect(throws: GitHubAccessError.signInRequired) { try await session.client(baseURL: "https://other.example/api/v3", buildType: .none) }
+        #expect(try await session.client(baseURL: "https://api.github.com", buildType: .none).expectedLogin == "octocat")
     }
 
-    @Test func clientsVerifyTheConnectedAccountWithoutASeparateRequest() async throws {
-        let fixture = try CLIExecutableFixture(response: Data(#"{"data":{"viewer":{"login":"octocat"},"search":{"edges":[],"issueCount":0,"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#.utf8))
-        defer { fixture.remove() }
-        let session = GitHubSession(connection: .init(executablePath: fixture.executable.path, username: "octocat", apiBaseURL: "https://api.github.com"))
-        let client = try await session.client(baseURL: "https://api.github.com", buildType: .none)
-        #expect(client.expectedLogin == "octocat")
-        #expect(!FileManager.default.fileExists(atPath: fixture.arguments.path))
-        #expect(try await client.fetchPulls(filter: "author:octocat").isEmpty)
-        let arguments = try String(contentsOf: fixture.arguments, encoding: .utf8)
-        #expect(arguments.hasPrefix("api\ngraphql\n"))
+    @Test func aSavedConnectionWithoutAStoredTokenAsksForOne() async {
+        let session = GitHubSession(connection: connection)
+        await #expect(throws: GitHubAccessError.signInRequired) { try await session.client(baseURL: "https://api.github.com", buildType: .none) }
+    }
+
+    @Test func tokensAreStoredPerHostAndRemovedOnDisconnect() throws {
+        let tokens = GitHubTokenStorage.memory()
+        var writes: [GitHubConnection?] = []
+        let session = GitHubSession(connection: nil, tokens: tokens, persist: { writes.append($0) })
+        try session.connect(connection, token: "secret")
+        #expect(try tokens.read("https://api.github.com") == "secret")
+        #expect(try tokens.read("https://github.example.com/api/v3") == nil)
+        session.disconnect()
+        #expect(try tokens.read("https://api.github.com") == nil)
+        #expect(session.connection == nil)
+        #expect(writes == [connection, nil])
     }
 }

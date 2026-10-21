@@ -114,39 +114,44 @@ private struct EnterpriseSettings: View {
 private struct AccountCard: View {
     let store: PullRequestStore
     @ObservedObject private var session = GitHubSession.shared
-    @StateObject private var connector = GitHubCLIConnector()
+    @StateObject private var connector = GitHubTokenConnector()
+    @Default(.githubApiBaseUrl) private var apiURL
+    @State private var token = ""
+    @State private var replacing = false
 
     var body: some View {
-        SettingsSection("GITHUB CLI") {
-            if session.isConfigured, let connection = session.cliConnection {
+        SettingsSection("GITHUB") {
+            if session.isConfigured, let connection = session.connection, !replacing {
                 HStack(spacing: 8) {
-                    Image(systemName: "terminal").foregroundStyle(Theme.success)
+                    Image(systemName: "key.fill").foregroundStyle(Theme.success)
                     Text("@" + connection.username).font(.system(size: 12, weight: .medium))
                     Spacer()
-                    Button("Reconnect", action: connector.connect)
-                        .controlSize(.small).disabled(connector.isConnecting)
+                    Button("Replace Token…") { replacing = true }.controlSize(.small)
                     Button("Disconnect") {
                         connector.cancel()
                         session.disconnect()
                     }.controlSize(.small)
                 }
-                SettingsHint("Connected through GitHub CLI. Disconnecting PR Harbor keeps gh signed in.")
+                SettingsHint("Connected with a personal access token stored in your Keychain.")
             } else {
-                Text("Use the GitHub account already signed in with gh on this Mac.")
+                Text("Paste a classic personal access token with the repo and read:org scopes.")
                     .font(.system(size: 12))
-                Button(action: connector.connect) {
-                    SwiftUI.Label("Connect GitHub CLI", systemImage: "terminal")
-                }.buttonStyle(.borderedProminent).controlSize(.small)
-                    .disabled(connector.isConnecting)
-                SettingsHint("First time? Install GitHub CLI and sign in from Terminal:")
-                Text("brew install gh\ngh auth login")
-                    .font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
-                SettingsHint("PR Harbor uses the access your CLI account already has.")
+                HStack(spacing: 8) {
+                    SecureField("ghp_…", text: $token)
+                        .textFieldStyle(.roundedBorder).font(.system(size: 12, design: .monospaced))
+                        .onSubmit { connector.connect(token: token) }
+                    Button("Connect") { connector.connect(token: token) }
+                        .buttonStyle(.borderedProminent).controlSize(.small)
+                        .disabled(connector.isConnecting || token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    if replacing { Button("Cancel") { replacing = false; token = "" }.controlSize(.small) }
+                }
+                if let url = newTokenURL { Link("Create a token on GitHub…", destination: url).font(.system(size: 12)) }
+                SettingsHint("For organizations with SAML single sign-on, choose Configure SSO next to the token on GitHub and authorize it.")
             }
             if connector.isConnecting {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text("Checking GitHub CLI…").font(.system(size: 12))
+                    Text("Checking token…").font(.system(size: 12))
                     Spacer()
                     Button("Cancel", action: connector.cancel).controlSize(.small)
                 }
@@ -156,7 +161,20 @@ private struct AccountCard: View {
             }
         }
         .onDisappear { connector.cancel() }
-        .onChange(of: connector.successfulConnections) { _, _ in store.refresh() }
+        .onChange(of: connector.successfulConnections) { _, _ in
+            token = ""
+            replacing = false
+            store.refresh()
+        }
+    }
+
+    /// GitHub's new-token form with the needed scopes preselected, on github.com or the Enterprise host.
+    private var newTokenURL: URL? {
+        guard var components = URLComponents(string: apiURL), let host = components.host else { return nil }
+        components.host = host == "api.github.com" ? "github.com" : host
+        components.path = "/settings/tokens/new"
+        components.queryItems = [.init(name: "scopes", value: "repo,read:org"), .init(name: "description", value: "PR Harbor")]
+        return components.url
     }
 }
 

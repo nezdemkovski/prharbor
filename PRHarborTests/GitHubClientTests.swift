@@ -154,7 +154,7 @@ struct GitHubClientTests {
 
     @Test
     func rejectsInsecureAPIURLs() {
-        #expect(throws: URLError.self) {
+        #expect(throws: GitHubAccessError.unsupportedHost) {
             _ = try TestGitHubTransport.client(
                 baseURL: "http://github.example.com/api/v3",
                 buildType: .none

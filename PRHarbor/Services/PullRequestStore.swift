@@ -65,7 +65,7 @@ final class PullRequestStore {
         observeRefreshRate()
         observeCounterType()
         observeDataSettings()
-        sessionObservation = session.$cliConnection
+        sessionObservation = session.$connection
             .removeDuplicates()
             .dropFirst()
             .sink { [weak self] _ in
@@ -215,7 +215,7 @@ final class PullRequestStore {
     }
 
     var snapshotScope: PullSnapshotScope {
-        let username = session.cliConnection?.username ?? ""
+        let username = session.connection?.username ?? ""
         let showAssigned = Defaults[.showAssigned]
         let showCreated = Defaults[.showCreated]
         let showRequested = Defaults[.showRequested]
@@ -401,7 +401,7 @@ final class PullRequestStore {
             guard scope == snapshotScope, sessionGeneration == session.generation, isConfigured else { throw CancellationError() }
             return result
         } catch {
-            if let cliError = error as? GitHubCLIError, case .accountChanged = cliError,
+            if let accessError = error as? GitHubAccessError, accessError == .accountChanged,
                scope == snapshotScope, sessionGeneration == session.generation {
                 mutationStarted = false
                 clear()
@@ -470,7 +470,7 @@ final class PullRequestStore {
                        includeRequested: Bool = true, username: String? = nil) -> TimelineInput {
         TimelineInput(assigned: assignedPulls, created: createdPulls, requested: reviewRequestedPulls,
                       includeAssigned: includeAssigned, includeCreated: includeCreated, includeRequested: includeRequested,
-                      username: username ?? session.cliConnection?.username ?? "", now: now,
+                      username: username ?? session.connection?.username ?? "", now: now,
                       thresholds: thresholds ?? Defaults[.freshnessThresholds], bots: bots ?? Defaults[.botAccounts],
                       ownComments: ownComments ?? Defaults[.ownCommentsCount], snoozed: snoozed ?? Defaults[.snoozedPulls])
     }
@@ -478,14 +478,14 @@ final class PullRequestStore {
     private func reconcileSnoozes(_ edges: [Edge]) {
         let (snoozed, activity) = TimelineSnoozePolicy.reconcile(edges: edges, snoozed: Defaults[.snoozedPulls],
             activity: Defaults[.snoozeActivity], now: .now, wakeOnComment: Defaults[.wakeOnComment],
-            username: session.cliConnection?.username ?? "")
+            username: session.connection?.username ?? "")
         if Defaults[.snoozedPulls] != snoozed { Defaults[.snoozedPulls] = snoozed }
         if Defaults[.snoozeActivity] != activity { Defaults[.snoozeActivity] = activity }
     }
 
     private func finishFailedRefresh(_ error: Error, generation: Int) {
         guard generation == refreshGeneration else { return }
-        if let cliError = error as? GitHubCLIError, case .accountChanged = cliError {
+        if let accessError = error as? GitHubAccessError, accessError == .accountChanged {
             clear()
         }
         self.error = error.localizedDescription

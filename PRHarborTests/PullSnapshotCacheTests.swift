@@ -51,8 +51,8 @@ struct PullSnapshotCacheTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let cache = PullSnapshotCache(directory: directory)
-        let session = GitHubSession(connection: GitHubCLIConnection(executablePath: "/unused", username: "cache-user",
-            apiBaseURL: GitHubSession.shared.cliConnection?.apiBaseURL ?? "https://api.github.com"))
+        let session = GitHubSession(connection: GitHubConnection(username: "cache-user",
+            apiBaseURL: GitHubSession.shared.connection?.apiBaseURL ?? "https://api.github.com"))
         let store = PullRequestStore(startAutomatically: false, session: session, cache: cache, clientProvider: { _, _ in
             try await Task.sleep(for: .milliseconds(30))
             throw URLError(.notConnectedToInternet)
@@ -92,8 +92,8 @@ struct PullSnapshotCacheTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let cache = PullSnapshotCache(directory: directory)
-        let baseURL = GitHubSession.shared.cliConnection?.apiBaseURL ?? "https://api.github.com"
-        let session = GitHubSession(connection: GitHubCLIConnection(executablePath: "/unused", username: "cache-user", apiBaseURL: baseURL))
+        let baseURL = GitHubSession.shared.connection?.apiBaseURL ?? "https://api.github.com"
+        let session = GitHubSession(connection: GitHubConnection(username: "cache-user", apiBaseURL: baseURL))
         var calls = 0
         let store = PullRequestStore(startAutomatically: false, session: session, cache: cache, clientProvider: { _, _ in
             calls += 1

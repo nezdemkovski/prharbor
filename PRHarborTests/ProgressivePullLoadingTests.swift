@@ -13,8 +13,8 @@ struct ProgressivePullLoadingTests {
         let sample = try #require(TimelinePreviewData.items(now: .now).first { $0.pull.stack == nil })
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        let session = GitHubSession(connection: GitHubCLIConnection(executablePath: "/unused", username: "progress-user",
-            apiBaseURL: GitHubSession.shared.cliConnection?.apiBaseURL ?? "https://api.github.com"))
+        let session = GitHubSession(connection: GitHubConnection(username: "progress-user",
+            apiBaseURL: GitHubSession.shared.connection?.apiBaseURL ?? "https://api.github.com"))
         let store = PullRequestStore(startAutomatically: false, session: session, cache: PullSnapshotCache(directory: directory),
             clientProvider: { baseURL, build in
                 try GitHubClient(baseURL: baseURL, buildType: build,
@@ -53,8 +53,8 @@ struct ProgressivePullLoadingTests {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let cache = PullSnapshotCache(directory: directory)
-        let session = GitHubSession(connection: GitHubCLIConnection(executablePath: "/unused", username: "progress-user",
-            apiBaseURL: GitHubSession.shared.cliConnection?.apiBaseURL ?? "https://api.github.com"))
+        let session = GitHubSession(connection: GitHubConnection(username: "progress-user",
+            apiBaseURL: GitHubSession.shared.connection?.apiBaseURL ?? "https://api.github.com"))
         let store = PullRequestStore(startAutomatically: false, session: session, cache: cache,
             clientProvider: { baseURL, build in
                 try GitHubClient(baseURL: baseURL, buildType: build,
@@ -76,8 +76,8 @@ struct ProgressivePullLoadingTests {
         let sample = try #require(TimelinePreviewData.items(now: .now).first { $0.pull.stack == nil })
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        let session = GitHubSession(connection: GitHubCLIConnection(executablePath: "/unused", username: "progress-user",
-            apiBaseURL: GitHubSession.shared.cliConnection?.apiBaseURL ?? "https://api.github.com"))
+        let session = GitHubSession(connection: GitHubConnection(username: "progress-user",
+            apiBaseURL: GitHubSession.shared.connection?.apiBaseURL ?? "https://api.github.com"))
         let store = PullRequestStore(startAutomatically: false, session: session, cache: PullSnapshotCache(directory: directory),
             clientProvider: { baseURL, build in
                 try GitHubClient(baseURL: baseURL, buildType: build,

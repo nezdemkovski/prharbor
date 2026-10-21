@@ -8,8 +8,8 @@ struct AppRuntimeTests {
     @Test @MainActor func startupUsesNoProductionAccountOrPreferences() {
         #expect(AppRuntime.isTesting)
         #expect(AppPreferences.storage !== UserDefaults.standard)
-        #expect(Defaults.Keys.githubCLIConnection.suite === AppPreferences.storage)
-        #expect(Defaults[.githubCLIConnection] == nil)
+        #expect(Defaults.Keys.githubConnection.suite === AppPreferences.storage)
+        #expect(Defaults[.githubConnection] == nil)
         #expect(Defaults[.githubUsername].isEmpty)
         #expect(!GitHubSession.shared.isConfigured)
         let delegate = AppDelegate()

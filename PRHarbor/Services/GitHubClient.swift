@@ -129,7 +129,6 @@ nonisolated struct GitHubClient: Sendable {
         if let conflicting = openEntries.compactMap(\.pullRequest).first(where: { $0.mergeable == "CONFLICTING" }) {
             throw StackRebaseError.conflictingBranch(conflicting.headRefName)
         }
-        if expectedLogin != nil { try verifyAccount(try await fetchUser().login) }
 
         let mutation = """
         mutation RebasePullRequestBranch($input: UpdatePullRequestBranchInput!) {
@@ -158,7 +157,7 @@ nonisolated struct GitHubClient: Sendable {
                 completed += 1
             } catch is CancellationError {
                 throw CancellationError()
-            } catch let error as GitHubCLIError where error == .accountChanged {
+            } catch let error as GitHubAccessError where error == .accountChanged {
                 // Keep account mismatch identifiable so the store can invalidate
                 // its old identity rather than treating it as ordinary partial progress.
                 throw error
@@ -183,7 +182,7 @@ nonisolated struct GitHubClient: Sendable {
 
     private func verifyAccount(_ login: String?) throws {
         guard let expectedLogin, login != expectedLogin else { return }
-        throw GitHubCLIError.accountChanged
+        throw GitHubAccessError.accountChanged
     }
 
     private func postGraphQL<T: Decodable, Variables: Encodable>(

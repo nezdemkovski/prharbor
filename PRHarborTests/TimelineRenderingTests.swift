@@ -40,6 +40,8 @@ struct TimelineRenderingTests {
     }
     @Test @MainActor func rendersSettingsAndEmptyStates() async throws {
         let store = PullRequestStore(startAutomatically: false)
+        let window = NSHostingView(rootView: SettingsView(store: store).frame(width: 760, height: 560).environment(\.colorScheme, .light).background(Color(nsColor: .windowBackgroundColor)))
+        try await snapshot(window, name: "settings", size: CGSize(width: 760, height: 560))
         for tab in SettingsTab.allCases {
             let pane = NSHostingView(rootView: SettingsView(store: store).pane(tab).frame(width: 560, height: 620).environment(\.colorScheme, .light).background(Color(nsColor: .windowBackgroundColor)))
             try await snapshot(pane, name: "settings-" + tab.rawValue, size: CGSize(width: 560, height: 620))

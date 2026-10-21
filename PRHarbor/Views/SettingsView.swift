@@ -19,11 +19,11 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     }
 }
 
-/// The standard macOS settings window: toolbar tabs, each a grouped form.
+/// A settings window laid out like System Settings: sections in a sidebar, each a grouped form.
 struct SettingsView: View {
     let store: PullRequestStore
     var usernameOverride: String? = nil
-    @State private var tab: SettingsTab
+    @State private var tab: SettingsTab?
 
     init(store: PullRequestStore, usernameOverride: String? = nil) {
         self.store = store
@@ -32,12 +32,17 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        TabView(selection: $tab) {
-            ForEach(SettingsTab.allCases) { tab in
-                Tab(tab.rawValue, systemImage: tab.symbol, value: tab) { pane(tab) }
+        NavigationSplitView {
+            List(SettingsTab.allCases, selection: $tab) { tab in
+                Label(tab.rawValue, systemImage: tab.symbol)
             }
+            .navigationSplitViewColumnWidth(min: 170, ideal: 190, max: 240)
+            .toolbar(removing: .sidebarToggle)
+        } detail: {
+            let tab = tab ?? .general
+            pane(tab).navigationTitle(tab.rawValue)
         }
-        .frame(width: 560)
+        .frame(minWidth: 680, minHeight: 460)
     }
 
     @ViewBuilder func pane(_ tab: SettingsTab) -> some View {

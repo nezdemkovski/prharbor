@@ -50,19 +50,31 @@ final class StatusBarController: NSObject {
         }
     }
 
+    /// Geometry callbacks arrive during SwiftUI's layout. Resizing the popover there lays out
+    /// its window recursively, which AppKit reports as illegal, so it waits for the next turn.
     private func resizePanel(to size: CGSize) {
         guard size.width > 0, size.height > 0 else { return }
         let rounded = CGSize(width: size.width.rounded(.up), height: size.height.rounded(.up))
-        if popover.contentSize != rounded { popover.contentSize = rounded }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, popover.contentSize != rounded else { return }
+            popover.contentSize = rounded
+        }
     }
 
     func showPanel() {
-        guard let button = statusItem.button, !popover.isShown else { return }
+        guard let button = statusItem.button else { return }
+        showPanel(relativeTo: button)
+    }
+
+    func showPanel(relativeTo anchor: NSView) {
+        guard !popover.isShown else { return }
         store.refresh(respectFreshness: true)
         NSApp.activate()
-        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        popover.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()
     }
+
+    var isPanelShown: Bool { popover.isShown }
 
     func closePanel() { popover.performClose(nil) }
 

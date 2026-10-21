@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		016CFD924C1D678872D6858B /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FA7D1609526869EF1F7C8CB /* TestSupport.swift */; };
 		22E56E27C357EAF035D8FBFB /* AppRuntimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85D1A9AF5F751042304D294A /* AppRuntimeTests.swift */; };
+		62DF1FAEDC124C219BACF6AA /* MenuBarPanelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A27A606C8584BC2B7CE3312 /* MenuBarPanelTests.swift */; };
 		26E4F933B38BBF76D2E00A2A /* ProgressivePullLoadingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8974F288F4DADFA32FADCC6 /* ProgressivePullLoadingTests.swift */; };
 		2E2B9BF8091B2782047E9C91 /* CICheckTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECF0C8A273336579B68FB35 /* CICheckTests.swift */; };
 		2E2FC6389A8A67AC9349EEDC /* TimelineRowGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82BECBD5A89E7F52E695332D /* TimelineRowGeometry.swift */; };
@@ -91,6 +92,7 @@
 		825482153D0C4F55DD39C75F /* GitHubAPITransportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubAPITransportTests.swift; sourceTree = "<group>"; };
 		82BECBD5A89E7F52E695332D /* TimelineRowGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineRowGeometry.swift; sourceTree = "<group>"; };
 		85D1A9AF5F751042304D294A /* AppRuntimeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntimeTests.swift; sourceTree = "<group>"; };
+		9A27A606C8584BC2B7CE3312 /* MenuBarPanelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarPanelTests.swift; sourceTree = "<group>"; };
 		8C55444C274AD9E00079CA42 /* NSImageExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NSImageExtensions.swift; sourceTree = "<group>"; };
 		8CECBBDF2742AAF800A2802D /* PRHarbor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PRHarbor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8CECBBE22742AAF900A2802D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -215,6 +217,7 @@
 			isa = PBXGroup;
 			children = (
 				85D1A9AF5F751042304D294A /* AppRuntimeTests.swift */,
+				9A27A606C8584BC2B7CE3312 /* MenuBarPanelTests.swift */,
 				4CF40492DC582C06770ECB81 /* AvatarDecodingTests.swift */,
 				DECF0C8A273336579B68FB35 /* CICheckTests.swift */,
 				825482153D0C4F55DD39C75F /* GitHubAPITransportTests.swift */,
@@ -454,6 +457,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				22E56E27C357EAF035D8FBFB /* AppRuntimeTests.swift in Sources */,
+				62DF1FAEDC124C219BACF6AA /* MenuBarPanelTests.swift in Sources */,
 				32E3C014808BF8D43E1D6EC7 /* AvatarDecodingTests.swift in Sources */,
 				2E2B9BF8091B2782047E9C91 /* CICheckTests.swift in Sources */,
 				978492AC01027416741319C9 /* GitHubAPITransportTests.swift in Sources */,

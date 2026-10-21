@@ -37,6 +37,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) { statusBar?.invalidate() }
 
+    /// A menu bar app outlives its windows. Without this, SwiftUI quits when the panel
+    /// popover, the only window, closes (Debug builds declare a Window scene).
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool { true }
 }
 extension AppDelegate: UNUserNotificationCenterDelegate {

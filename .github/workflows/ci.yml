@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve packages
+        run: xcodebuild -project PRHarbor.xcodeproj -scheme PRHarbor -resolvePackageDependencies
+
+      - name: Run tests
+        run: |
+          xcodebuild test \
+            -project PRHarbor.xcodeproj \
+            -scheme PRHarbor \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Validate GraphQL documents
+        run: |
+          bash Scripts/validate-graphql.sh
+          git diff --exit-code Scripts/graphql/selected-fields.txt
+
+      - name: Check design token contrast
+        run: python3 Scripts/design-contrast.py

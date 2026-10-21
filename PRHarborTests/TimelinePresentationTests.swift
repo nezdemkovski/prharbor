@@ -21,12 +21,12 @@ struct TimelinePresentationTests {
         #expect(interaction.cursorAge == 0)
         interaction.hover(at: right + 1)
         #expect(interaction.cursorAge == nil)
-        interaction.drag(from: origin - 1, to: right, scale: interaction.scale)
+        interaction.drag(from: origin - 1, to: right)
         #expect(!interaction.brushing)
-        interaction.drag(from: origin, to: right, scale: interaction.scale)
+        interaction.drag(from: origin, to: right)
         #expect(interaction.dragging?.lowerBound == 0)
         #expect(interaction.dragging?.upperBound == .infinity)
-        interaction.endDrag()
+        interaction.endDrag { _ in }
         #expect(!interaction.brushing && interaction.dragging == nil)
     }
     private let now = Date(timeIntervalSince1970: 1_800_000_000)

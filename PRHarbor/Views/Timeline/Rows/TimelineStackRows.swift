@@ -14,7 +14,7 @@ struct TimelineStackRows: View {
     var body: some View {
         VStack(spacing: 0) {
             if isCollapsed {
-                // Only the label column expands the stack; its bars stay part of the timeline.
+                // Only the label column expands the stack; its bars belong to the timeline pointer.
                 HStack(spacing: 0) {
                     Button(action: toggle) {
                         SwiftUI.Label("Stack · \(items.count) layers", systemImage: "square.3.layers.3d")
@@ -31,7 +31,6 @@ struct TimelineStackRows: View {
                             }.frame(height: TimelineRowGeometry.collapsedBarHeight)
                         }
                     }
-                    .allowsHitTesting(false)
                 }
                 .frame(height: TimelineRowGeometry.collapsedBodyHeight(layers: items.count))
                 .padding(TimelineRowGeometry.collapsedContentPadding)

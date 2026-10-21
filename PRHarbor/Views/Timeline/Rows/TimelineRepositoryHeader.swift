@@ -8,7 +8,7 @@ struct TimelineRepositoryHeader: View {
     var showOwner = false
     let toggle: () -> Void
     var body: some View {
-        // Only the label column toggles; the timeline beside it belongs to hover and range selection.
+        // Only the label column toggles; the timeline beside it belongs to the timeline pointer.
         HStack(spacing: 0) {
             Button(action: toggle) {
                 HStack(spacing: Spacing.xs) {
@@ -43,7 +43,6 @@ struct TimelineRepositoryHeader: View {
                     }
                 }
             }
-            .allowsHitTesting(false)
         }
         .frame(height: TimelineRowGeometry.repositoryHeight - 6).padding(.top, Spacing.s)
     }

@@ -37,6 +37,6 @@ import AppKit
 
     private func setScrolling(_ scrolling: Bool) {
         interaction?.isScrolling = scrolling
-        if scrolling { interaction?.cursorAge = nil }
+        if scrolling { interaction?.endHover() }
     }
 }

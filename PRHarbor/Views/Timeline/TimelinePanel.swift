@@ -8,10 +8,6 @@ struct TimelinePanel: View {
     let onAbout: () -> Void
     let onQuit: () -> Void
     var previewItems: [TimelineItem]? = nil
-    var scrollRendering: TimelineScrollRendering = .automatic
-    private var rendering: TimelineScrollRendering {
-        scrollRendering == .automatic ? .native : scrollRendering
-    }
     @Default(.timelineRange) private var range
     @Default(.freshnessThresholds) private var thresholds
     @Default(.showRequested) private var showRequested
@@ -107,18 +103,12 @@ struct TimelinePanel: View {
         .task(id: request) { await screen.resolveSearch(request) }
     }
     private var rows: some View {
-        Group {
-            if rendering == .native {
-                let rowsByID = Dictionary(uniqueKeysWithValues: presentation.rows.map { ($0.id, $0) })
-                TimelineNativeScrollView(height: presentation.contentHeight, rowIDs: presentation.rows.map(\.id),
-                    ranges: presentation.rowRanges, selection: selection, interaction: interaction,
-                    content: { id in rowDocument(row: rowsByID[id]).id(id) },
-                    placeholder: { id in placeholder(for: rowsByID[id]) },
-                    activate: { id in activate(rowsByID[id]) })
-            } else {
-                swiftUIScrollView
-            }
-        }
+        let rowsByID = Dictionary(uniqueKeysWithValues: presentation.rows.map { ($0.id, $0) })
+        return TimelineNativeScrollView(height: presentation.contentHeight, rowIDs: presentation.rows.map(\.id),
+            ranges: presentation.rowRanges, selection: selection, interaction: interaction,
+            content: { id in rowDocument(row: rowsByID[id]).id(id) },
+            placeholder: { id in placeholder(for: rowsByID[id]) },
+            activate: { id in activate(rowsByID[id]) })
         .background(alignment: .trailing) {
             TimelineInteractiveGrid(scale: scale, now: now, interaction: interaction, brush: brush)
                 .frame(width: TimelineMetrics.trackWidth).padding(.trailing, TimelineMetrics.inset)
@@ -144,39 +134,6 @@ struct TimelinePanel: View {
                 if interaction.brushing { writeIdle(interaction.dragging) }
                 interaction.endDrag()
             })
-    }
-    private var swiftUIScrollView: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                Group {
-                    if rendering == .eager { VStack(spacing: 0) { rowContent } }
-                    else { LazyVStack(spacing: 0) { rowContent } }
-                }
-                .padding(.bottom, TimelineRowGeometry.documentBottomPadding).padding(.horizontal, Spacing.panel)
-                .onContinuousHover { phase in
-                    guard !interaction.isScrolling else { return }
-                    switch phase {
-                    case .active(let point): interaction.hover(at: point.x)
-                    case .ended: interaction.cursorAge = nil
-                    }
-                }
-                .simultaneousGesture(DragGesture(minimumDistance: 8).onChanged { value in
-                    interaction.drag(from: value.startLocation.x, to: value.location.x, scale: scale)
-                }.onEnded { _ in
-                    if interaction.brushing { writeIdle(interaction.dragging) }
-                    interaction.endDrag()
-                })
-            }
-            .scrollIndicators(.automatic)
-            .onScrollPhaseChange { _, phase in
-                interaction.isScrolling = phase != .idle
-                if interaction.isScrolling { interaction.cursorAge = nil }
-            }
-            .onChange(of: selection) { _, value in if let value { proxy.scrollTo(presentation.scrollTargets[value] ?? value, anchor: nil) } }
-        }
-    }
-    private var rowContent: some View {
-        ForEach(presentation.rows) { row in rowView(row) }
     }
     private func rowView(_ row: TimelinePresentation.Row) -> some View {
         TimelinePresentedRow(row: row, scale: scale, now: now, selection: row.normalizedSelection(selection),

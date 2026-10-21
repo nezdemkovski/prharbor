@@ -86,4 +86,3 @@ struct TimelineNativeScrollView<Content: View>: NSViewRepresentable {
     }
 }
 
-nonisolated enum TimelineScrollRendering: String { case automatic, lazy, eager, native }

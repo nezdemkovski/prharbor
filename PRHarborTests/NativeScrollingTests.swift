@@ -62,8 +62,7 @@ struct NativeScrollingTests {
         }
     }
 
-    @Test(arguments: [TimelineScrollRendering.lazy, .eager, .native]) @MainActor
-    func scrollingSixtyEightPullsKeepsTheHostingViewportStable(scrollRendering: TimelineScrollRendering) async throws {
+    @Test @MainActor func scrollingSixtyEightPullsKeepsTheHostingViewportStable() async throws {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         let fixtures = TimelinePreviewData.items(now: now)
         let items = (0..<68).map { index -> TimelineItem in
@@ -76,7 +75,7 @@ struct NativeScrollingTests {
         }
         var sizeChanges = 0
         let content = TimelinePanel(store: PullRequestStore(startAutomatically: false), now: now,
-            onSettings: {}, onAbout: {}, onQuit: {}, previewItems: items, scrollRendering: scrollRendering)
+            onSettings: {}, onAbout: {}, onQuit: {}, previewItems: items)
             .fixedSize(horizontal: false, vertical: true)
             .onGeometryChange(for: CGSize.self, of: { $0.size }) { _ in sizeChanges += 1 }
         let hosting = NSHostingController(rootView: content)
@@ -112,19 +111,17 @@ struct NativeScrollingTests {
         #expect(hosting.view.frame.size == viewport)
         #expect(sizeChanges == initialChanges)
         #expect(maximumObservedOffset > 0)
-        if scrollRendering == .native {
-            // Only viewport rows and the prefetch margin are mounted, even
-            // after traversing the entire list repeatedly.
-            let virtual = try #require(document as? any TimelineViewportDocument)
-            #expect(virtual.mountedRowIDs.count <= 36)
-            #expect(!virtual.mountedRowIDs.isEmpty)
-            for _ in 0..<50 where virtual.preparedRowIDs != virtual.mountedRowIDs {
-                try await Task.sleep(for: .milliseconds(20))
-            }
-            #expect(virtual.preparedRowIDs == virtual.mountedRowIDs)
+        // Only viewport rows and the prefetch margin are mounted, even
+        // after traversing the entire list repeatedly.
+        let virtual = try #require(document as? any TimelineViewportDocument)
+        #expect(virtual.mountedRowIDs.count <= 36)
+        #expect(!virtual.mountedRowIDs.isEmpty)
+        for _ in 0..<50 where virtual.preparedRowIDs != virtual.mountedRowIDs {
+            try await Task.sleep(for: .milliseconds(20))
         }
+        #expect(virtual.preparedRowIDs == virtual.mountedRowIDs)
         let sorted = durations.sorted()
-        print("Native scroll layout, rendering=\(scrollRendering.rawValue), 68 PRs, 90 updates: median=\(sorted[45])ms p95=\(sorted[85])ms max=\(sorted.last!)ms")
+        print("Native scroll layout, 68 PRs, 90 updates: median=\(sorted[45])ms p95=\(sorted[85])ms max=\(sorted.last!)ms")
         window.close()
     }
 
@@ -142,7 +139,7 @@ struct NativeScrollingTests {
             ownComments: true, snoozed: [:]).makeItems()
         #expect(items.count >= 50)
         let content = TimelinePanel(store: PullRequestStore(startAutomatically: false), now: now,
-            onSettings: {}, onAbout: {}, onQuit: {}, previewItems: items, scrollRendering: .native)
+            onSettings: {}, onAbout: {}, onQuit: {}, previewItems: items)
             .fixedSize(horizontal: false, vertical: true)
         let hosting = NSHostingController(rootView: content)
         hosting.sizingOptions = []

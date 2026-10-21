@@ -1,12 +1,12 @@
-import Combine
 import Defaults
 import Foundation
+import Observation
 
 /// The connected account and its personal access token.
-@MainActor
-final class GitHubSession: ObservableObject {
+@MainActor @Observable
+final class GitHubSession {
     static let shared = GitHubSession()
-    @Published private(set) var connection: GitHubConnection?
+    private(set) var connection: GitHubConnection?
     private let tokens: GitHubTokenStorage
     private let persist: (GitHubConnection?) -> Void
     /// Read from the Keychain once per connection rather than on every refresh.

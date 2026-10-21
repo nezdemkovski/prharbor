@@ -1,5 +1,6 @@
 import Foundation
 import Defaults
+import Observation
 import Testing
 @testable import PRHarbor
 
@@ -21,6 +22,16 @@ struct GitHubSessionTests {
         await #expect(throws: GitHubAccessError.signInRequired) { try await session.client(baseURL: "https://api.github.com", buildType: .none) }
     }
 
+    @Test func connectingIsVisibleToViewsThatOnlyObserveTheStore() throws {
+        let session = GitHubSession(connection: nil)
+        let store = PullRequestStore(startAutomatically: false, session: session)
+        let changed = ObservationFlag()
+        withObservationTracking { _ = store.isConfigured } onChange: { changed.set() }
+        try session.connect(GitHubConnection(username: "octocat", apiBaseURL: Defaults[.githubApiBaseUrl]), token: "token")
+        #expect(changed.value)
+        #expect(store.isConfigured)
+    }
+
     @Test func tokensAreStoredPerHostAndRemovedOnDisconnect() throws {
         let tokens = GitHubTokenStorage.memory()
         var writes: [GitHubConnection?] = []
@@ -33,4 +44,11 @@ struct GitHubSessionTests {
         #expect(session.connection == nil)
         #expect(writes == [connection, nil])
     }
+}
+
+private nonisolated final class ObservationFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var flag = false
+    func set() { lock.withLock { flag = true } }
+    var value: Bool { lock.withLock { flag } }
 }

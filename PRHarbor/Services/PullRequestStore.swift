@@ -1,5 +1,4 @@
 
-import Combine
 import Foundation
 import Defaults
 import Observation
@@ -42,7 +41,7 @@ final class PullRequestStore {
     private var refreshRateObservation: Defaults.Observation?
     private var counterTypeObservation: Defaults.Observation?
     private var settingsObservations: [Defaults.Observation] = []
-    private var sessionObservation: AnyCancellable?
+    private var sessionObservation: Task<Void, Never>?
     private let notifications = PullNotificationCoordinator()
     private var refreshGeneration = 0
     private let session: GitHubSession
@@ -65,15 +64,16 @@ final class PullRequestStore {
         observeRefreshRate()
         observeCounterType()
         observeDataSettings()
-        sessionObservation = session.$connection
-            .removeDuplicates()
-            .dropFirst()
-            .sink { [weak self] _ in
-                // Published sends before the connection changes. Invalidate old work
-                // synchronously, then read the new identity in the startup task.
+        sessionObservation = Task { [weak self, session] in
+            var previous = session.connection
+            // Work already started for the old account is rejected by the session generation,
+            // which changes synchronously; this restarts loading for the new identity.
+            for await connection in Observations({ session.connection }) where connection != previous {
+                previous = connection
                 self?.clear()
                 self?.startWithCache()
             }
+        }
     }
 
     isolated deinit {
@@ -82,6 +82,7 @@ final class PullRequestStore {
         refreshTask?.cancel()
         startupTask?.cancel()
         settingsRefreshTask?.cancel()
+        sessionObservation?.cancel()
     }
 
     private var currentCount: Int {

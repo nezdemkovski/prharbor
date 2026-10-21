@@ -113,8 +113,8 @@ private struct EnterpriseSettings: View {
 
 private struct AccountCard: View {
     let store: PullRequestStore
-    @ObservedObject private var session = GitHubSession.shared
-    @StateObject private var connector = GitHubTokenConnector()
+    private let session = GitHubSession.shared
+    @State private var connector = GitHubTokenConnector()
     @Default(.githubApiBaseUrl) private var apiURL
     @State private var token = ""
     @State private var replacing = false

@@ -1,6 +1,6 @@
-import Combine
 import Defaults
 import Foundation
+import Observation
 import Security
 
 /// The connected account. Its token lives in the Keychain, never in preferences.
@@ -175,11 +175,11 @@ private nonisolated final class TokenBox: @unchecked Sendable {
 }
 
 /// Validates a pasted token, then stores it and selects its account.
-@MainActor
-final class GitHubTokenConnector: ObservableObject {
-    @Published private(set) var isConnecting = false
-    @Published private(set) var error: String?
-    @Published private(set) var successfulConnections = 0
+@MainActor @Observable
+final class GitHubTokenConnector {
+    private(set) var isConnecting = false
+    private(set) var error: String?
+    private(set) var successfulConnections = 0
     private let session: GitHubSession
     private var task: Task<Void, Never>?
     private var generation = 0
